@@ -13,6 +13,8 @@ import Offers from './pages/Offers.jsx';
 import Brands from './pages/Brands.jsx';
 import Help from './pages/Help.jsx';
 import DeleteAccount from './pages/DeleteAccount.jsx';
+import NewArrivalsPage from './pages/NewArrivalsPage.jsx';
+import WeddingEdit from './fashion/WeddingEdit.jsx';
 import About from './pages/About.jsx';
 import Contact from './pages/Contact.jsx';
 import Legal from './pages/Legal.jsx';
@@ -218,6 +220,7 @@ export default function App() {
         <Route path="p/:slug" element={<FashionProductPage />} />
         <Route path="search" element={<FashionSearch />} />
         <Route path="wishlist" element={<FashionWishlistPage />} />
+        <Route path="wedding" element={<WeddingEdit />} />
       </Route>
 
       {/* The grocery store: its own shell and homepage; the cart it links to
@@ -256,6 +259,7 @@ export default function App() {
         <Route path="/brands" element={<Brands />} />
         <Route path="/help" element={<Help />} />
         <Route path="/delete-account" element={<DeleteAccount />} />
+        <Route path="/new" element={<NewArrivalsPage />} />
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/grievance" element={<EditableLegal doc="grievance" />} />

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import Icon from './Icon.jsx';
 import DeferredImage from './DeferredImage.jsx';
 import { useStorefrontSection } from '../lib/storefrontSections.js';
-import { useNewArrivals, STORE_LISTING } from '../lib/newArrivals.js';
+import { useNewArrivals } from '../lib/newArrivals.js';
 import { money } from '../lib/format.js';
 
 // ============================================================
@@ -32,8 +32,8 @@ export const NEW_ARRIVALS_AUTOPLAY_MS = 4500; // the fashion strip's pace
 /** The section's built-in content; an empty link is the newest arrival's store (viewAllLink). */
 export const NEW_ARRIVALS_SECTION = Object.freeze({ hidden: false, title: 'New Arrivals', more: 'View All', link: '' });
 
-/** Where "View All" goes: the link set in Storefronts, else the listing of the store the newest card comes from. */
-export const viewAllLink = (link, items) => link || STORE_LISTING[items[0]?.store] || STORE_LISTING.wellness;
+/** Where "View All" goes: the link set in Storefronts, else every new arrival (/new, 2026-11-13). */
+export const viewAllLink = (link) => link || '/new';
 
 /** The reduced-motion check, read when a tick fires rather than when it is scheduled. */
 function useReducedMotion() {

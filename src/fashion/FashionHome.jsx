@@ -8,6 +8,7 @@ import { CategoryChips } from './FashionLayout.jsx';
 import FashionProductCard from './FashionProductCard.jsx';
 import RecentlyViewedHome from '../components/RecentlyViewedHome.jsx';
 import BudgetChips from '../components/BudgetChips.jsx';
+import { WeddingStrip } from './WeddingEdit.jsx';
 import OfferBanner from '../components/OfferBanner.jsx';
 import { BagReminder } from '../components/HomeExtras.jsx';
 import { TajLeatherPosters, TajLeatherRange } from '../components/TajLeather.jsx';
@@ -164,6 +165,8 @@ export default function FashionHome() {
       {/* This visitor's recently viewed fashion products (2+; this browser only). */}
       <RecentlyViewedHome prefix="fs-" />
       <BudgetChips base="/fashion/search" wrap="fs-sec" />
+      {/* The Wedding & Festive edit (WeddingEdit.jsx, 2026-11-13). */}
+      <WeddingStrip />
       <CategoryTiles tree={tree} />
       <TajLeatherRange />
       <AnsariRange />

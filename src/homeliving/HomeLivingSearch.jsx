@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useHomeLivingCatalogue } from '../data/homelivingHomepage.js';
 import { searchItems, didYouMean } from '../lib/searchMatch.js';
 import { DidYouMean } from '../components/SearchSuggest.jsx';
+import FindForMe from '../components/FindForMe.jsx';
 import { homelivingSearchRows } from './HomeLivingLayout.jsx';
 import { Breadcrumb, Listing } from './HomeLivingCategory.jsx';
 import HomeLivingProductCard from './HomeLivingProductCard.jsx';
@@ -38,6 +39,7 @@ export default function HomeLivingSearch() {
           <p>{status === 'loading' ? 'Loading the catalogue…' : `Nothing in Home & Living matches “${q}”. Try a shorter word, or browse the store.`}</p>
           {status !== 'loading' && <DidYouMean fix={fix} href={`/homeliving/search?q=${encodeURIComponent(fix)}`} />}
           {status !== 'loading' && <Link to="/homeliving" className="hl-btn">Browse Home &amp; Living</Link>}
+          {status !== 'loading' && <FindForMe q={q} />}
         </div>
       ) : (
         <div className="hl-grid">

@@ -169,19 +169,20 @@ await test('C1 nothing to show — no cards, or hidden in Storefronts — and th
   }
 });
 
-await test('C2 the heading and "View All" on one line, as "Explore the stores"; an empty link goes to the newest card\'s store, a set one wins', async () => {
+await test('C2 the heading and "View All" on one line, as "Explore the stores"; an empty link goes to /new, a set one wins', async () => {
   const { handle } = await openSection({ items: FIVE });
   const head = findAll(handle.tree, (n) => n.props?.className === 'hx-stores__head')[0];
   assert.ok(head, 'the Explore-the-stores heading row');
   assert.equal(textOf(findAll(head, (n) => n.type === 'h2' && n.props.className === 'hx-stores__h')[0]), 'New Arrivals');
   const more = findAll(head, (n) => n.type === 'a' && n.props.className === 'hx-more')[0];
-  assert.deepEqual([textOf(more).trim(), more.props.href, more.props['aria-label']], ['View All', '/homeliving', 'View all new arrivals']);
+  assert.deepEqual([textOf(more).trim(), more.props.href, more.props['aria-label']], ['View All', '/new', 'View all new arrivals']);
   const set = await openSection({ items: [card(9, 'fashion'), ...FIVE], content: { title: 'Just In', more: 'See everything', link: '/shop?sort=new' } });
   const head2 = findAll(set.handle.tree, (n) => n.props?.className === 'hx-stores__head')[0];
   const more2 = findAll(head2, (n) => n.type === 'a')[0];
   assert.deepEqual([textOf(findAll(head2, (n) => n.type === 'h2')[0]), textOf(more2).trim(), more2.props.href, more2.props['aria-label']], ['Just In', 'See everything', '/shop?sort=new', undefined]);
-  assert.equal(set.mod.viewAllLink('', [card(1, 'fashion')]), '/fashion');
-  assert.equal(set.mod.viewAllLink('', [card(1, 'wellness')]), '/shop?sort=new');
+  // 2026-11-13: an empty link is the all-arrivals page, whichever store leads.
+  assert.equal(set.mod.viewAllLink('', [card(1, 'fashion')]), '/new');
+  assert.equal(set.mod.viewAllLink('', [card(1, 'wellness')]), '/new');
 });
 
 await test('C3 each card: picture, name, price, a link to its product page — and no button', async () => {

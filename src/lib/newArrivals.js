@@ -86,16 +86,16 @@ export function selectNewArrivals({ wellness = [], catalogue = [] } = {}, { byId
 }
 
 /** The section's cards: null until the reads answer, then the list (empty when nothing is flagged). */
-export function useNewArrivals() {
+export function useNewArrivals(limit = NEW_ARRIVALS_LIMIT) {
   const [rows, setRows] = useState(null);
   useEffect(() => {
     let live = true;
-    fetchNewArrivalRows().then(
+    fetchNewArrivalRows(supabase, limit).then(
       (r) => { if (live) setRows(r); },
       () => { if (live) setRows({ wellness: [], catalogue: [] }); },
     );
     return () => { live = false; };
   }, []);
   const real = catalogSource === 'supabase';
-  return useMemo(() => (rows ? selectNewArrivals(rows, { byId: productById, realCatalogue: real }) : null), [rows, real, productById]);
+  return useMemo(() => (rows ? selectNewArrivals(rows, { byId: productById, realCatalogue: real, limit }) : null), [rows, real, productById, limit]);
 }

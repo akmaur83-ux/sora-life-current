@@ -13,6 +13,7 @@ import FashionProductCard from './FashionProductCard.jsx';
 import ShareList from '../components/ShareList.jsx';
 import PriceDrops from '../components/PriceDrops.jsx';
 import { DidYouMean } from '../components/SearchSuggest.jsx';
+import FindForMe from '../components/FindForMe.jsx';
 import { didYouMean } from '../lib/searchMatch.js';
 import LoadMore, { useShowMore } from '../components/LoadMore.jsx';
 
@@ -102,7 +103,7 @@ export function FilterPanel({ state, options, onPatch, onClear, onClose = null, 
   );
 }
 
-export function Listing({ title, trail, scope = null, only = null, intro = null, emptyCopy }) {
+export function Listing({ title, trail, scope = null, only = null, intro = null, emptyCopy, emptyExtra = null }) {
   const { status, tree, views } = useFashionCatalogue();
   const [params, setParams] = useSearchParams();
   const state = useMemo(() => readFashionUrlState(params), [params]);
@@ -148,6 +149,7 @@ export function Listing({ title, trail, scope = null, only = null, intro = null,
             <div className="fs-empty">
               <p>{status === 'loading' ? 'Loading the catalogue…' : count > 0 ? 'Nothing matches these filters.' : emptyCopy}</p>
               {count > 0 && <button type="button" className="fs-btn" onClick={clear}>Clear filters</button>}
+              {status !== 'loading' && count === 0 && emptyExtra}
             </div>
           ) : (
             <>
@@ -214,6 +216,7 @@ export function FashionSearch() {
       title={q ? `Results for “${q}”` : 'All fashion'}
       trail={[{ name: 'Fashion', href: '/fashion' }, { name: q ? 'Search' : 'All styles' }]}
       emptyCopy={q ? `Nothing found for “${q}”. Try another word, or browse a category.` : 'The fashion store is being stocked — styles appear here as they go live.'}
+      emptyExtra={q ? <FindForMe q={q} /> : null}
     />
   );
 }

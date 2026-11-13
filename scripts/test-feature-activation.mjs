@@ -394,6 +394,8 @@ await test('remaining footer links all point at real in-app routes', () => {
     '/offers',     // every product on offer (App.jsx), in the footer since 2026-11-10
     '/brands',     // the partner brands (App.jsx), in the footer since 2026-11-13
     '/help',       // Help & FAQ (App.jsx), in the footer since 2026-11-13
+    '/new',        // every new arrival (App.jsx), in the footer since 2026-11-13
+    '/fashion/wedding', // the Wedding & Festive edit (App.jsx), in the footer since 2026-11-13
   ];
   for (const t of targets) {
     const ok = known.includes(t) || t.startsWith('/category/');

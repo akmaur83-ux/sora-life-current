@@ -45,6 +45,10 @@ export const wellnessDeals = (list) => (Array.isArray(list) ? list : [])
   .filter((p) => p && p.slug && p.price > 0 && p.mrp > p.price && Number(p.stock) > 0)
   .map((p) => ({ key: `wellness-${p.id}`, store: 'wellness', name: p.name, image: p.image || null, price: p.price, mrp: p.mrp, pct: Math.round(((p.mrp - p.price) / p.mrp) * 100), href: `/product/${p.slug}` }));
 
+/** Budget chips (2026-11-13): deals at or under a price; '' is every price. */
+export const BUDGETS = [{ id: '', label: 'Any price' }, { id: '499', label: 'Under ₹499' }, { id: '999', label: 'Under ₹999' }, { id: '1999', label: 'Under ₹1,999' }];
+export const underBudget = (deals, under) => { const n = Number(under); return n > 0 ? deals.filter((d) => d.price <= n) : deals; };
+
 export const sortDeals = (deals) => [...deals].sort((a, b) => b.pct - a.pct || (b.mrp - b.price) - (a.mrp - a.price) || String(a.name).localeCompare(String(b.name)));
 
 /** India's date as YYYY-MM-DD for a moment. Pure. */
@@ -129,10 +133,12 @@ export default function Offers() {
   const [cat, setCat] = useState(null);
   useEffect(() => { let on = true; fetchCatalogueDeals().then((d) => { if (on) setCat(d); }, () => { if (on) setCat([]); }); return () => { on = false; }; }, []);
   const all = useMemo(() => sortDeals([...wellnessDeals(products), ...(cat || [])]), [cat]);
-  const shownDeals = store === 'all' ? all : all.filter((d) => d.store === store);
-  const paging = useShowMore(shownDeals.length, store);
+  const under = BUDGETS.some((b) => b.id && b.id === params.get('under')) ? params.get('under') : '';
+  const shownDeals = underBudget(store === 'all' ? all : all.filter((d) => d.store === store), under);
+  const paging = useShowMore(shownDeals.length, `${store}|${under}`);
   usePageMeta({ title: 'Offers & deals', description: 'Every product on offer at SORA LIFESTYLE: wellness, fashion and home, biggest discounts first.', path: '/offers' });
   const counts = Object.fromEntries(STORES.map((s) => [s.id, s.id === 'all' ? all.length : all.filter((d) => d.store === s.id).length]));
+  const budget = (id) => { const next = new URLSearchParams(params); if (!id) next.delete('under'); else next.set('under', id); setParams(next, { replace: true }); };
   const pick = (id) => { const next = new URLSearchParams(params); if (id === 'all') next.delete('store'); else next.set('store', id); setParams(next, { replace: true }); };
 
   return (
@@ -151,6 +157,11 @@ export default function Offers() {
             <button key={s.id} type="button" role="tab" aria-selected={store === s.id} className={`hx-offers__tab${store === s.id ? ' is-on' : ''}`} onClick={() => pick(s.id)}>
               {s.label}{cat ? <em>{counts[s.id]}</em> : null}
             </button>
+          ))}
+        </div>
+        <div className="hx-offers__budget" role="group" aria-label="Budget">
+          {BUDGETS.map((b) => (
+            <button key={b.id || 'any'} type="button" aria-pressed={under === b.id} className={`hx-offers__chip${under === b.id ? ' is-on' : ''}`} onClick={() => budget(b.id)}>{b.label}</button>
           ))}
         </div>
         {cat === null && shownDeals.length === 0 ? (

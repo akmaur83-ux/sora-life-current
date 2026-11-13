@@ -1,0 +1,350 @@
+diff --git a/api/sitemap.js b/api/sitemap.js
+index 982ddd9..6deb50d 100644
+--- a/api/sitemap.js
++++ b/api/sitemap.js
+@@ -18,7 +18,7 @@ import { feedHandler } from './_lib/feed.js';
+ const ORIGIN = 'https://www.soralifestyle.in';
+ 
+ export const STATIC_PATHS = [
+-  '/', '/shop', '/offers', '/brands', '/help', '/delete-account', '/fashion', '/homeliving', '/lifestyle', '/grocery',
++  '/', '/shop', '/offers', '/brands', '/help', '/delete-account', '/new', '/fashion/wedding', '/fashion', '/homeliving', '/lifestyle', '/grocery',
+   '/about', '/contact', '/shipping', '/returns', '/privacy', '/terms',
+   '/refund-policy', '/shipping-policy', '/grievance',
+ ];
+diff --git a/src/App.jsx b/src/App.jsx
+index 81cfca5..065e3ec 100644
+--- a/src/App.jsx
++++ b/src/App.jsx
+@@ -13,6 +13,8 @@ import Offers from './pages/Offers.jsx';
+ import Brands from './pages/Brands.jsx';
+ import Help from './pages/Help.jsx';
+ import DeleteAccount from './pages/DeleteAccount.jsx';
++import NewArrivalsPage from './pages/NewArrivalsPage.jsx';
++import WeddingEdit from './fashion/WeddingEdit.jsx';
+ import About from './pages/About.jsx';
+ import Contact from './pages/Contact.jsx';
+ import Legal from './pages/Legal.jsx';
+@@ -218,6 +220,7 @@ export default function App() {
+         <Route path="p/:slug" element={<FashionProductPage />} />
+         <Route path="search" element={<FashionSearch />} />
+         <Route path="wishlist" element={<FashionWishlistPage />} />
++        <Route path="wedding" element={<WeddingEdit />} />
+       </Route>
+ 
+       {/* The grocery store: its own shell and homepage; the cart it links to
+@@ -256,6 +259,7 @@ export default function App() {
+         <Route path="/brands" element={<Brands />} />
+         <Route path="/help" element={<Help />} />
+         <Route path="/delete-account" element={<DeleteAccount />} />
++        <Route path="/new" element={<NewArrivalsPage />} />
+         <Route path="/about" element={<About />} />
+         <Route path="/contact" element={<Contact />} />
+         <Route path="/grievance" element={<EditableLegal doc="grievance" />} />
+diff --git a/src/components/Footer.jsx b/src/components/Footer.jsx
+index e7bf6b4..187e38d 100644
+--- a/src/components/Footer.jsx
++++ b/src/components/Footer.jsx
+@@ -67,6 +67,8 @@ export default function Footer() {
+             <Link to="/shop">All products</Link>
+             <Link to="/offers">Offers &amp; deals</Link>
+             <Link to="/brands">Our brands</Link>
++            <Link to="/new">New arrivals</Link>
++            <Link to="/fashion/wedding">Wedding edit</Link>
+             {categories.slice(0, 3).map((c) => (
+               <Link key={c.slug} to={`/category/${c.slug}`}>{c.name}</Link>
+             ))}
+diff --git a/src/components/NewArrivals.jsx b/src/components/NewArrivals.jsx
+index e2c7aa5..d78d285 100644
+--- a/src/components/NewArrivals.jsx
++++ b/src/components/NewArrivals.jsx
+@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
+ import Icon from './Icon.jsx';
+ import DeferredImage from './DeferredImage.jsx';
+ import { useStorefrontSection } from '../lib/storefrontSections.js';
+-import { useNewArrivals, STORE_LISTING } from '../lib/newArrivals.js';
++import { useNewArrivals } from '../lib/newArrivals.js';
+ import { money } from '../lib/format.js';
+ 
+ // ============================================================
+@@ -32,8 +32,8 @@ export const NEW_ARRIVALS_AUTOPLAY_MS = 4500; // the fashion strip's pace
+ /** The section's built-in content; an empty link is the newest arrival's store (viewAllLink). */
+ export const NEW_ARRIVALS_SECTION = Object.freeze({ hidden: false, title: 'New Arrivals', more: 'View All', link: '' });
+ 
+-/** Where "View All" goes: the link set in Storefronts, else the listing of the store the newest card comes from. */
+-export const viewAllLink = (link, items) => link || STORE_LISTING[items[0]?.store] || STORE_LISTING.wellness;
++/** Where "View All" goes: the link set in Storefronts, else every new arrival (/new, 2026-11-13). */
++export const viewAllLink = (link) => link || '/new';
+ 
+ /** The reduced-motion check, read when a tick fires rather than when it is scheduled. */
+ function useReducedMotion() {
+diff --git a/src/fashion/FashionHome.jsx b/src/fashion/FashionHome.jsx
+index bd5b1a6..7147fba 100644
+--- a/src/fashion/FashionHome.jsx
++++ b/src/fashion/FashionHome.jsx
+@@ -8,6 +8,7 @@ import { CategoryChips } from './FashionLayout.jsx';
+ import FashionProductCard from './FashionProductCard.jsx';
+ import RecentlyViewedHome from '../components/RecentlyViewedHome.jsx';
+ import BudgetChips from '../components/BudgetChips.jsx';
++import { WeddingStrip } from './WeddingEdit.jsx';
+ import OfferBanner from '../components/OfferBanner.jsx';
+ import { BagReminder } from '../components/HomeExtras.jsx';
+ import { TajLeatherPosters, TajLeatherRange } from '../components/TajLeather.jsx';
+@@ -164,6 +165,8 @@ export default function FashionHome() {
+       {/* This visitor's recently viewed fashion products (2+; this browser only). */}
+       <RecentlyViewedHome prefix="fs-" />
+       <BudgetChips base="/fashion/search" wrap="fs-sec" />
++      {/* The Wedding & Festive edit (WeddingEdit.jsx, 2026-11-13). */}
++      <WeddingStrip />
+       <CategoryTiles tree={tree} />
+       <TajLeatherRange />
+       <AnsariRange />
+diff --git a/src/fashion/FashionListing.jsx b/src/fashion/FashionListing.jsx
+index aa5e46b..c061365 100644
+--- a/src/fashion/FashionListing.jsx
++++ b/src/fashion/FashionListing.jsx
+@@ -13,6 +13,7 @@ import FashionProductCard from './FashionProductCard.jsx';
+ import ShareList from '../components/ShareList.jsx';
+ import PriceDrops from '../components/PriceDrops.jsx';
+ import { DidYouMean } from '../components/SearchSuggest.jsx';
++import FindForMe from '../components/FindForMe.jsx';
+ import { didYouMean } from '../lib/searchMatch.js';
+ import LoadMore, { useShowMore } from '../components/LoadMore.jsx';
+ 
+@@ -102,7 +103,7 @@ export function FilterPanel({ state, options, onPatch, onClear, onClose = null,
+   );
+ }
+ 
+-export function Listing({ title, trail, scope = null, only = null, intro = null, emptyCopy }) {
++export function Listing({ title, trail, scope = null, only = null, intro = null, emptyCopy, emptyExtra = null }) {
+   const { status, tree, views } = useFashionCatalogue();
+   const [params, setParams] = useSearchParams();
+   const state = useMemo(() => readFashionUrlState(params), [params]);
+@@ -148,6 +149,7 @@ export function Listing({ title, trail, scope = null, only = null, intro = null,
+             <div className="fs-empty">
+               <p>{status === 'loading' ? 'Loading the catalogue…' : count > 0 ? 'Nothing matches these filters.' : emptyCopy}</p>
+               {count > 0 && <button type="button" className="fs-btn" onClick={clear}>Clear filters</button>}
++              {status !== 'loading' && count === 0 && emptyExtra}
+             </div>
+           ) : (
+             <>
+@@ -214,6 +216,7 @@ export function FashionSearch() {
+       title={q ? `Results for “${q}”` : 'All fashion'}
+       trail={[{ name: 'Fashion', href: '/fashion' }, { name: q ? 'Search' : 'All styles' }]}
+       emptyCopy={q ? `Nothing found for “${q}”. Try another word, or browse a category.` : 'The fashion store is being stocked — styles appear here as they go live.'}
++      emptyExtra={q ? <FindForMe q={q} /> : null}
+     />
+   );
+ }
+diff --git a/src/homeliving/HomeLivingSearch.jsx b/src/homeliving/HomeLivingSearch.jsx
+index 995b3ab..70dca68 100644
+--- a/src/homeliving/HomeLivingSearch.jsx
++++ b/src/homeliving/HomeLivingSearch.jsx
+@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
+ import { useHomeLivingCatalogue } from '../data/homelivingHomepage.js';
+ import { searchItems, didYouMean } from '../lib/searchMatch.js';
+ import { DidYouMean } from '../components/SearchSuggest.jsx';
++import FindForMe from '../components/FindForMe.jsx';
+ import { homelivingSearchRows } from './HomeLivingLayout.jsx';
+ import { Breadcrumb, Listing } from './HomeLivingCategory.jsx';
+ import HomeLivingProductCard from './HomeLivingProductCard.jsx';
+@@ -38,6 +39,7 @@ export default function HomeLivingSearch() {
+           <p>{status === 'loading' ? 'Loading the catalogue…' : `Nothing in Home & Living matches “${q}”. Try a shorter word, or browse the store.`}</p>
+           {status !== 'loading' && <DidYouMean fix={fix} href={`/homeliving/search?q=${encodeURIComponent(fix)}`} />}
+           {status !== 'loading' && <Link to="/homeliving" className="hl-btn">Browse Home &amp; Living</Link>}
++          {status !== 'loading' && <FindForMe q={q} />}
+         </div>
+       ) : (
+         <div className="hl-grid">
+diff --git a/src/lib/brands.js b/src/lib/brands.js
+index 67e6d94..d1fe435 100644
+--- a/src/lib/brands.js
++++ b/src/lib/brands.js
+@@ -11,13 +11,13 @@ export const BRANDS = Object.freeze([
+     text: 'Ayurvedic and herbal care: oils, powders, juices and supplements for everyday wellness.' }),
+   Object.freeze({ id: 'atomy', name: 'Atomy', store: 'Wellness', href: '/shop?q=atomy', image: 'https://image.atomy.com/IN/goods/D00190/D00190_00.jpg?w=720&h=720',
+     text: 'Korean skin care, HemoHIM, supplements, hair and personal care.' }),
+-  Object.freeze({ id: 'weavers-villa', name: 'Weavers Villa', store: 'Fashion · Home', href: '/fashion/c/shawls-stoles', image: '/video/weavers-villa/0e053f13.webp',
++  Object.freeze({ id: 'weavers-villa', catalogueBrand: 'Weavers Villa', name: 'Weavers Villa', store: 'Fashion · Home', href: '/fashion/c/shawls-stoles', image: '/video/weavers-villa/0e053f13.webp',
+     text: 'Handwoven shawls, stoles, dupattas and Kullu weaves, plus table covers for the home.' }),
+-  Object.freeze({ id: 'leather-factory', name: 'Leather Factory', store: 'Fashion', href: '/fashion/c/leather-goods', image: '/img/partners/leather-factory/handbags.webp',
++  Object.freeze({ id: 'leather-factory', catalogueBrand: 'Leather Factory', name: 'Leather Factory', store: 'Fashion', href: '/fashion/c/leather-goods', image: '/img/partners/leather-factory/handbags.webp',
+     text: 'Leather handbags, wallets, belts, sling bags and travel bags.' }),
+-  Object.freeze({ id: 'taj-leather', name: 'Taj Leather', store: 'Fashion', href: '/fashion/search?q=taj%20leather', image: 'https://cdn.shopify.com/s/files/1/0780/8437/4633/files/kbxt1xR35kfGamD.jpg?width=800',
++  Object.freeze({ id: 'taj-leather', catalogueBrand: 'Taj Leather', name: 'Taj Leather', store: 'Fashion', href: '/fashion/search?q=taj%20leather', image: 'https://cdn.shopify.com/s/files/1/0780/8437/4633/files/kbxt1xR35kfGamD.jpg?width=800',
+     text: 'Genuine leather jackets and coats for men and women.' }),
+-  Object.freeze({ id: 'ansari-fashion', name: 'Ansari Fashion', store: 'Fashion', href: '/fashion/search?q=ansari%20fashion', image: '/img/partners/ansari-fashion/suit-sets.webp',
++  Object.freeze({ id: 'ansari-fashion', catalogueBrand: 'Ansari Fashion', name: 'Ansari Fashion', store: 'Fashion', href: '/fashion/search?q=ansari%20fashion', image: '/img/partners/ansari-fashion/suit-sets.webp',
+     text: 'Banarasi silk and cotton suit sets, Jamdani weaves and sarees from Banaras.' }),
+ ]);
+ 
+@@ -28,3 +28,17 @@ export function brandImage(brand, products = [], isBrand = () => false) {
+   const hit = (Array.isArray(products) ? products : []).find((p) => p && p.image && Number(p.stock) > 0 && isBrand(p));
+   return hit ? hit.image : null;
+ }
++
++/**
++ * How many products each brand has live (2026-11-13: new features): wellness brands
++ * counted from the loaded catalogue (`brandOf` names a product's brand), the rest from
++ * the catalogue table (`catalogueCounts`, brand → count). null when not known. Pure.
++ */
++export function brandCounts(products = [], brandOf = () => '', catalogueCounts = {}) {
++  const out = {};
++  for (const b of BRANDS) {
++    if (b.catalogueBrand) { out[b.id] = Number.isFinite(catalogueCounts[b.catalogueBrand]) ? catalogueCounts[b.catalogueBrand] : null; continue; }
++    out[b.id] = (Array.isArray(products) ? products : []).filter((p) => p && p.slug && brandOf(p).toLowerCase() === b.name.toLowerCase()).length || null;
++  }
++  return out;
++}
+diff --git a/src/lib/newArrivals.js b/src/lib/newArrivals.js
+index 4f0d3cf..839e48f 100644
+--- a/src/lib/newArrivals.js
++++ b/src/lib/newArrivals.js
+@@ -86,16 +86,16 @@ export function selectNewArrivals({ wellness = [], catalogue = [] } = {}, { byId
+ }
+ 
+ /** The section's cards: null until the reads answer, then the list (empty when nothing is flagged). */
+-export function useNewArrivals() {
++export function useNewArrivals(limit = NEW_ARRIVALS_LIMIT) {
+   const [rows, setRows] = useState(null);
+   useEffect(() => {
+     let live = true;
+-    fetchNewArrivalRows().then(
++    fetchNewArrivalRows(supabase, limit).then(
+       (r) => { if (live) setRows(r); },
+       () => { if (live) setRows({ wellness: [], catalogue: [] }); },
+     );
+     return () => { live = false; };
+   }, []);
+   const real = catalogSource === 'supabase';
+-  return useMemo(() => (rows ? selectNewArrivals(rows, { byId: productById, realCatalogue: real }) : null), [rows, real, productById]);
++  return useMemo(() => (rows ? selectNewArrivals(rows, { byId: productById, realCatalogue: real, limit }) : null), [rows, real, productById, limit]);
+ }
+diff --git a/src/pages/Brands.jsx b/src/pages/Brands.jsx
+index cd1f15f..145fd86 100644
+--- a/src/pages/Brands.jsx
++++ b/src/pages/Brands.jsx
+@@ -1,14 +1,32 @@
++import { useEffect, useState } from 'react';
+ import { Link } from 'react-router-dom';
++import { supabase } from '../lib/supabase.js';
+ import Icon from '../components/Icon.jsx';
+ import { products } from '../data/products.js';
+ import { productBrandName } from '../lib/homeMerchandising.js';
+-import { BRANDS, brandImage } from '../lib/brands.js';
++import { BRANDS, brandImage, brandCounts } from '../lib/brands.js';
+ import { usePageMeta } from '../lib/pageMeta.js';
+ 
+ // /brands — every partner brand on SORA Lifestyle (brands.js has the list).
+ const isBiosash = (p) => productBrandName(p).toLowerCase() === 'biosash';
++const brandOf = (p) => String(p?.brand || productBrandName(p) || '').trim();
++
++/** Live product counts of the partner brands kept in the Fashion / Home & Living catalogue; {} until read. */
++function useCatalogueCounts() {
++  const [counts, setCounts] = useState({});
++  useEffect(() => {
++    let live = true;
++    const names = BRANDS.map((b) => b.catalogueBrand).filter(Boolean);
++    Promise.all(names.map((n) => supabase.from('catalogue_products').select('id', { count: 'exact', head: true }).eq('brand', n).eq('is_active', true)
++      .then(({ count, error }) => [n, error ? null : count], () => [n, null])))
++      .then((pairs) => { if (live) setCounts(Object.fromEntries(pairs.filter(([, c]) => Number.isFinite(c)))); });
++    return () => { live = false; };
++  }, []);
++  return counts;
++}
+ 
+ export default function Brands() {
++  const counts = brandCounts(products, brandOf, useCatalogueCounts());
+   usePageMeta({ title: 'Our brands', description: 'The brands you can shop at SORA LIFESTYLE: Biosash, Atomy, Weavers Villa, Leather Factory, Taj Leather and Ansari Fashion.', path: '/brands' });
+   return (
+     <div className="hx hx-brands">
+@@ -26,7 +44,7 @@ export default function Brands() {
+                     {img && <img src={img} alt="" width="600" height="450" loading={i < 3 ? 'eager' : 'lazy'} decoding="async" />}
+                   </span>
+                   <span className="hx-brands__body">
+-                    <em>{b.store}</em>
++                    <em>{b.store}{counts[b.id] ? ` · ${counts[b.id]} products` : ''}</em>
+                     <b>{b.name}</b>
+                     <span>{b.text}</span>
+                     <i>Shop {b.name} <Icon name="arrowRight" size={14} /></i>
+diff --git a/src/pages/Offers.jsx b/src/pages/Offers.jsx
+index d00a1c8..150372a 100644
+--- a/src/pages/Offers.jsx
++++ b/src/pages/Offers.jsx
+@@ -45,6 +45,10 @@ export const wellnessDeals = (list) => (Array.isArray(list) ? list : [])
+   .filter((p) => p && p.slug && p.price > 0 && p.mrp > p.price && Number(p.stock) > 0)
+   .map((p) => ({ key: `wellness-${p.id}`, store: 'wellness', name: p.name, image: p.image || null, price: p.price, mrp: p.mrp, pct: Math.round(((p.mrp - p.price) / p.mrp) * 100), href: `/product/${p.slug}` }));
+ 
++/** Budget chips (2026-11-13): deals at or under a price; '' is every price. */
++export const BUDGETS = [{ id: '', label: 'Any price' }, { id: '499', label: 'Under ₹499' }, { id: '999', label: 'Under ₹999' }, { id: '1999', label: 'Under ₹1,999' }];
++export const underBudget = (deals, under) => { const n = Number(under); return n > 0 ? deals.filter((d) => d.price <= n) : deals; };
++
+ export const sortDeals = (deals) => [...deals].sort((a, b) => b.pct - a.pct || (b.mrp - b.price) - (a.mrp - a.price) || String(a.name).localeCompare(String(b.name)));
+ 
+ /** India's date as YYYY-MM-DD for a moment. Pure. */
+@@ -129,10 +133,12 @@ export default function Offers() {
+   const [cat, setCat] = useState(null);
+   useEffect(() => { let on = true; fetchCatalogueDeals().then((d) => { if (on) setCat(d); }, () => { if (on) setCat([]); }); return () => { on = false; }; }, []);
+   const all = useMemo(() => sortDeals([...wellnessDeals(products), ...(cat || [])]), [cat]);
+-  const shownDeals = store === 'all' ? all : all.filter((d) => d.store === store);
+-  const paging = useShowMore(shownDeals.length, store);
++  const under = BUDGETS.some((b) => b.id && b.id === params.get('under')) ? params.get('under') : '';
++  const shownDeals = underBudget(store === 'all' ? all : all.filter((d) => d.store === store), under);
++  const paging = useShowMore(shownDeals.length, `${store}|${under}`);
+   usePageMeta({ title: 'Offers & deals', description: 'Every product on offer at SORA LIFESTYLE: wellness, fashion and home, biggest discounts first.', path: '/offers' });
+   const counts = Object.fromEntries(STORES.map((s) => [s.id, s.id === 'all' ? all.length : all.filter((d) => d.store === s.id).length]));
++  const budget = (id) => { const next = new URLSearchParams(params); if (!id) next.delete('under'); else next.set('under', id); setParams(next, { replace: true }); };
+   const pick = (id) => { const next = new URLSearchParams(params); if (id === 'all') next.delete('store'); else next.set('store', id); setParams(next, { replace: true }); };
+ 
+   return (
+@@ -153,6 +159,11 @@ export default function Offers() {
+             </button>
+           ))}
+         </div>
++        <div className="hx-offers__budget" role="group" aria-label="Budget">
++          {BUDGETS.map((b) => (
++            <button key={b.id || 'any'} type="button" aria-pressed={under === b.id} className={`hx-offers__chip${under === b.id ? ' is-on' : ''}`} onClick={() => budget(b.id)}>{b.label}</button>
++          ))}
++        </div>
+         {cat === null && shownDeals.length === 0 ? (
+           <p className="hx-offers__empty" role="status">Loading the offers…</p>
+         ) : shownDeals.length === 0 ? (
+diff --git a/src/styles/v2-home.css b/src/styles/v2-home.css
+index 5029d92..1fed525 100644
+--- a/src/styles/v2-home.css
++++ b/src/styles/v2-home.css
+@@ -765,4 +765,32 @@
+ .hx-del__p a { color: #007185; font-weight: 700; }
+ .hx-del__small { margin-top: 12px; font-size: 14px; color: #565959; }
+ .hx-del__list { margin: 0; padding-left: 20px; font-size: 15px; line-height: 1.8; color: #333; }
+-.hx.hx-help .hx-offers__btn--wa, .hx.hx-help .hx-offers__btn--wa:hover { color: #fff; }
+\ No newline at end of file
++.hx .hx-offers__btn--wa, .hx .hx-offers__btn--wa:hover { color: #fff; }
++/* New features (2026-11-13): budget chips on /offers, the New tag, the Wedding edit, "Can't find it?". */
++.hx-offers__budget { display: flex; gap: 8px; flex-wrap: wrap; margin: 4px 0 16px; }
++.hx-offers__chip { height: 34px; padding: 0 14px; border: 1px solid #D5D9D9; background: #fff; color: #0F1111; font: 400 13.5px Arial, sans-serif; cursor: pointer; }
++.hx-offers__chip:hover { border-color: #0F1111; }
++.hx-offers__chip.is-on { border-color: #1E3A2F; background: #1E3A2F; color: #fff; font-weight: 700; }
++.hx-deals__pct.hx-new__tag { background: #1E3A2F; }
++.hx-wed__hero { margin: 12px 0 8px; }
++.hx-wed__eyebrow { margin: 0 0 4px; font: 700 12px Arial, sans-serif; letter-spacing: .1em; text-transform: uppercase; color: #B4690E; }
++.hx-wed__jump { list-style: none; display: flex; gap: 8px; flex-wrap: wrap; margin: 14px 0 6px; padding: 0; }
++.hx-wed__jump a { display: inline-flex; align-items: center; height: 34px; padding: 0 14px; border: 1px solid #E8D7B5; background: #FFF8EC; color: #6B3E0A; font: 600 13.5px Arial, sans-serif; text-decoration: none; }
++.hx-wed__jump a:hover { border-color: #B4690E; }
++.hx-wed__sec { margin: 26px 0 8px; scroll-margin-top: 90px; }
++.hx-wed__head { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; margin-bottom: 12px; }
++.hx-wed__head h2 { margin: 0; font-size: 22px; }
++.hx-wed__head p { margin: 4px 0 0; font-size: 14px; color: #565959; }
++.hx-wed__all { flex: none; display: inline-flex; align-items: center; gap: 4px; color: #007185; font-weight: 700; text-decoration: none; }
++.hx-wed__all:hover { color: #C7511F; }
++.hx-wedstrip { display: flex; justify-content: space-between; align-items: center; gap: 14px; padding: 18px 20px; background: linear-gradient(100deg, #5A1E12, #8E3B12 55%, #B4690E); color: #fff; text-decoration: none; }
++.hx-wedstrip > span:first-child { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
++.hx-wedstrip em { font-style: normal; font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #F6D79B; }
++.hx-wedstrip b, .hx-wedstrip:hover b { font: 400 24px/1.2 "Playfair Display", Georgia, serif; color: #fff; }
++.hx-wedstrip i { font-style: normal; font-size: 14px; color: #F3E3CF; }
++.hx-wedstrip__go { flex: none; display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 16px; background: #fff; color: #5A1E12; font-weight: 700; }
++@media (max-width: 600px) { .hx-wedstrip { flex-direction: column; align-items: flex-start; } .hx-wedstrip b { font-size: 20px; } }
++.hx-find { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; margin: 16px 0 0; padding: 14px 16px; background: #F0F7F3; border: 1px solid #CFE3D7; text-align: left; }
++.hx-find p { margin: 0; font-size: 14.5px; line-height: 1.5; color: #0F1111; }
++.hx-find__go { display: inline-flex; align-items: center; gap: 6px; height: 38px; padding: 0 14px; background: #1E7A46; color: #fff; font: 700 14px Arial, sans-serif; text-decoration: none; }
++.hx-find__go:hover { background: #17633A; color: #fff; }
+\ No newline at end of file
