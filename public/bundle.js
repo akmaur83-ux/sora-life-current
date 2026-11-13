@@ -35,8 +35,8 @@ var B$1={isMounted:function(){return !1},enqueueForceUpdate:function(){},enqueue
 E$1.prototype.setState=function(a,b){if("object"!==typeof a&&"function"!==typeof a&&null!=a)throw Error("setState(...): takes an object of state variables to update or a function which returns an object of state variables.");this.updater.enqueueSetState(this,a,b,"setState");};E$1.prototype.forceUpdate=function(a){this.updater.enqueueForceUpdate(this,a,"forceUpdate");};function F(){}F.prototype=E$1.prototype;function G$1(a,b,e){this.props=a;this.context=b;this.refs=D$1;this.updater=e||B$1;}var H$1=G$1.prototype=new F;
 H$1.constructor=G$1;C$1(H$1,E$1.prototype);H$1.isPureReactComponent=!0;var I$1=Array.isArray,J$1=Object.prototype.hasOwnProperty,K$1={current:null},L$1={key:!0,ref:!0,__self:!0,__source:!0};
 function M$2(a,b,e){var d,c={},k=null,h=null;if(null!=b)for(d in void 0!==b.ref&&(h=b.ref),void 0!==b.key&&(k=""+b.key),b)J$1.call(b,d)&&!L$1.hasOwnProperty(d)&&(c[d]=b[d]);var g=arguments.length-2;if(1===g)c.children=e;else if(1<g){for(var f=Array(g),m=0;m<g;m++)f[m]=arguments[m+2];c.children=f;}if(a&&a.defaultProps)for(d in g=a.defaultProps,g)void 0===c[d]&&(c[d]=g[d]);return {$$typeof:l$1,type:a,key:k,ref:h,props:c,_owner:K$1.current}}
-function N$1(a,b){return {$$typeof:l$1,type:a.type,key:b,ref:a.ref,props:a.props,_owner:a._owner}}function O$1(a){return "object"===typeof a&&null!==a&&a.$$typeof===l$1}function escape(a){var b={"=":"=0",":":"=2"};return "$"+a.replace(/[=:]/g,function(a){return b[a]})}var P$3=/\/+/g;function Q$1(a,b){return "object"===typeof a&&null!==a&&null!=a.key?escape(""+a.key):b.toString(36)}
-function R$1(a,b,e,d,c){var k=typeof a;if("undefined"===k||"boolean"===k)a=null;var h=!1;if(null===a)h=!0;else switch(k){case "string":case "number":h=!0;break;case "object":switch(a.$$typeof){case l$1:case n$1:h=!0;}}if(h)return h=a,c=c(h),a=""===d?"."+Q$1(h,0):d,I$1(c)?(e="",null!=a&&(e=a.replace(P$3,"$&/")+"/"),R$1(c,b,e,"",function(a){return a})):null!=c&&(O$1(c)&&(c=N$1(c,e+(!c.key||h&&h.key===c.key?"":(""+c.key).replace(P$3,"$&/")+"/")+a)),b.push(c)),1;h=0;d=""===d?".":d+":";if(I$1(a))for(var g=0;g<a.length;g++){k=
+function N$1(a,b){return {$$typeof:l$1,type:a.type,key:b,ref:a.ref,props:a.props,_owner:a._owner}}function O$1(a){return "object"===typeof a&&null!==a&&a.$$typeof===l$1}function escape(a){var b={"=":"=0",":":"=2"};return "$"+a.replace(/[=:]/g,function(a){return b[a]})}var P$4=/\/+/g;function Q$1(a,b){return "object"===typeof a&&null!==a&&null!=a.key?escape(""+a.key):b.toString(36)}
+function R$1(a,b,e,d,c){var k=typeof a;if("undefined"===k||"boolean"===k)a=null;var h=!1;if(null===a)h=!0;else switch(k){case "string":case "number":h=!0;break;case "object":switch(a.$$typeof){case l$1:case n$1:h=!0;}}if(h)return h=a,c=c(h),a=""===d?"."+Q$1(h,0):d,I$1(c)?(e="",null!=a&&(e=a.replace(P$4,"$&/")+"/"),R$1(c,b,e,"",function(a){return a})):null!=c&&(O$1(c)&&(c=N$1(c,e+(!c.key||h&&h.key===c.key?"":(""+c.key).replace(P$4,"$&/")+"/")+a)),b.push(c)),1;h=0;d=""===d?".":d+":";if(I$1(a))for(var g=0;g<a.length;g++){k=
 a[g];var f=d+Q$1(k,g);h+=R$1(k,b,e,f,c);}else if(f=A$1(a),"function"===typeof f)for(a=f.call(a),g=0;!(k=a.next()).done;)k=k.value,f=d+Q$1(k,g++),h+=R$1(k,b,e,f,c);else if("object"===k)throw b=String(a),Error("Objects are not valid as a React child (found: "+("[object Object]"===b?"object with keys {"+Object.keys(a).join(", ")+"}":b)+"). If you meant to render a collection of children, use an array instead.");return h}
 function S$2(a,b,e){if(null==a)return a;var d=[],c=0;R$1(a,d,"","",function(a){return b.call(e,a,c++)});return d}function T$1(a){if(-1===a._status){var b=a._result;b=b();b.then(function(b){if(0===a._status||-1===a._status)a._status=1,a._result=b;},function(b){if(0===a._status||-1===a._status)a._status=2,a._result=b;});-1===a._status&&(a._status=0,a._result=b);}if(1===a._status)return a._result.default;throw a._result;}
 var U$1={current:null},V$1={transition:null},W$2={ReactCurrentDispatcher:U$1,ReactCurrentBatchConfig:V$1,ReactCurrentOwner:K$1};function X$1(){throw Error("act(...) is not supported in production builds of React.");}
@@ -253,7 +253,7 @@ h=h.next;if(null===h)if(h=e.shared.pending,null===h)break;else r=h,h=r.next,r.ne
 function sh(a,b,c){a=b.effects;b.effects=null;if(null!==a)for(b=0;b<a.length;b++){var d=a[b],e=d.callback;if(null!==e){d.callback=null;d=c;if("function"!==typeof e)throw Error(p$1(191,e));e.call(d);}}}var th={},uh=Uf(th),vh=Uf(th),wh=Uf(th);function xh(a){if(a===th)throw Error(p$1(174));return a}
 function yh(a,b){G(wh,b);G(vh,a);G(uh,th);a=b.nodeType;switch(a){case 9:case 11:b=(b=b.documentElement)?b.namespaceURI:lb(null,"");break;default:a=8===a?b.parentNode:b,b=a.namespaceURI||null,a=a.tagName,b=lb(b,a);}E(uh);G(uh,b);}function zh(){E(uh);E(vh);E(wh);}function Ah(a){xh(wh.current);var b=xh(uh.current);var c=lb(b,a.type);b!==c&&(G(vh,a),G(uh,c));}function Bh(a){vh.current===a&&(E(uh),E(vh));}var L=Uf(0);
 function Ch(a){for(var b=a;null!==b;){if(13===b.tag){var c=b.memoizedState;if(null!==c&&(c=c.dehydrated,null===c||"$?"===c.data||"$!"===c.data))return b}else if(19===b.tag&&void 0!==b.memoizedProps.revealOrder){if(0!==(b.flags&128))return b}else if(null!==b.child){b.child.return=b;b=b.child;continue}if(b===a)break;for(;null===b.sibling;){if(null===b.return||b.return===a)return null;b=b.return;}b.sibling.return=b.return;b=b.sibling;}return null}var Dh=[];
-function Eh(){for(var a=0;a<Dh.length;a++)Dh[a]._workInProgressVersionPrimary=null;Dh.length=0;}var Fh=ua.ReactCurrentDispatcher,Gh=ua.ReactCurrentBatchConfig,Hh=0,M$1=null,N=null,O=null,Ih=!1,Jh=!1,Kh=0,Lh=0;function P$2(){throw Error(p$1(321));}function Mh(a,b){if(null===b)return !1;for(var c=0;c<b.length&&c<a.length;c++)if(!He(a[c],b[c]))return !1;return !0}
+function Eh(){for(var a=0;a<Dh.length;a++)Dh[a]._workInProgressVersionPrimary=null;Dh.length=0;}var Fh=ua.ReactCurrentDispatcher,Gh=ua.ReactCurrentBatchConfig,Hh=0,M$1=null,N=null,O=null,Ih=!1,Jh=!1,Kh=0,Lh=0;function P$3(){throw Error(p$1(321));}function Mh(a,b){if(null===b)return !1;for(var c=0;c<b.length&&c<a.length;c++)if(!He(a[c],b[c]))return !1;return !0}
 function Nh(a,b,c,d,e,f){Hh=f;M$1=b;b.memoizedState=null;b.updateQueue=null;b.lanes=0;Fh.current=null===a||null===a.memoizedState?Oh:Ph;a=c(d,e);if(Jh){f=0;do{Jh=!1;Kh=0;if(25<=f)throw Error(p$1(301));f+=1;O=N=null;b.updateQueue=null;Fh.current=Qh;a=c(d,e);}while(Jh)}Fh.current=Rh;b=null!==N&&null!==N.next;Hh=0;O=N=M$1=null;Ih=!1;if(b)throw Error(p$1(300));return a}function Sh(){var a=0!==Kh;Kh=0;return a}
 function Th(){var a={memoizedState:null,baseState:null,baseQueue:null,queue:null,next:null};null===O?M$1.memoizedState=O=a:O=O.next=a;return O}function Uh(){if(null===N){var a=M$1.alternate;a=null!==a?a.memoizedState:null;}else a=N.next;var b=null===O?M$1.memoizedState:O.next;if(null!==b)O=b,N=a;else {if(null===a)throw Error(p$1(310));N=a;a={memoizedState:N.memoizedState,baseState:N.baseState,baseQueue:N.baseQueue,queue:N.queue,next:null};null===O?M$1.memoizedState=O=a:O=O.next=a;}return O}
 function Vh(a,b){return "function"===typeof b?b(a):b}
@@ -270,7 +270,7 @@ function ti(a,b){var c=Uh();b=void 0===b?null:b;var d=c.memoizedState;if(null!==
 function xi(a,b,c){var d=yi(a);c={lane:d,action:c,hasEagerState:!1,eagerState:null,next:null};if(zi(a))Ai(b,c);else if(c=hh(a,b,c,d),null!==c){var e=R();gi(c,a,d,e);Bi(c,b,d);}}
 function ii(a,b,c){var d=yi(a),e={lane:d,action:c,hasEagerState:!1,eagerState:null,next:null};if(zi(a))Ai(b,e);else {var f=a.alternate;if(0===a.lanes&&(null===f||0===f.lanes)&&(f=b.lastRenderedReducer,null!==f))try{var g=b.lastRenderedState,h=f(g,c);e.hasEagerState=!0;e.eagerState=h;if(He(h,g)){var k=b.interleaved;null===k?(e.next=e,gh(b)):(e.next=k.next,k.next=e);b.interleaved=e;return}}catch(l){}finally{}c=hh(a,b,e,d);null!==c&&(e=R(),gi(c,a,d,e),Bi(c,b,d));}}
 function zi(a){var b=a.alternate;return a===M$1||null!==b&&b===M$1}function Ai(a,b){Jh=Ih=!0;var c=a.pending;null===c?b.next=b:(b.next=c.next,c.next=b);a.pending=b;}function Bi(a,b,c){if(0!==(c&4194240)){var d=b.lanes;d&=a.pendingLanes;c|=d;b.lanes=c;Cc(a,c);}}
-var Rh={readContext:eh,useCallback:P$2,useContext:P$2,useEffect:P$2,useImperativeHandle:P$2,useInsertionEffect:P$2,useLayoutEffect:P$2,useMemo:P$2,useReducer:P$2,useRef:P$2,useState:P$2,useDebugValue:P$2,useDeferredValue:P$2,useTransition:P$2,useMutableSource:P$2,useSyncExternalStore:P$2,useId:P$2,unstable_isNewReconciler:!1},Oh={readContext:eh,useCallback:function(a,b){Th().memoizedState=[a,void 0===b?null:b];return a},useContext:eh,useEffect:mi,useImperativeHandle:function(a,b,c){c=null!==c&&void 0!==c?c.concat([a]):null;return ki(4194308,
+var Rh={readContext:eh,useCallback:P$3,useContext:P$3,useEffect:P$3,useImperativeHandle:P$3,useInsertionEffect:P$3,useLayoutEffect:P$3,useMemo:P$3,useReducer:P$3,useRef:P$3,useState:P$3,useDebugValue:P$3,useDeferredValue:P$3,useTransition:P$3,useMutableSource:P$3,useSyncExternalStore:P$3,useId:P$3,unstable_isNewReconciler:!1},Oh={readContext:eh,useCallback:function(a,b){Th().memoizedState=[a,void 0===b?null:b];return a},useContext:eh,useEffect:mi,useImperativeHandle:function(a,b,c){c=null!==c&&void 0!==c?c.concat([a]):null;return ki(4194308,
 4,pi.bind(null,b,a),c)},useLayoutEffect:function(a,b){return ki(4194308,4,a,b)},useInsertionEffect:function(a,b){return ki(4,2,a,b)},useMemo:function(a,b){var c=Th();b=void 0===b?null:b;a=a();c.memoizedState=[a,b];return a},useReducer:function(a,b,c){var d=Th();b=void 0!==c?c(b):b;d.memoizedState=d.baseState=b;a={pending:null,interleaved:null,lanes:0,dispatch:null,lastRenderedReducer:a,lastRenderedState:b};d.queue=a;a=a.dispatch=xi.bind(null,M$1,a);return [d.memoizedState,a]},useRef:function(a){var b=
 Th();a={current:a};return b.memoizedState=a},useState:hi,useDebugValue:ri,useDeferredValue:function(a){return Th().memoizedState=a},useTransition:function(){var a=hi(!1),b=a[0];a=vi.bind(null,a[1]);Th().memoizedState=a;return [b,a]},useMutableSource:function(){},useSyncExternalStore:function(a,b,c){var d=M$1,e=Th();if(I){if(void 0===c)throw Error(p$1(407));c=c();}else {c=b();if(null===Q)throw Error(p$1(349));0!==(Hh&30)||di(d,b,c);}e.memoizedState=c;var f={value:c,getSnapshot:b};e.queue=f;mi(ai.bind(null,d,
 f,a),[a]);d.flags|=2048;bi(9,ci.bind(null,d,f,c,b),void 0,null);return c},useId:function(){var a=Th(),b=Q.identifierPrefix;if(I){var c=sg;var d=rg;c=(d&~(1<<32-oc(d)-1)).toString(32)+c;b=":"+b+"R"+c;c=Kh++;0<c&&(b+="H"+c.toString(32));b+=":";}else c=Lh++,b=":"+b+"r"+c.toString(32)+":";return a.memoizedState=b},unstable_isNewReconciler:!1},Ph={readContext:eh,useCallback:si,useContext:eh,useEffect:$h,useImperativeHandle:qi,useInsertionEffect:ni,useLayoutEffect:oi,useMemo:ti,useReducer:Wh,useRef:ji,useState:function(){return Wh(Vh)},
@@ -2592,7 +2592,7 @@ function q(c,a,g){var b,d={},e=null,h=null;void 0!==g&&(e=""+g);void 0!==a.key&&
 var jsxRuntimeExports = jsxRuntime.exports;
 
 // Inline stroke icons (Lucide-style). No emoji, per design checklist.
-const P$1 = {
+const P$2 = {
   search: '<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>',
   user: '<path d="M20 21a8 8 0 1 0-16 0"/><circle cx="12" cy="7" r="4"/>',
   heart: '<path d="M20.8 5.6a5.5 5.5 0 0 0-7.8 0L12 6.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1 7.8 7.8 7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.8Z"/>',
@@ -2663,7 +2663,7 @@ function Icon({
   className,
   style
 }) {
-  const d = P$1[name];
+  const d = P$2[name];
   if (!d) return null;
   return /*#__PURE__*/jsxRuntimeExports.jsx("svg", {
     width: size,
@@ -3316,6 +3316,21 @@ const WELLNESS = {
     more: text$1(30, 'View-all label'),
     link: link('View-all link (empty: Leather Jackets)')
   }, 'Taj Leather jackets (their range in Fashion; also on the Fashion home)'),
+  // Ansari Fashion (partner, 2026-11-13), under Taj Leather; also on the Fashion home.
+  ansariPosters: group({
+    hidden: hidden(),
+    eyebrow: text$1(60, 'Eyebrow'),
+    title: text$1(60, 'Headline'),
+    text: text$1(200, 'Subline'),
+    cta: text$1(40, 'Button label'),
+    link: link('Button link (empty: all Ansari Fashion)')
+  }, 'Ansari Fashion posters (three category photographs; also on the Fashion home)'),
+  ansari: group({
+    hidden: hidden(),
+    title: text$1(60, 'Heading'),
+    more: text$1(30, 'View-all label'),
+    link: link('View-all link (empty: all Ansari Fashion)')
+  }, 'Ansari Fashion suits and sarees (their range in Fashion; also on the Fashion home)'),
   // Under the Biosash range (and Weavers Villa since 2026-11-08) since 2026-11-07.
   bedsheets: group({
     hidden: hidden(),
@@ -42035,18 +42050,18 @@ const TAJ_POSTERS_SECTION = Object.freeze({
   cta: 'Shop leather jackets',
   link: TAJ_LISTING
 });
-const P = '/img/partners/taj-leather';
+const P$1 = '/img/partners/taj-leather';
 const TAJ_POSTERS = Object.freeze([Object.freeze({
   id: 'leather-edit',
   href: '/fashion/c/mens-leather-jackets',
   alt: 'The Leather Edit: men’s leather jackets by Taj Leather',
-  wide: `${P}/leather-edit-wide.webp`,
-  tall: `${P}/leather-edit-tall.webp`
+  wide: `${P$1}/leather-edit-wide.webp`,
+  tall: `${P$1}/leather-edit-tall.webp`
 }), Object.freeze({
   id: 'womens-jacket',
   href: '/fashion/c/womens-leather-jackets',
   alt: 'Premium leather jacket: women’s leather jackets by Taj Leather',
-  wide: `${P}/womens-jacket-wide.webp`,
+  wide: `${P$1}/womens-jacket-wide.webp`,
   tall: null
 })]);
 
@@ -42163,6 +42178,175 @@ function TajLeatherPosters({
                 decoding: "async"
               })]
             })
+          })
+        }, p.id))
+      })]
+    })
+  });
+}
+
+// ============================================================
+// Ansari Fashion, Banaras (partner, 2026-11-13: "tie-up"). Their Banarasi suit sets
+// (mostly unstitched, three pieces) and sarees live in Fashion › Women (Suits &
+// Dress Materials, Sarees), so the Women page and the saree store show them too.
+// Prices are theirs; an M.R.P. more than 60% above the price is not shown.
+//
+//   * the posters — their three category photographs (copies served from this site,
+//     /img/partners/ansari-fashion), each with our own label, opening its listing.
+//     Their sale banners ("extra 10% on prepaid" and the like) are not used: those
+//     are their store's offers, not SORA's.
+//   * the range — a sliding row of their pieces, the two categories taking turns.
+//
+// On the wellness homepage and the Fashion home; editable in Storefronts → Wellness.
+// ============================================================
+const ANSARI_BRAND = 'Ansari Fashion';
+const ANSARI_LISTING = '/fashion/search?q=ansari%20fashion';
+const ANSARI_RANGE_LIMIT = 12;
+const ANSARI_SECTION = Object.freeze({
+  hidden: false,
+  title: 'Banarasi suits & sarees by Ansari Fashion',
+  more: 'View All',
+  link: ''
+});
+const ANSARI_POSTERS_SECTION = Object.freeze({
+  hidden: false,
+  eyebrow: 'New on SORA Lifestyle',
+  title: 'Ansari Fashion, Banaras',
+  text: 'Banarasi silk and cotton suit sets, Jamdani weaves and sarees, at Ansari Fashion’s own prices.',
+  cta: 'Shop Ansari Fashion',
+  link: ANSARI_LISTING
+});
+const P = '/img/partners/ansari-fashion';
+const ANSARI_POSTERS = Object.freeze([Object.freeze({
+  id: 'suits',
+  label: 'Suits & Dress Materials',
+  href: '/fashion/c/suits-dress-materials',
+  image: `${P}/suit-sets.webp`,
+  alt: 'A woman in a cream Banarasi suit with a woven dupatta'
+}), Object.freeze({
+  id: 'banarasi',
+  label: 'Banarasi Silk Suits',
+  href: '/fashion/search?q=banarasi%20silk',
+  image: `${P}/banarasi-suits.webp`,
+  alt: 'A woman in a pink Banarasi silk suit with a zari dupatta'
+}), Object.freeze({
+  id: 'sarees',
+  label: 'Sarees',
+  href: '/fashion/c/sarees',
+  image: `${P}/sarees.webp`,
+  alt: 'A woman in a Banarasi silk saree'
+})]);
+
+/** The range's rows: active, in-stock fashion rows of the brand; a failed read counts as none. */
+async function fetchAnsariRows(client = supabase, limit = 72) {
+  const {
+    data,
+    error
+  } = await client.from('catalogue_products').select('id, store, name, slug, mrp, sale_price, images, category_id, sort_order, created_at').eq('store', 'fashion').eq('brand', ANSARI_BRAND).eq('is_active', true).gt('stock', 0).order('sort_order', {
+    ascending: true
+  }).limit(limit);
+  if (error || !Array.isArray(data)) return [];
+  return data;
+}
+
+/** A card-sized copy of their picture (their CDN resizes on w-…). */
+const ansariCard = src => src ? String(src).replace(/\bw-\d+\b/, 'w-700') : src;
+
+/** The range's cards: null until the read answers. */
+function useAnsariRange(limit = ANSARI_RANGE_LIMIT) {
+  const [rows, setRows] = reactExports.useState(null);
+  reactExports.useEffect(() => {
+    let live = true;
+    fetchAnsariRows(supabase).then(r => {
+      if (live) setRows(r);
+    }, () => {
+      if (live) setRows([]);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+  return reactExports.useMemo(() => rows ? selectWeaversRange(rows, limit).map(c => ({
+    ...c,
+    image: ansariCard(c.image)
+  })) : null, [rows, limit]);
+}
+
+/** `items` is for a test; the page passes nothing and the live catalogue is read. */
+function AnsariRange({
+  items: given,
+  autoplayMs
+} = {}) {
+  const section = useStorefrontSection('wellness', 'ansari', ANSARI_SECTION);
+  const loaded = useAnsariRange();
+  const items = (given ?? loaded) || [];
+  return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+    className: "hx-wv-range",
+    children: /*#__PURE__*/jsxRuntimeExports.jsx(SlidingRail, {
+      id: "ansari",
+      label: "Ansari Fashion suits and sarees",
+      section: section,
+      defaults: ANSARI_SECTION,
+      link: section.link || ANSARI_LISTING,
+      items: items,
+      ...(autoplayMs ? {
+        autoplayMs
+      } : {})
+    })
+  });
+}
+function AnsariPosters({
+  posters = ANSARI_POSTERS
+} = {}) {
+  const s = useStorefrontSection('wellness', 'ansariPosters', ANSARI_POSTERS_SECTION);
+  if (s.hidden || !posters.length) return null;
+  return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
+    className: "hx hx-ans",
+    "aria-labelledby": "hx-ans-h",
+    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "hx-wrap",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "hx-taj__head",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          children: [s.eyebrow && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+            className: "hx-taj__eyebrow",
+            children: s.eyebrow
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+            className: "hx-taj__h",
+            id: "hx-ans-h",
+            children: s.title
+          }), s.text && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+            className: "hx-taj__text",
+            children: s.text
+          })]
+        }), s.cta && /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: s.link || ANSARI_LISTING,
+          className: "hx-ans__cta",
+          children: [s.cta, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "arrowRight",
+            size: 16
+          })]
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+        className: "hx-ans__posters",
+        children: posters.map(p => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+          children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+            to: p.href,
+            className: "hx-ans__poster",
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("img", {
+              src: p.image,
+              alt: p.alt,
+              width: "900",
+              height: "1200",
+              loading: "lazy",
+              decoding: "async"
+            }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+              className: "hx-ans__label",
+              children: [p.label, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+                name: "arrowRight",
+                size: 15
+              })]
+            })]
           })
         }, p.id))
       })]
@@ -48060,7 +48244,7 @@ function Home() {
       wrap: "hx-wrap"
     }), /*#__PURE__*/jsxRuntimeExports.jsx(TopDeals, {}), /*#__PURE__*/jsxRuntimeExports.jsx(GiftShop, {}), /*#__PURE__*/jsxRuntimeExports.jsx(HomeTiles, {}), /*#__PURE__*/jsxRuntimeExports.jsx(ExploreStores, {}), /*#__PURE__*/jsxRuntimeExports.jsx(FestivePromo, {}), /*#__PURE__*/jsxRuntimeExports.jsx(HomeOffers, {
       appearance: visuals.offers
-    }), /*#__PURE__*/jsxRuntimeExports.jsx(RecentlyViewedHome, {}), /*#__PURE__*/jsxRuntimeExports.jsx(WishlistRail, {}), /*#__PURE__*/jsxRuntimeExports.jsx(NewArrivals, {}), /*#__PURE__*/jsxRuntimeExports.jsx(BiosashRange, {}), /*#__PURE__*/jsxRuntimeExports.jsx(WeaversVillaRange, {}), /*#__PURE__*/jsxRuntimeExports.jsx(WeaversVillaShowcase, {}), /*#__PURE__*/jsxRuntimeExports.jsx(LeatherFactoryRange, {}), /*#__PURE__*/jsxRuntimeExports.jsx(LeatherFactoryShowcase, {}), /*#__PURE__*/jsxRuntimeExports.jsx(AtomyRange, {}), /*#__PURE__*/jsxRuntimeExports.jsx(AtomyShowcase, {}), /*#__PURE__*/jsxRuntimeExports.jsx(TajLeatherPosters, {}), /*#__PURE__*/jsxRuntimeExports.jsx(TajLeatherRange, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Bedsheets, {}), /*#__PURE__*/jsxRuntimeExports.jsx(LifestyleBanner, {}), /*#__PURE__*/jsxRuntimeExports.jsx(JewelleryBanner, {}), /*#__PURE__*/jsxRuntimeExports.jsx(MarketplaceProductRail, {
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(RecentlyViewedHome, {}), /*#__PURE__*/jsxRuntimeExports.jsx(WishlistRail, {}), /*#__PURE__*/jsxRuntimeExports.jsx(NewArrivals, {}), /*#__PURE__*/jsxRuntimeExports.jsx(BiosashRange, {}), /*#__PURE__*/jsxRuntimeExports.jsx(WeaversVillaRange, {}), /*#__PURE__*/jsxRuntimeExports.jsx(WeaversVillaShowcase, {}), /*#__PURE__*/jsxRuntimeExports.jsx(LeatherFactoryRange, {}), /*#__PURE__*/jsxRuntimeExports.jsx(LeatherFactoryShowcase, {}), /*#__PURE__*/jsxRuntimeExports.jsx(AtomyRange, {}), /*#__PURE__*/jsxRuntimeExports.jsx(AtomyShowcase, {}), /*#__PURE__*/jsxRuntimeExports.jsx(TajLeatherPosters, {}), /*#__PURE__*/jsxRuntimeExports.jsx(TajLeatherRange, {}), /*#__PURE__*/jsxRuntimeExports.jsx(AnsariPosters, {}), /*#__PURE__*/jsxRuntimeExports.jsx(AnsariRange, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Bedsheets, {}), /*#__PURE__*/jsxRuntimeExports.jsx(LifestyleBanner, {}), /*#__PURE__*/jsxRuntimeExports.jsx(JewelleryBanner, {}), /*#__PURE__*/jsxRuntimeExports.jsx(MarketplaceProductRail, {
       id: "trending",
       eyebrow: "Across the catalogue",
       title: "Start here",
@@ -69023,7 +69207,7 @@ function FashionHome() {
     className: "fs-home",
     children: [/*#__PURE__*/jsxRuntimeExports.jsx(Hero, {
       config: config.hero
-    }), /*#__PURE__*/jsxRuntimeExports.jsx(CategoryChips, {}), /*#__PURE__*/jsxRuntimeExports.jsx(TajLeatherPosters, {}), /*#__PURE__*/jsxRuntimeExports.jsx(BagReminder, {
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(CategoryChips, {}), /*#__PURE__*/jsxRuntimeExports.jsx(TajLeatherPosters, {}), /*#__PURE__*/jsxRuntimeExports.jsx(AnsariPosters, {}), /*#__PURE__*/jsxRuntimeExports.jsx(BagReminder, {
       wrap: "fs-sec"
     }), /*#__PURE__*/jsxRuntimeExports.jsx(OfferBanner, {
       wrap: "fs-sec"
@@ -69034,7 +69218,7 @@ function FashionHome() {
       wrap: "fs-sec"
     }), /*#__PURE__*/jsxRuntimeExports.jsx(CategoryTiles, {
       tree: tree
-    }), /*#__PURE__*/jsxRuntimeExports.jsx(TajLeatherRange, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Benefits, {}), /*#__PURE__*/jsxRuntimeExports.jsx(ShopByCategory, {
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(TajLeatherRange, {}), /*#__PURE__*/jsxRuntimeExports.jsx(AnsariRange, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Benefits, {}), /*#__PURE__*/jsxRuntimeExports.jsx(ShopByCategory, {
       tree: tree,
       copy: config.sections
     }), /*#__PURE__*/jsxRuntimeExports.jsx(TopBrands, {
