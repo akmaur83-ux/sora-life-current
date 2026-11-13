@@ -292,11 +292,12 @@ await test('S1 Storefronts → Wellness edits it: hide, heading, "View All" labe
   assert.equal(read('supabase/migrations/0037_storefront_content.sql').includes('newArrivals'), false, 'the 0037 records hold it as they are');
 });
 
-await test('S2 Home.jsx: mid-page, after the offers and before the Lifestyle banner', () => {
+await test('S2 Home.jsx: under the running offer, above the festive gifting (owner, 2026-11-13: swapped with Top deals)', () => {
   const home = read('src/pages/Home.jsx');
   assert.match(home, /import \{ NewArrivals \} from '\.\.\/components\/NewArrivals\.jsx';/);
   const at = (s) => home.indexOf(s);
-  assert.ok(at('<FestivePromo />') < at('<HomeOffers') && at('<HomeOffers') < at('<NewArrivals />') && at('<NewArrivals />') < at('<LifestyleBanner />'));
+  // Owner, 2026-11-13: New Arrivals took Top deals' place under the running offer, Top deals went mid-page.
+  assert.ok(at('<OfferBanner') < at('<NewArrivals />') && at('<NewArrivals />') < at('<FestivePromo />') && at('<TopDeals />') > at('<GiftShop />') && at('<TopDeals />') < at('<LifestyleBanner />'));
 });
 
 await test('S3 the page\'s look: the .hx palette and tint, square edges, a transform-only track, a viewport that cannot scroll, still under reduced motion', () => {

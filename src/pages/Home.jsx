@@ -8,6 +8,8 @@ import HomeLeaderboard from '../components/HomeLeaderboard.jsx';
 import { LifestyleBanner } from '../components/FashionBanner.jsx';
 import BrandCarousel from '../components/BrandCarousel.jsx';
 import { BiosashRange } from '../components/BiosashRange.jsx';
+import { TajLeatherPosters } from '../components/TajLeather.jsx';
+import { AnsariPosters } from '../components/AnsariFashion.jsx';
 import HomeGroup from '../components/HomeGroup.jsx';
 import { NewArrivals } from '../components/NewArrivals.jsx';
 import { LuxuryBeds, Bedsheets } from '../components/HomeCategoryRails.jsx';
@@ -80,9 +82,15 @@ export default function Home() {
       <HomeGroup eyebrow="Offers" title="Deals worth grabbing" />
       {/* The running offer with a live countdown (OfferBanner.jsx); nothing once it ends. */}
       <OfferBanner wrap="hx-wrap" />
-      {/* The biggest verified discounts in stock (HomeExtras.jsx). */}
-      <TopDeals />
+      {/* The products flagged new, across the stores (NewArrivals.jsx; View All opens /new).
+          Owner, 2026-11-13: New Arrivals and Top deals swapped places. */}
+      <NewArrivals />
       <FestivePromo />
+      {/* Owner, 2026-11-13: "festive gifting ke niche shop by brand" — the brands row, then
+          Taj Leather's and Ansari Fashion's posters as they were ("ache lagte hain"). */}
+      <BrandCarousel />
+      <TajLeatherPosters />
+      <AnsariPosters />
       {/* Existing promotions runtime: nothing when no active promotion targets `home`. */}
       <HomeOffers appearance={visuals.offers} />
 
@@ -92,9 +100,9 @@ export default function Home() {
       <ShopByConcerns />
       {/* Gift-ready categories across Fashion and Home & Living (GiftShop.jsx). */}
       <GiftShop />
-      {/* The products flagged new, across the stores (NewArrivals.jsx; View All opens /new). */}
-      <NewArrivals />
-      {/* Biosash's own range stays here, straight after New Arrivals (owner, 2026-11-07). */}
+      {/* The biggest verified discounts in stock (HomeExtras.jsx), where New Arrivals was. */}
+      <TopDeals />
+      {/* Biosash's own range stays here, straight after the row above it (owner, 2026-11-07). */}
       <BiosashRange />
       {/* Home & Living's Bedsheets, straight under the Biosash range (HomeCategoryRails.jsx). */}
       <Bedsheets />
@@ -102,9 +110,6 @@ export default function Home() {
 
       {/* The doorway to the jewellery page, directly under the fashion category strip. */}
       <JewelleryBanner />
-
-      <HomeGroup eyebrow="Our brands" title="The makers behind SORA" />
-      <BrandCarousel />
 
       <HomeGroup eyebrow="For you" title="Picked for you" />
       {/* This visitor's recently viewed and saved products (this browser only). */}

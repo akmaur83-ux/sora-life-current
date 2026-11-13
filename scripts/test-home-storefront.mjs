@@ -338,7 +338,7 @@ await test('Home.jsx: the five sections lead the page in the mockup\'s order, th
   // sections in one "Our brands" row, so the tail is no longer byte-identical; its closing order still holds.
   void bedroom; void tail;
   const at = (x) => home.indexOf(x);
-  assert.ok(at('<LifestyleBanner />') < at('<BrandCarousel />') && at('<BrandCarousel />') < at('<CreatorCommunity />') && at('<CreatorCommunity />') < at('<WhySoraLife />') && at('<WhySoraLife />') < at('<LuxuryBeds />') && at('<LuxuryBeds />') < at('<Newsletter />'), 'from LifestyleBanner down: brands, the closing blocks, the beds, the newsletter');
+  assert.ok(at('<FestivePromo />') < at('<BrandCarousel />') && at('<BrandCarousel />') < at('<LifestyleBanner />') && at('<LifestyleBanner />') < at('<CreatorCommunity />') && at('<CreatorCommunity />') < at('<WhySoraLife />') && at('<WhySoraLife />') < at('<LuxuryBeds />') && at('<LuxuryBeds />') < at('<Newsletter />'), 'from LifestyleBanner down: brands, the closing blocks, the beds, the newsletter');
 });
 
 await test('the jewellery banner: one link to /fashion/jewellery — "SORA LIFE Jewellery" / "Jewellery that tells your story" / "Rings, necklaces, earrings and bracelets, made to be worn every day." / "Explore Jewellery" — over the owner\'s photograph, the 4:5 portrait on a phone; square-edged, near-black on the ivory', () => {

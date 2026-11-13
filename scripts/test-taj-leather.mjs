@@ -29,7 +29,8 @@ test('wired: posters lead the Fashion home; on the wellness homepage through the
   assert.ok(fs.indexOf('<TajLeatherPosters />') > fs.indexOf('<CategoryChips />') && fs.indexOf('<TajLeatherPosters />') < fs.indexOf('<BagReminder'));
   assert.match(fs, /<TajLeatherRange \/>/);
   const home = read('src/pages/Home.jsx');
-  assert.ok(!home.includes('<TajLeatherPosters />') && home.split('<BrandCarousel />').length === 2);
+  // Owner, 2026-11-13: the posters back on the homepage, straight under the brands row (which sits under the festive gifting).
+  assert.ok(home.indexOf('<FestivePromo />') < home.indexOf('<BrandCarousel />') && home.indexOf('<BrandCarousel />') < home.indexOf('<TajLeatherPosters />') && home.split('<TajLeatherPosters />').length === 2);
   assert.match(read('src/lib/brands.js'), /id: 'taj-leather', luxe: true, page: '\/brands\/taj-leather'/);
   const c = read('src/lib/storefrontContent.js');
   assert.match(c, /tajPosters: group\(/); assert.match(c, /tajLeather: group\(/);

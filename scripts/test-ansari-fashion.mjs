@@ -32,7 +32,8 @@ test('wired: after Taj Leather on the Fashion home; on the wellness homepage thr
   assert.ok(fs.indexOf('<AnsariRange />') > fs.indexOf('<TajLeatherRange />'));
   const home = read('src/pages/Home.jsx');
   // The redesign put the partners in one "Our brands" row, each card opening the brand's page.
-  assert.ok(!home.includes('<AnsariPosters />') && home.split('<BrandCarousel />').length === 2);
+  // Owner, 2026-11-13: Ansari's posters on the homepage too, right after Taj Leather's.
+  assert.ok(home.indexOf('<AnsariPosters />') > home.indexOf('<TajLeatherPosters />') && home.split('<AnsariPosters />').length === 2);
   assert.match(read('src/lib/brands.js'), /id: 'ansari-fashion', luxe: true, page: '\/brands\/ansari-fashion'/);
   const c = read('src/lib/storefrontContent.js');
   assert.match(c, /ansariPosters: group\(/); assert.match(c, /ansari: group\(/);
