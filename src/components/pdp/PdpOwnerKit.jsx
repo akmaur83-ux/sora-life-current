@@ -332,6 +332,28 @@ export function PdpCheaper({ items, current }) {
   );
 }
 
+// ---- Complete the look (2026-11-13): pieces that go with this one (completeLook.js) ----
+export function PdpLook({ items }) {
+  const list = Array.isArray(items) ? items : [];
+  if (list.length < 2) return null;
+  return (
+    <section className="pdpk-rail pdpk-rail--look" aria-labelledby="pdpk-look-h">
+      <h2 className="pdpk-h pdpk-h--lg" id="pdpk-look-h">Complete the look</h2>
+      <ul className="pdpk-rail__row">
+        {list.map((p) => (
+          <li key={p.key}>
+            <Link to={p.href} className="pdpk-rail__card">
+              <span className="pdpk-rail__img">{p.image && <img src={p.image} alt="" width="180" height="180" loading="lazy" />}</span>
+              <span className="pdpk-rail__name">{p.name}</span>
+              <span className="pdpk-rail__price"><b>{money(p.price)}</b></span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 // ---- Share: WhatsApp, the system sheet, or copy the link ----------------------------
 export function PdpShare({ name }) {
   const [copied, setCopied] = useState(false);

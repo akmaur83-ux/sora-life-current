@@ -18,7 +18,7 @@ import { feedHandler } from './_lib/feed.js';
 const ORIGIN = 'https://www.soralifestyle.in';
 
 export const STATIC_PATHS = [
-  '/', '/shop', '/offers', '/fashion', '/homeliving', '/lifestyle', '/grocery',
+  '/', '/shop', '/offers', '/brands', '/fashion', '/homeliving', '/lifestyle', '/grocery',
   '/about', '/contact', '/shipping', '/returns', '/privacy', '/terms',
   '/refund-policy', '/shipping-policy', '/grievance',
 ];

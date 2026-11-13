@@ -136,7 +136,7 @@ export async function buildFashionApp({ cartCount = 0, session = null, wishlist 
     // The marketplace kit (PdpOwnerKit.jsx) and the extra facts read, stubbed: they need the network or storage.
     PdpPrice: () => null, PdpSaving: () => null, PdpAssurances: () => null, PdpFactTable: () => null, PdpAbout: () => null,
     aboutBullets: () => [], PdpCompare: () => null, PdpService: () => null, PdpBrandRail: () => null, PdpRecent: () => null,
-    PdpShare: () => null, PdpCheaper: () => null, PdpReviews: () => null, useRecentlyViewed: () => [], useHoverZoom: () => {}, PdpDeliveryDate: () => null, ProductDeliveryInfo: () => null, SizeGuide: () => null, usePageMeta: () => {}, priceTitle: (n) => n, GalleryZoom: () => null,
+    PdpShare: () => null, PdpCheaper: () => null, PdpLook: () => null, lookPicks: () => [], PdpReviews: () => null, useRecentlyViewed: () => [], useHoverZoom: () => {}, PdpDeliveryDate: () => null, ProductDeliveryInfo: () => null, SizeGuide: () => null, usePageMeta: () => {}, priceTitle: (n) => n, GalleryZoom: () => null,
     useFashionDetails: () => null, countryName: (c) => c });
   const App = ({ path, initial = INITIAL }) => h(StaticRouter, { location: path },
     h(Routes, null,

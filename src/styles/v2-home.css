@@ -680,3 +680,15 @@
   .hx-ans__cta { width: 100%; justify-content: center; }
   .hx-ans__label { font-size: 15px; }
 }
+.hx-brands__grid { list-style: none; margin: 18px 0 32px; padding: 0; display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+.hx-brands__card { display: flex; flex-direction: column; height: 100%; background: #fff; border: 1px solid #E3E6E6; color: #0F1111; text-decoration: none; }
+.hx-brands__card:hover { border-color: #888C8C; box-shadow: 0 2px 10px rgba(15,17,17,.08); }
+.hx-brands__img { display: block; aspect-ratio: 4 / 3; background: #F7F8F8; overflow: hidden; }
+.hx-brands__img img { width: 100%; height: 100%; object-fit: cover; object-position: center 20%; display: block; }
+.hx-brands__img.is-whole img { object-fit: contain; padding: 16px; box-sizing: border-box; }
+.hx-brands__body { display: flex; flex-direction: column; gap: 6px; padding: 14px 16px 16px; flex: 1; }
+.hx-brands__body em { font-style: normal; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: #565959; }
+.hx-brands__body b { font-size: 20px; }
+.hx-brands__body > span { font-size: 14px; line-height: 1.45; color: #333; flex: 1; }
+.hx-brands__body i { font-style: normal; font-weight: 700; color: #007185; display: inline-flex; align-items: center; gap: 4px; }
+.hx-brands__card:hover i { color: #C7511F; }

@@ -1,0 +1,295 @@
+diff --git a/src/App.jsx b/src/App.jsx
+index 696374d..ad1702e 100644
+--- a/src/App.jsx
++++ b/src/App.jsx
+@@ -10,6 +10,7 @@ import Checkout from './pages/Checkout.jsx';
+ import Account from './pages/Account.jsx';
+ import Wishlist from './pages/Wishlist.jsx';
+ import Offers from './pages/Offers.jsx';
++import Brands from './pages/Brands.jsx';
+ import About from './pages/About.jsx';
+ import Contact from './pages/Contact.jsx';
+ import Legal from './pages/Legal.jsx';
+@@ -250,6 +251,7 @@ export default function App() {
+         <Route path="/account/:tab" element={<Account />} />
+         <Route path="/wishlist" element={<Wishlist />} />
+         <Route path="/offers" element={<Offers />} />
++        <Route path="/brands" element={<Brands />} />
+         <Route path="/about" element={<About />} />
+         <Route path="/contact" element={<Contact />} />
+         <Route path="/grievance" element={<EditableLegal doc="grievance" />} />
+diff --git a/src/components/Footer.jsx b/src/components/Footer.jsx
+index 50c1b4a..b10e7cd 100644
+--- a/src/components/Footer.jsx
++++ b/src/components/Footer.jsx
+@@ -66,6 +66,7 @@ export default function Footer() {
+             <h4>Shop</h4>
+             <Link to="/shop">All products</Link>
+             <Link to="/offers">Offers &amp; deals</Link>
++            <Link to="/brands">Our brands</Link>
+             {categories.slice(0, 3).map((c) => (
+               <Link key={c.slug} to={`/category/${c.slug}`}>{c.name}</Link>
+             ))}
+diff --git a/src/components/pdp/PdpDeliveryDate.jsx b/src/components/pdp/PdpDeliveryDate.jsx
+index f31b762..96492a0 100644
+--- a/src/components/pdp/PdpDeliveryDate.jsx
++++ b/src/components/pdp/PdpDeliveryDate.jsx
+@@ -5,18 +5,37 @@ import { PdpNotifyMe } from './PdpEngage.jsx';
+ import { useStorefrontSection } from '../../lib/storefrontSections.js';
+ import { OFFER_COUNTDOWN, parseIndiaTime, timeLeft } from '../../lib/offerCountdown.js';
+ import { useConsumerCare } from '../../lib/consumerCare.js';
+-import { waLink } from '../SiteAssist.jsx';
++import { waLink, waNumber } from '../SiteAssist.jsx';
+ 
+ /** "Questions? Ask us on WhatsApp" with this product named (SiteAssist.waLink); nothing without a number. */
++/** The WhatsApp message for a bulk enquiry: the product, its link, and room for the count. Pure. */
++export function bulkText(name, href) {
++  return `Hi SORA Lifestyle, I'd like to buy ${String(name || 'this product').trim()} in bulk (quantity: __). Could you share a bulk price and delivery time? ${href}`;
++}
++
+ function AskWhatsApp({ productName }) {
+   const care = useConsumerCare();
+   const [href, setHref] = useState('');
+-  useEffect(() => { setHref(waLink(care?.phone, window.location.pathname, productName, window.location.href.split('#')[0])); }, [care?.phone, productName]);
++  const [bulk, setBulk] = useState('');
++  useEffect(() => {
++    const page = window.location.href.split('#')[0];
++    setHref(waLink(care?.phone, window.location.pathname, productName, page));
++    // Bulk orders (2026-11-13: more features): weddings, gifting, shops — the same number, its own message.
++    const n = waNumber(care?.phone);
++    setBulk(n ? `https://wa.me/${n}?text=${encodeURIComponent(bulkText(productName, page))}` : '');
++  }, [care?.phone, productName]);
+   if (!href) return null;
+   return (
+-    <a className="pdpk-ask" href={href} target="_blank" rel="noopener noreferrer">
+-      <Icon name="chat" size={16} /> Questions about this product? <b>Ask us on WhatsApp</b>
+-    </a>
++    <>
++      <a className="pdpk-ask" href={href} target="_blank" rel="noopener noreferrer">
++        <Icon name="chat" size={16} /> Questions about this product? <b>Ask us on WhatsApp</b>
++      </a>
++      {bulk && (
++        <a className="pdpk-ask pdpk-ask--bulk" href={bulk} target="_blank" rel="noopener noreferrer">
++          <Icon name="package" size={16} /> Buying 5 or more for a wedding, gifting or your shop? <b>Ask for a bulk price</b>
++        </a>
++      )}
++    </>
+   );
+ }
+ 
+diff --git a/src/components/pdp/PdpOwnerKit.jsx b/src/components/pdp/PdpOwnerKit.jsx
+index 238806b..c4e5862 100644
+--- a/src/components/pdp/PdpOwnerKit.jsx
++++ b/src/components/pdp/PdpOwnerKit.jsx
+@@ -332,6 +332,28 @@ export function PdpCheaper({ items, current }) {
+   );
+ }
+ 
++// ---- Complete the look (2026-11-13): pieces that go with this one (completeLook.js) ----
++export function PdpLook({ items }) {
++  const list = Array.isArray(items) ? items : [];
++  if (list.length < 2) return null;
++  return (
++    <section className="pdpk-rail pdpk-rail--look" aria-labelledby="pdpk-look-h">
++      <h2 className="pdpk-h pdpk-h--lg" id="pdpk-look-h">Complete the look</h2>
++      <ul className="pdpk-rail__row">
++        {list.map((p) => (
++          <li key={p.key}>
++            <Link to={p.href} className="pdpk-rail__card">
++              <span className="pdpk-rail__img">{p.image && <img src={p.image} alt="" width="180" height="180" loading="lazy" />}</span>
++              <span className="pdpk-rail__name">{p.name}</span>
++              <span className="pdpk-rail__price"><b>{money(p.price)}</b></span>
++            </Link>
++          </li>
++        ))}
++      </ul>
++    </section>
++  );
++}
++
+ // ---- Share: WhatsApp, the system sheet, or copy the link ----------------------------
+ export function PdpShare({ name }) {
+   const [copied, setCopied] = useState(false);
+diff --git a/src/fashion/FashionProductPage.jsx b/src/fashion/FashionProductPage.jsx
+index cfecb85..0f6d424 100644
+--- a/src/fashion/FashionProductPage.jsx
++++ b/src/fashion/FashionProductPage.jsx
+@@ -14,7 +14,8 @@ import FashionProductCard, { Stars } from './FashionProductCard.jsx';
+ import { VariantPicker } from './FashionVariantPicker.jsx';
+ import ProductInformation from '../components/ProductInformation.jsx';
+ import { GalleryZoom } from '../homeliving/HomeLivingProductPage.jsx';
+-import { PdpPrice, PdpSaving, PdpAssurances, PdpFactTable, PdpAbout, aboutBullets, PdpCompare, PdpService, PdpBrandRail, PdpRecent, PdpCheaper, PdpShare, PdpReviews, useRecentlyViewed, useHoverZoom } from '../components/pdp/PdpOwnerKit.jsx';
++import { PdpPrice, PdpSaving, PdpAssurances, PdpFactTable, PdpAbout, aboutBullets, PdpCompare, PdpService, PdpBrandRail, PdpRecent, PdpCheaper, PdpLook, PdpShare, PdpReviews, useRecentlyViewed, useHoverZoom } from '../components/pdp/PdpOwnerKit.jsx';
++import { lookPicks } from '../lib/completeLook.js';
+ import { useFashionDetails, countryName } from '../lib/fashionPdpDetails.js';
+ import PdpDeliveryDate from '../components/pdp/PdpDeliveryDate.jsx';
+ import ProductDeliveryInfo from '../components/pdp/ProductDeliveryInfo.jsx';
+@@ -253,6 +254,8 @@ export default function FashionProductPage() {
+         }))} />
+         <PdpService />
+         <PdpReviews productKey={`fashion:${view.id}`} productName={view.name} />
++        <PdpLook items={lookPicks(views.map((p) => ({ key: p.id, href: `/fashion/p/${p.slug}`, name: p.name, image: p.image, price: p.price, inStock: p.inStock, slug: p.category_id ? tree.byId.get(p.category_id)?.slug : '' })),
++          { key: view.id, slug: node?.slug })} />
+         <PdpCheaper current={{ key: view.id, price: view.price, group: view.category_id }}
+           items={views.map((p) => ({ key: p.id, href: `/fashion/p/${p.slug}`, name: p.name, image: p.image, price: p.price, group: p.category_id, inStock: p.inStock }))} />
+         <PdpRecent items={recent} />
+diff --git a/src/fashion/SizeGuide.jsx b/src/fashion/SizeGuide.jsx
+index ac93d9c..7c538d4 100644
+--- a/src/fashion/SizeGuide.jsx
++++ b/src/fashion/SizeGuide.jsx
+@@ -15,9 +15,24 @@ export const SIZE_CHART = Object.freeze({
+   men: { head: ['Size', 'Chest', 'Waist', 'Shoulder'], rows: [['S', '36–38', '28–30', '17'], ['M', '38–40', '30–32', '17.5'], ['L', '40–42', '32–34', '18'], ['XL', '42–44', '34–36', '18.5'], ['XXL', '44–46', '36–38', '19']] },
+ });
+ 
++/**
++ * Find my size (2026-11-13: more features): the chart's size for a chest or bust
++ * measurement in inches — the first row whose range reaches it; between two sizes
++ * the larger (the guide's own advice). '' outside the chart. Pure.
++ */
++export function suggestSize(chart, inches) {
++  const n = Number(String(inches).replace(',', '.'));
++  if (!chart || !Number.isFinite(n) || n <= 0) return '';
++  const rows = chart.rows.map((r) => { const [lo, hi] = String(r[1]).split('–').map(Number); return { size: r[0], lo, hi: Number.isFinite(hi) ? hi : lo }; });
++  if (n < rows[0].lo - 2 || n > rows[rows.length - 1].hi + 1) return '';
++  const hit = rows.find((r) => n < r.hi);
++  return (hit || rows[rows.length - 1]).size;
++}
++
+ export default function SizeGuide({ sizes, department = 'women' }) {
+   const [open, setOpen] = useState(false);
+   const [tab, setTab] = useState(department === 'men' ? 'men' : 'women');
++  const [inches, setInches] = useState('');
+   const closer = useRef(null);
+   useEffect(() => {
+     if (!open) return undefined;
+@@ -30,6 +45,9 @@ export default function SizeGuide({ sizes, department = 'women' }) {
+   }, [open]);
+   if (!hasLetterSizes(sizes)) return null;
+   const chart = SIZE_CHART[tab];
++  const pick = suggestSize(chart, inches);
++  const sold = sizes.map((x) => String(x).trim().toUpperCase());
++  const pickSold = pick && sold.includes(pick);
+   return (
+     <>
+       <button type="button" className="fs-sizeguide__open" onClick={() => setOpen(true)}><Icon name="sliders" size={15} /> Size guide</button>
+@@ -45,10 +63,20 @@ export default function SizeGuide({ sizes, department = 'women' }) {
+                 <button key={id} type="button" role="tab" aria-selected={tab === id} className={tab === id ? 'is-on' : ''} onClick={() => setTab(id)}>{label}</button>
+               ))}
+             </div>
++            <div className="fs-sizeguide__find">
++              <label htmlFor="fs-sizeguide-in">Find my size: your {tab === 'men' ? 'chest' : 'bust'} in inches</label>
++              <input id="fs-sizeguide-in" type="number" inputMode="decimal" min="20" max="60" step="0.5" placeholder={tab === 'men' ? 'e.g. 40' : 'e.g. 35'}
++                value={inches} onChange={(e) => setInches(e.target.value)} />
++              <p role="status" aria-live="polite">
++                {!inches ? 'Measure as below, then type it in.'
++                  : !pick ? 'That is outside this chart. Ask us on WhatsApp and we’ll help.'
++                    : <>Suggested size: <b>{pick}</b>{pickSold ? '' : ' (not made in this product; try the next size or ask us)'}</>}
++              </p>
++            </div>
+             <table className="fs-sizeguide__table">
+               <caption>Body measurements in inches</caption>
+               <thead><tr>{chart.head.map((h) => <th key={h} scope="col">{h}</th>)}</tr></thead>
+-              <tbody>{chart.rows.map((r) => <tr key={r[0]} className={sizes.map((s) => String(s).toUpperCase()).includes(r[0]) ? 'is-sold' : ''}>{r.map((c, i) => (i === 0 ? <th key={i} scope="row">{c}</th> : <td key={i}>{c}</td>))}</tr>)}</tbody>
++              <tbody>{chart.rows.map((r) => <tr key={r[0]} className={`${sold.includes(r[0]) ? 'is-sold' : ''}${r[0] === pick ? ' is-pick' : ''}`.trim()}>{r.map((c, i) => (i === 0 ? <th key={i} scope="row">{c}</th> : <td key={i}>{c}</td>))}</tr>)}</tbody>
+             </table>
+             <ul className="fs-sizeguide__how">
+               <li><b>Chest / bust:</b> around the fullest part, tape level under the arms.</li>
+diff --git a/src/pages/Account.jsx b/src/pages/Account.jsx
+index 76a2146..1d3b011 100644
+--- a/src/pages/Account.jsx
++++ b/src/pages/Account.jsx
+@@ -36,6 +36,17 @@ function productForLine(line) {
+   return key != null ? productById[key] : undefined;
+ }
+ 
++/**
++ * "Buy it again" (2026-11-13: more features): the order's wellness lines that are
++ * still on sale and in stock, with the quantities bought. Fashion and Home & Living
++ * lines need a size or colour chosen again, so they open from their product page.
++ */
++export function buyAgainLines(items) {
++  return (Array.isArray(items) ? items : [])
++    .map((l) => ({ product: productForLine(l), qty: Math.max(1, Math.min(10, Number(l?.qty) || 1)) }))
++    .filter(({ product }) => product && Number(product.stock) > 0 && Number(product.price) > 0);
++}
++
+ const NAV = [
+   { id: 'orders', label: 'My orders', icon: 'package' },
+   { id: 'wishlist', label: 'Wishlist', icon: 'heart' },
+@@ -382,6 +393,8 @@ function AuthView() {
+ }
+ 
+ function Orders() {
++  const { addToCart } = useStore();
++  const navigate = useNavigate();
+   const [orders, setOrders] = useState(null); // null = loading, [] = none
+   const [error, setError] = useState('');
+ 
+@@ -459,6 +472,16 @@ function Orders() {
+                     <Icon name="card" size={15} /> View Invoice
+                   </Link>
+                   <Link to={`/passport/${o.order_number}`} className="btn btn-sm btn-light btn-goldhover">View Passport</Link>
++                  {(() => {
++                    const again = buyAgainLines(items);
++                    if (!again.length) return null;
++                    const buy = () => { let added = 0; again.forEach(({ product, qty }) => { if (addToCart(product, qty) !== false) added += 1; }); if (added) navigate('/cart'); };
++                    return (
++                      <button type="button" className="btn btn-sm btn-primary" onClick={buy}>
++                        <Icon name="bag" size={15} /> Buy it again{again.length < items.length ? ` (${again.length} of ${items.length})` : ''}
++                      </button>
++                    );
++                  })()}
+                   {trackingUrl && (
+                     <a href={trackingUrl} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-light">
+                       Track shipment <Icon name="externalLink" size={14} />
+diff --git a/src/styles/fashion.css b/src/styles/fashion.css
+index 305c1f5..2d83557 100644
+--- a/src/styles/fashion.css
++++ b/src/styles/fashion.css
+@@ -568,3 +568,10 @@
+   .fs-search .hx-voice { right: 68px; top: 6px; width: 34px; height: 34px; }
+   .fs-search input { padding-right: 40px; }
+ }
++/* Find my size (2026-11-13): a measurement in, the chart's size out. */
++.fs-sizeguide__find { display: grid; gap: 6px; margin: 4px 0 14px; padding: 12px; background: #F7F8F8; border: 1px solid #E3E6E6; }
++.fs-sizeguide__find label { font-weight: 700; font-size: 14px; }
++.fs-sizeguide__find input { width: 120px; height: 38px; padding: 0 10px; border: 1px solid #888C8C; font-size: 16px; }
++.fs-sizeguide__find p { margin: 0; font-size: 14px; color: #565959; }
++.fs-sizeguide__find p b { color: #067D62; font-size: 16px; }
++.fs-sizeguide__table tr.is-pick th, .fs-sizeguide__table tr.is-pick td { background: #E6F4EA; font-weight: 700; }
+diff --git a/src/styles/v2-home.css b/src/styles/v2-home.css
+index a95e532..5fd0811 100644
+--- a/src/styles/v2-home.css
++++ b/src/styles/v2-home.css
+@@ -679,4 +679,16 @@
+   .hx-ans__posters > li { scroll-snap-align: start; }
+   .hx-ans__cta { width: 100%; justify-content: center; }
+   .hx-ans__label { font-size: 15px; }
+-}
+\ No newline at end of file
++}
++.hx-brands__grid { list-style: none; margin: 18px 0 32px; padding: 0; display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
++.hx-brands__card { display: flex; flex-direction: column; height: 100%; background: #fff; border: 1px solid #E3E6E6; color: #0F1111; text-decoration: none; }
++.hx-brands__card:hover { border-color: #888C8C; box-shadow: 0 2px 10px rgba(15,17,17,.08); }
++.hx-brands__img { display: block; aspect-ratio: 4 / 3; background: #F7F8F8; overflow: hidden; }
++.hx-brands__img img { width: 100%; height: 100%; object-fit: cover; object-position: center 20%; display: block; }
++.hx-brands__img.is-whole img { object-fit: contain; padding: 16px; box-sizing: border-box; }
++.hx-brands__body { display: flex; flex-direction: column; gap: 6px; padding: 14px 16px 16px; flex: 1; }
++.hx-brands__body em { font-style: normal; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: #565959; }
++.hx-brands__body b { font-size: 20px; }
++.hx-brands__body > span { font-size: 14px; line-height: 1.45; color: #333; flex: 1; }
++.hx-brands__body i { font-style: normal; font-weight: 700; color: #007185; display: inline-flex; align-items: center; gap: 4px; }
++.hx-brands__card:hover i { color: #C7511F; }
+\ No newline at end of file
+diff --git a/src/styles/v2-pdp.css b/src/styles/v2-pdp.css
+index ca2b9be..e4d45bc 100644
+--- a/src/styles/v2-pdp.css
++++ b/src/styles/v2-pdp.css
+@@ -1527,5 +1527,7 @@ body:has(.v2-pdp-root .buybar) .page-main {
+ .pdpk-ask svg { color: #1DA851; flex: none; }
+ .pdpk-ask b { color: #007185; font-weight: 400; }
+ .pdpk-ask:hover b { color: #C7511F; text-decoration: underline; }
++.pdpk-ask--bulk { margin-top: -4px; }
++.pdpk-ask--bulk svg { color: #565959; }
+ /* "Similar, for less" (2026-11-10): how much less, under the price. */
+ .pdpk-rail__save { font-size: 13px; font-weight: 700; color: #067D62; }

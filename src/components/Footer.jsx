@@ -66,6 +66,7 @@ export default function Footer() {
             <h4>Shop</h4>
             <Link to="/shop">All products</Link>
             <Link to="/offers">Offers &amp; deals</Link>
+            <Link to="/brands">Our brands</Link>
             {categories.slice(0, 3).map((c) => (
               <Link key={c.slug} to={`/category/${c.slug}`}>{c.name}</Link>
             ))}

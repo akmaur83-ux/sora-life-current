@@ -5,18 +5,37 @@ import { PdpNotifyMe } from './PdpEngage.jsx';
 import { useStorefrontSection } from '../../lib/storefrontSections.js';
 import { OFFER_COUNTDOWN, parseIndiaTime, timeLeft } from '../../lib/offerCountdown.js';
 import { useConsumerCare } from '../../lib/consumerCare.js';
-import { waLink } from '../SiteAssist.jsx';
+import { waLink, waNumber } from '../SiteAssist.jsx';
 
 /** "Questions? Ask us on WhatsApp" with this product named (SiteAssist.waLink); nothing without a number. */
+/** The WhatsApp message for a bulk enquiry: the product, its link, and room for the count. Pure. */
+export function bulkText(name, href) {
+  return `Hi SORA Lifestyle, I'd like to buy ${String(name || 'this product').trim()} in bulk (quantity: __). Could you share a bulk price and delivery time? ${href}`;
+}
+
 function AskWhatsApp({ productName }) {
   const care = useConsumerCare();
   const [href, setHref] = useState('');
-  useEffect(() => { setHref(waLink(care?.phone, window.location.pathname, productName, window.location.href.split('#')[0])); }, [care?.phone, productName]);
+  const [bulk, setBulk] = useState('');
+  useEffect(() => {
+    const page = window.location.href.split('#')[0];
+    setHref(waLink(care?.phone, window.location.pathname, productName, page));
+    // Bulk orders (2026-11-13: more features): weddings, gifting, shops — the same number, its own message.
+    const n = waNumber(care?.phone);
+    setBulk(n ? `https://wa.me/${n}?text=${encodeURIComponent(bulkText(productName, page))}` : '');
+  }, [care?.phone, productName]);
   if (!href) return null;
   return (
-    <a className="pdpk-ask" href={href} target="_blank" rel="noopener noreferrer">
-      <Icon name="chat" size={16} /> Questions about this product? <b>Ask us on WhatsApp</b>
-    </a>
+    <>
+      <a className="pdpk-ask" href={href} target="_blank" rel="noopener noreferrer">
+        <Icon name="chat" size={16} /> Questions about this product? <b>Ask us on WhatsApp</b>
+      </a>
+      {bulk && (
+        <a className="pdpk-ask pdpk-ask--bulk" href={bulk} target="_blank" rel="noopener noreferrer">
+          <Icon name="package" size={16} /> Buying 5 or more for a wedding, gifting or your shop? <b>Ask for a bulk price</b>
+        </a>
+      )}
+    </>
   );
 }
 

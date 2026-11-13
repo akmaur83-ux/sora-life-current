@@ -14,7 +14,8 @@ import FashionProductCard, { Stars } from './FashionProductCard.jsx';
 import { VariantPicker } from './FashionVariantPicker.jsx';
 import ProductInformation from '../components/ProductInformation.jsx';
 import { GalleryZoom } from '../homeliving/HomeLivingProductPage.jsx';
-import { PdpPrice, PdpSaving, PdpAssurances, PdpFactTable, PdpAbout, aboutBullets, PdpCompare, PdpService, PdpBrandRail, PdpRecent, PdpCheaper, PdpShare, PdpReviews, useRecentlyViewed, useHoverZoom } from '../components/pdp/PdpOwnerKit.jsx';
+import { PdpPrice, PdpSaving, PdpAssurances, PdpFactTable, PdpAbout, aboutBullets, PdpCompare, PdpService, PdpBrandRail, PdpRecent, PdpCheaper, PdpLook, PdpShare, PdpReviews, useRecentlyViewed, useHoverZoom } from '../components/pdp/PdpOwnerKit.jsx';
+import { lookPicks } from '../lib/completeLook.js';
 import { useFashionDetails, countryName } from '../lib/fashionPdpDetails.js';
 import PdpDeliveryDate from '../components/pdp/PdpDeliveryDate.jsx';
 import ProductDeliveryInfo from '../components/pdp/ProductDeliveryInfo.jsx';
@@ -253,6 +254,8 @@ export default function FashionProductPage() {
         }))} />
         <PdpService />
         <PdpReviews productKey={`fashion:${view.id}`} productName={view.name} />
+        <PdpLook items={lookPicks(views.map((p) => ({ key: p.id, href: `/fashion/p/${p.slug}`, name: p.name, image: p.image, price: p.price, inStock: p.inStock, slug: p.category_id ? tree.byId.get(p.category_id)?.slug : '' })),
+          { key: view.id, slug: node?.slug })} />
         <PdpCheaper current={{ key: view.id, price: view.price, group: view.category_id }}
           items={views.map((p) => ({ key: p.id, href: `/fashion/p/${p.slug}`, name: p.name, image: p.image, price: p.price, group: p.category_id, inStock: p.inStock }))} />
         <PdpRecent items={recent} />

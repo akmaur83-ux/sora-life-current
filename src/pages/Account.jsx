@@ -36,6 +36,17 @@ function productForLine(line) {
   return key != null ? productById[key] : undefined;
 }
 
+/**
+ * "Buy it again" (2026-11-13: more features): the order's wellness lines that are
+ * still on sale and in stock, with the quantities bought. Fashion and Home & Living
+ * lines need a size or colour chosen again, so they open from their product page.
+ */
+export function buyAgainLines(items) {
+  return (Array.isArray(items) ? items : [])
+    .map((l) => ({ product: productForLine(l), qty: Math.max(1, Math.min(10, Number(l?.qty) || 1)) }))
+    .filter(({ product }) => product && Number(product.stock) > 0 && Number(product.price) > 0);
+}
+
 const NAV = [
   { id: 'orders', label: 'My orders', icon: 'package' },
   { id: 'wishlist', label: 'Wishlist', icon: 'heart' },
@@ -382,6 +393,8 @@ function AuthView() {
 }
 
 function Orders() {
+  const { addToCart } = useStore();
+  const navigate = useNavigate();
   const [orders, setOrders] = useState(null); // null = loading, [] = none
   const [error, setError] = useState('');
 
@@ -459,6 +472,16 @@ function Orders() {
                     <Icon name="card" size={15} /> View Invoice
                   </Link>
                   <Link to={`/passport/${o.order_number}`} className="btn btn-sm btn-light btn-goldhover">View Passport</Link>
+                  {(() => {
+                    const again = buyAgainLines(items);
+                    if (!again.length) return null;
+                    const buy = () => { let added = 0; again.forEach(({ product, qty }) => { if (addToCart(product, qty) !== false) added += 1; }); if (added) navigate('/cart'); };
+                    return (
+                      <button type="button" className="btn btn-sm btn-primary" onClick={buy}>
+                        <Icon name="bag" size={15} /> Buy it again{again.length < items.length ? ` (${again.length} of ${items.length})` : ''}
+                      </button>
+                    );
+                  })()}
                   {trackingUrl && (
                     <a href={trackingUrl} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-light">
                       Track shipment <Icon name="externalLink" size={14} />
