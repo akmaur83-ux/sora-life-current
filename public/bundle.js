@@ -35196,7 +35196,76 @@ function useConsumerCare() {
   });
 }
 
+// ============================================================
+// The SORA app (owner, 2026-11-13: "sora app pe kaam kro ache se deep mein").
+// SORA LIFESTYLE installs from the browser as an app of its own (manifest +
+// service worker, /sw.js). These are the small, pure rules the app pieces share:
+// where it is running, whether to offer the install, and the visit count that
+// decides when. Nothing here is sent anywhere; this browser only.
+// ============================================================
+const APP_KEY = 'sora.app.v1';
+const NUDGE_EVERY_MS = 30 * 86400 * 1000; // a dismissed install card stays away 30 days
+const NUDGE_MIN_VISITS = 2; // never on the very first visit
+const NUDGE_AFTER_MS = 15000;
+
+/** iPhone / iPad Safari (not Chrome/Firefox/Edge/in-app browsers on iOS), which installs only through Share → Add to Home Screen. Pure. */
+function isIosSafari(ua = '', maxTouchPoints = 0, platform = '') {
+  const s = String(ua);
+  const ios = /iPhone|iPad|iPod/.test(s) || platform === 'MacIntel' && maxTouchPoints > 1;
+  if (!ios) return false;
+  return /Safari\//.test(s) && !/CriOS|FxiOS|EdgiOS|OPiOS|GSA\/|FBAN|FBAV|Instagram|Line\//.test(s);
+}
+
+/** Running as the installed app (home-screen icon), not in a browser tab. */
+function isStandalone(win = typeof window !== 'undefined' ? window : null) {
+  if (!win) return false;
+  try {
+    return Boolean(win.matchMedia?.('(display-mode: standalone)').matches || win.matchMedia?.('(display-mode: minimal-ui)').matches || win.navigator?.standalone === true);
+  } catch {
+    return false;
+  }
+}
+
+/** Today's visit counted once per day: { visits, day, dismissed }. Pure. */
+function countVisit(state, now) {
+  const s = state && typeof state === 'object' ? state : {};
+  const day = new Date(now + 330 * 60000).toISOString().slice(0, 10);
+  const visits = Number(s.visits) || 0;
+  return {
+    ...s,
+    visits: s.day === day ? visits : visits + 1,
+    day
+  };
+}
+
+/** Show the install card? Second visit or later, installable here, not dismissed in the last 30 days. Pure. */
+function shouldNudge(state, {
+  now,
+  canInstall,
+  standalone,
+  phone
+}) {
+  if (standalone || !canInstall || !phone) return false;
+  const s = state || {};
+  if ((Number(s.visits) || 0) < NUDGE_MIN_VISITS) return false;
+  if (s.dismissed && now - Number(s.dismissed) < NUDGE_EVERY_MS) return false;
+  return true;
+}
+const readApp = () => {
+  try {
+    return JSON.parse(window.localStorage.getItem(APP_KEY) || 'null');
+  } catch {
+    return null;
+  }
+};
+const writeApp = v => {
+  try {
+    window.localStorage.setItem(APP_KEY, JSON.stringify(v));
+  } catch {/* storage off */}
+};
+
 let deferred = null;
+let installedNow = false;
 const subs = new Set();
 const emit = () => subs.forEach(fn => fn());
 if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
@@ -35207,6 +35276,7 @@ if (typeof window !== 'undefined' && typeof window.addEventListener === 'functio
   });
   window.addEventListener('appinstalled', () => {
     deferred = null;
+    installedNow = true;
     emit();
   });
 }
@@ -35219,47 +35289,190 @@ const never = () => false;
 function useCanInstall() {
   return reactExports.useSyncExternalStore(subscribe$1, canInstall, never);
 }
-function InstallApp({
-  className = ''
-}) {
+
+/** 'prompt' (the browser's dialog), 'ios' (the Share guide) or '' (nothing to offer here). */
+function useInstallMode() {
   const can = useCanInstall();
-  if (!can) return null;
-  const install = async () => {
-    const e = deferred;
-    if (!e) return;
-    try {
-      await e.prompt();
-      const r = await e.userChoice;
-      if (r?.outcome === 'accepted') {
-        deferred = null;
-        emit();
-      }
-    } catch {/* dismissed */}
-  };
-  return /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
-    type: "button",
-    className: `hx-install${className ? ` ${className}` : ''}`,
-    onClick: install,
-    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("svg", {
-      width: "16",
-      height: "16",
-      viewBox: "0 0 24 24",
-      fill: "none",
-      stroke: "currentColor",
-      strokeWidth: "1.8",
-      strokeLinecap: "round",
-      strokeLinejoin: "round",
-      "aria-hidden": "true",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsx("rect", {
-        x: "6",
-        y: "2.5",
-        width: "12",
-        height: "19",
-        rx: "2.5"
-      }), /*#__PURE__*/jsxRuntimeExports.jsx("path", {
-        d: "M12 7v7m-3-3 3 3 3-3M10 18.5h4"
+  const [ios, setIos] = reactExports.useState(false);
+  reactExports.useEffect(() => {
+    if (typeof navigator === 'undefined') return;
+    setIos(!isStandalone() && isIosSafari(navigator.userAgent, navigator.maxTouchPoints, navigator.platform));
+  }, []);
+  if (installedNow) return '';
+  if (can) return 'prompt';
+  return ios ? 'ios' : '';
+}
+
+/** Opens the browser's install dialog; true when the visitor accepted. */
+async function promptInstall() {
+  const e = deferred;
+  if (!e) return false;
+  try {
+    await e.prompt();
+    const r = await e.userChoice;
+    if (r?.outcome === 'accepted') {
+      deferred = null;
+      emit();
+      return true;
+    }
+  } catch {/* dismissed */}
+  return false;
+}
+const ShareGlyph = () => /*#__PURE__*/jsxRuntimeExports.jsxs("svg", {
+  width: "18",
+  height: "18",
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: "1.8",
+  strokeLinecap: "round",
+  strokeLinejoin: "round",
+  "aria-hidden": "true",
+  children: [/*#__PURE__*/jsxRuntimeExports.jsx("path", {
+    d: "M12 3v12M8 7l4-4 4 4"
+  }), /*#__PURE__*/jsxRuntimeExports.jsx("path", {
+    d: "M6 11H5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-1"
+  })]
+});
+const PlusGlyph = () => /*#__PURE__*/jsxRuntimeExports.jsxs("svg", {
+  width: "18",
+  height: "18",
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: "1.8",
+  strokeLinecap: "round",
+  "aria-hidden": "true",
+  children: [/*#__PURE__*/jsxRuntimeExports.jsx("rect", {
+    x: "3.5",
+    y: "3.5",
+    width: "17",
+    height: "17",
+    rx: "3"
+  }), /*#__PURE__*/jsxRuntimeExports.jsx("path", {
+    d: "M12 8v8M8 12h8"
+  })]
+});
+
+/** The iPhone guide: three steps, closes on Escape, the backdrop or the button. */
+function IosInstallGuide({
+  onClose
+}) {
+  const closer = reactExports.useRef(null);
+  reactExports.useEffect(() => {
+    closer.current?.focus();
+    const onKey = e => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+  return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+    className: "hx-ios",
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-labelledby": "hx-ios-h",
+    onMouseDown: e => {
+      if (e.target === e.currentTarget) onClose();
+    },
+    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "hx-ios__box",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("img", {
+        src: "/assets/app-icon-192.png",
+        alt: "",
+        width: "64",
+        height: "64",
+        className: "hx-ios__icon"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+        id: "hx-ios-h",
+        children: "Install the SORA app"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "hx-ios__lede",
+        children: "Add SORA LIFESTYLE to your Home Screen: it opens full screen like an app, and products you\u2019ve seen stay available offline."
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("ol", {
+        className: "hx-ios__steps",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            className: "hx-ios__n",
+            children: "1"
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+            children: ["Tap ", /*#__PURE__*/jsxRuntimeExports.jsx("b", {
+              children: "Share"
+            }), " ", /*#__PURE__*/jsxRuntimeExports.jsx("i", {
+              className: "hx-ios__glyph",
+              children: /*#__PURE__*/jsxRuntimeExports.jsx(ShareGlyph, {})
+            }), " in Safari\u2019s toolbar"]
+          })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            className: "hx-ios__n",
+            children: "2"
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+            children: ["Scroll down and tap ", /*#__PURE__*/jsxRuntimeExports.jsx("b", {
+              children: "Add to Home Screen"
+            }), " ", /*#__PURE__*/jsxRuntimeExports.jsx("i", {
+              className: "hx-ios__glyph",
+              children: /*#__PURE__*/jsxRuntimeExports.jsx(PlusGlyph, {})
+            })]
+          })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            className: "hx-ios__n",
+            children: "3"
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+            children: ["Tap ", /*#__PURE__*/jsxRuntimeExports.jsx("b", {
+              children: "Add"
+            }), ". SORA appears on your Home Screen."]
+          })]
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        type: "button",
+        ref: closer,
+        className: "hx-ios__ok",
+        onClick: onClose,
+        children: "Got it"
       })]
-    }), "Install the SORA app"]
+    })
+  });
+}
+function InstallApp({
+  className = '',
+  label = 'Install the SORA app'
+}) {
+  const mode = useInstallMode();
+  const [guide, setGuide] = reactExports.useState(false);
+  if (!mode) return null;
+  const install = () => {
+    if (mode === 'ios') setGuide(true);else promptInstall();
+  };
+  return /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("button", {
+      type: "button",
+      className: `hx-install${className ? ` ${className}` : ''}`,
+      onClick: install,
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("svg", {
+        width: "16",
+        height: "16",
+        viewBox: "0 0 24 24",
+        fill: "none",
+        stroke: "currentColor",
+        strokeWidth: "1.8",
+        strokeLinecap: "round",
+        strokeLinejoin: "round",
+        "aria-hidden": "true",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("rect", {
+          x: "6",
+          y: "2.5",
+          width: "12",
+          height: "19",
+          rx: "2.5"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("path", {
+          d: "M12 7v7m-3-3 3 3 3-3M10 18.5h4"
+        })]
+      }), label]
+    }), guide && /*#__PURE__*/jsxRuntimeExports.jsx(IosInstallGuide, {
+      onClose: () => setGuide(false)
+    })]
   });
 }
 
@@ -43906,7 +44119,7 @@ const WELCOME_KEY = 'sora.welcome.v1';
 const WELCOME_EVERY = 14 * 86400 * 1000;
 const WELCOME_AFTER_MS = 12000;
 const NEVER = /^\/(admin|creator|invoice|passport|login)(\/|$)/;
-const QUIET = /^\/(cart|checkout|fashion\/cart|homeliving\/cart|grocery\/cart|grocery\/checkout)(\/|$)/;
+const QUIET$2 = /^\/(cart|checkout|fashion\/cart|homeliving\/cart|grocery\/cart|grocery\/checkout)(\/|$)/;
 
 /** A code from a promo link, upper-cased, or '' when it is not one. */
 function promoCode(search) {
@@ -43970,7 +44183,7 @@ function PromoCard$1({
 
   // The welcome card: first visit (or 14 days on), twelve seconds in, once.
   reactExports.useEffect(() => {
-    if (welcome.hidden || !offerLive || NEVER.test(pathname) || QUIET.test(pathname)) return undefined;
+    if (welcome.hidden || !offerLive || NEVER.test(pathname) || QUIET$2.test(pathname)) return undefined;
     const ls = store$1('local');
     const seen = Number(readJson(ls, WELCOME_KEY)) || 0;
     if (Date.now() - seen < WELCOME_EVERY) return undefined;
@@ -43982,7 +44195,7 @@ function PromoCard$1({
   }, [welcome.hidden, offerLive, pathname]);
   if (NEVER.test(pathname)) return null;
   const showPromo = promo && promo.code && !promo.closed;
-  const showWelcome = !showPromo && greet && offerLive && !QUIET.test(pathname);
+  const showWelcome = !showPromo && greet && offerLive && !QUIET$2.test(pathname);
   if (!showPromo && !showWelcome) return null;
   const code = showPromo ? promo.code : offer.code;
   const copy = async () => {
@@ -51083,6 +51296,112 @@ function careOpen(text, now = Date.now()) {
   };
 }
 
+const QUIET$1 = /^\/(cart|checkout|admin|creator|invoice|passport|login|account|fashion\/cart|homeliving\/cart|grocery\/cart|grocery\/checkout)(\/|$)/;
+function AppNudge({
+  foot = 0
+}) {
+  const {
+    pathname
+  } = useLocation();
+  const mode = useInstallMode();
+  const [show, setShow] = reactExports.useState(false);
+  const [guide, setGuide] = reactExports.useState(false);
+
+  // This visit counted once a day.
+  reactExports.useEffect(() => {
+    writeApp(countVisit(readApp(), Date.now()));
+  }, []);
+  reactExports.useEffect(() => {
+    if (!mode || QUIET$1.test(pathname)) {
+      setShow(false);
+      return undefined;
+    }
+    const t = setTimeout(() => {
+      const phone = window.matchMedia?.('(max-width: 767px)').matches;
+      const promoUp = !!document.querySelector('.hx-pcard:not(.hx-acard)');
+      if (!promoUp && shouldNudge(readApp(), {
+        now: Date.now(),
+        canInstall: true,
+        standalone: isStandalone(),
+        phone
+      })) setShow(true);
+    }, NUDGE_AFTER_MS);
+    return () => clearTimeout(t);
+  }, [mode, pathname]);
+  if (!show && !guide) return null;
+  const close = () => {
+    writeApp({
+      ...(readApp() || {}),
+      dismissed: Date.now()
+    });
+    setShow(false);
+  };
+  const install = async () => {
+    if (mode === 'ios') {
+      setGuide(true);
+      setShow(false);
+      writeApp({
+        ...(readApp() || {}),
+        dismissed: Date.now()
+      });
+      return;
+    }
+    const ok = await promptInstall();
+    if (ok) setShow(false);else close();
+  };
+  return /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+    children: [show && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "hx-pcard hx-acard",
+      role: "dialog",
+      "aria-labelledby": "hx-acard-t",
+      style: {
+        '--pcard-foot': `${foot}px`
+      },
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("img", {
+        className: "hx-acard__ic",
+        src: "/assets/app-icon-192.png",
+        alt: "",
+        width: "40",
+        height: "40"
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "hx-pcard__body",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "hx-pcard__t",
+          id: "hx-acard-t",
+          children: "Get the SORA app"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "hx-pcard__s",
+          children: "One tap from your home screen, full screen, and what you\u2019ve browsed opens even offline."
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          className: "hx-acard__go",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+            type: "button",
+            className: "hx-acard__btn",
+            onClick: install,
+            children: mode === 'ios' ? 'Show me how' : 'Install'
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+            type: "button",
+            className: "hx-acard__later",
+            onClick: close,
+            children: "Not now"
+          })]
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        type: "button",
+        className: "hx-pcard__x",
+        onClick: close,
+        "aria-label": "Close",
+        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "x",
+          size: 16
+        })
+      })]
+    }), guide && /*#__PURE__*/jsxRuntimeExports.jsx(IosInstallGuide, {
+      onClose: () => setGuide(false)
+    })]
+  });
+}
+
 const HIDDEN = /^\/(admin|checkout|cart|creator|invoice|passport|login|fashion\/cart|homeliving\/cart|grocery\/cart|grocery\/checkout)(\/|$)/;
 const PRODUCT = /^\/(product|fashion\/p|homeliving\/p|grocery\/p)\/[^/]+/;
 const LISTING = /^\/(shop|category\/[^/]+|fashion\/(c\/[^/]+|search|wishlist|men|women|jewellery)|homeliving\/(category\/[^/]+|search|wishlist))\/?$/;
@@ -51130,11 +51449,23 @@ function SiteAssist() {
 
   reactExports.useEffect(() => {
     const measure = () => setOffset(footOffset());
-    const timers = [100, 600, 1500].map(ms => setTimeout(measure, ms)); // also where only the promo card shows (cart, checkout)
+    // Also later: a product page's buy bar appears once its catalogue has loaded (often after 1.5 s).
+    const timers = [100, 600, 1500, 3000, 5000].map(ms => setTimeout(measure, ms)); // also where only the promo card shows (cart, checkout)
     window.addEventListener('resize', measure);
+    let once = false;
+    const firstScroll = () => {
+      if (!once) {
+        once = true;
+        measure();
+      }
+    };
+    window.addEventListener('scroll', firstScroll, {
+      passive: true
+    });
     if (hidden) return () => {
       timers.forEach(clearTimeout);
       window.removeEventListener('resize', measure);
+      window.removeEventListener('scroll', firstScroll);
     };
     const onScroll = () => setUp(window.scrollY > window.innerHeight * 2);
     onScroll();
@@ -51144,6 +51475,7 @@ function SiteAssist() {
     return () => {
       timers.forEach(clearTimeout);
       window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('scroll', firstScroll);
       window.removeEventListener('resize', measure);
     };
   }, [pathname, hidden]);
@@ -51175,6 +51507,11 @@ function SiteAssist() {
       document.querySelectorAll('.hl.pdp-bar-on').forEach(el => el.classList.remove('pdp-bar-on'));
     };
   }, [pathname]);
+
+  // The installed app's Back button sits above the same foot bar (AppShell.jsx).
+  reactExports.useEffect(() => {
+    document.documentElement.style.setProperty('--app-foot', `${offset}px`);
+  }, [offset]);
 
   // Offline notice (2026-11-10): the connection dropping says so, on every page, the
   // checkout included; coming back says so for a few seconds, then goes.
@@ -51262,7 +51599,7 @@ function SiteAssist() {
     className: `hx-net${net === 'back' ? ' is-back' : ''}`,
     role: "status",
     "aria-live": "polite",
-    children: net === 'off' ? 'You’re offline. Check your connection; anything new loads once you’re back.' : 'Back online.'
+    children: net === 'off' ? navigator.serviceWorker?.controller ? 'You’re offline. Pages and products you’ve already seen still open; anything new loads once you’re back.' : 'You’re offline. Check your connection; anything new loads once you’re back.' : 'Back online.'
   });
   // A promo link's code, or the welcome offer (PromoCard.jsx); cart and checkout keep the code in view.
   const promo = /*#__PURE__*/jsxRuntimeExports.jsx(PromoCard$1, {
@@ -51270,6 +51607,9 @@ function SiteAssist() {
   });
   if (hidden) return /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
     children: [netNote, promo]
+  });
+  const nudge = /*#__PURE__*/jsxRuntimeExports.jsx(AppNudge, {
+    foot: offset
   });
   // The product's name is read from the page's heading at the moment of the tap (it renders after this).
   const build = () => waLink(care?.phone, pathname, document.querySelector('main h1, h1')?.textContent || '', window.location.href.split('#')[0]);
@@ -51285,7 +51625,7 @@ function SiteAssist() {
     });
   };
   return /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
-    children: [netNote, promo, /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    children: [netNote, promo, nudge, /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
       className: "hx-sa",
       style: {
         '--sa-foot': `${offset}px`
@@ -56855,6 +57195,9 @@ function Account() {
               name: "logout",
               size: 19
             }), " Log out"]
+          }), /*#__PURE__*/jsxRuntimeExports.jsx(InstallApp, {
+            className: "acct__navitem acct__app",
+            label: "Get the SORA app"
           })]
         }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
           className: "acct__panel",
@@ -79198,6 +79541,129 @@ function ScrollManager() {
   return null;
 }
 
+const QUIET = /^\/(cart|checkout|fashion\/cart|homeliving\/cart|grocery\/cart|grocery\/checkout|admin|invoice)(\/|$)/;
+const HOMES = /^\/(fashion|homeliving|grocery|lifestyle)?\/?$/;
+const CHECK_EVERY_MS = 30 * 60 * 1000;
+
+/** The deployed app's fingerprint: the entry script's ETag (or Last-Modified); '' if unknown. */
+async function buildStamp() {
+  try {
+    const r = await fetch('/public/bundle.js', {
+      method: 'HEAD',
+      cache: 'no-store'
+    });
+    if (!r.ok) return '';
+    return r.headers.get('etag') || r.headers.get('last-modified') || '';
+  } catch {
+    return '';
+  }
+}
+function registerServiceWorker(win = typeof window !== 'undefined' ? window : null) {
+  if (!win || !('serviceWorker' in win.navigator)) return;
+  const local = /^(localhost|127\.0\.0\.1)$/.test(win.location.hostname);
+  if (win.location.protocol !== 'https:' && !local) return;
+  if (/[?&]nosw\b/.test(win.location.search)) return;
+  const go = () => {
+    win.navigator.serviceWorker.register('/sw.js', {
+      scope: '/',
+      updateViaCache: 'none'
+    }).catch(() => {});
+  };
+  if (win.document.readyState === 'complete') setTimeout(go, 1500);else win.addEventListener('load', () => setTimeout(go, 1500), {
+    once: true
+  });
+}
+function AppShell() {
+  const {
+    pathname
+  } = useLocation();
+  const navigate = useNavigate();
+  const {
+    cartCount
+  } = useStore();
+  const [app, setApp] = reactExports.useState(false);
+  const [fresh, setFresh] = reactExports.useState(false);
+  const stamp = reactExports.useRef('');
+
+  // Once: the worker, and whether this is the installed app.
+  reactExports.useEffect(() => {
+    registerServiceWorker();
+    const on = isStandalone();
+    setApp(on);
+    document.documentElement.classList.toggle('is-app', on);
+  }, []);
+
+  // A new deploy: compare the entry script's fingerprint when the visitor comes back.
+  reactExports.useEffect(() => {
+    let live = true;
+    buildStamp().then(s => {
+      if (live) stamp.current = s;
+    });
+    const check = async () => {
+      if (document.visibilityState !== 'visible' || !stamp.current) return;
+      const now = await buildStamp();
+      if (live && now && now !== stamp.current) setFresh(true);
+    };
+    const onVis = () => {
+      check();
+    };
+    document.addEventListener('visibilitychange', onVis);
+    const t = setInterval(check, CHECK_EVERY_MS);
+    return () => {
+      live = false;
+      document.removeEventListener('visibilitychange', onVis);
+      clearInterval(t);
+    };
+  }, []);
+
+  // The bag count on the app icon (installed app, where supported).
+  reactExports.useEffect(() => {
+    if (!app || typeof navigator === 'undefined') return;
+    try {
+      if (cartCount > 0 && navigator.setAppBadge) navigator.setAppBadge(cartCount).catch(() => {});else if (navigator.clearAppBadge) navigator.clearAppBadge().catch(() => {});
+    } catch {/* not supported */}
+  }, [app, cartCount]);
+  const quiet = QUIET.test(pathname);
+  const showBack = app && !quiet && !HOMES.test(pathname);
+  const back = () => {
+    if (window.history.length > 1) navigate(-1);else navigate('/');
+  };
+  return /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+    children: [showBack && /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
+      type: "button",
+      className: "hx-appback",
+      onClick: back,
+      "aria-label": "Back",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: "chevronLeft",
+        size: 20
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        children: "Back"
+      })]
+    }), fresh && !quiet && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "hx-update",
+      role: "status",
+      "aria-live": "polite",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+        children: "A new version of SORA is ready."
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        type: "button",
+        onClick: () => window.location.reload(),
+        children: "Refresh"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        type: "button",
+        className: "hx-update__x",
+        onClick: () => setFresh(false),
+        "aria-label": "Later",
+        children: /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "x",
+          size: 16
+        })
+      })]
+    })]
+  });
+}
+
 scheduleDeferredStyles();
 class ErrorBoundary extends React.Component {
   constructor(p) {
@@ -79314,12 +79780,12 @@ function Root() {
       value: bootstrapReady,
       children: [/*#__PURE__*/jsxRuntimeExports.jsxs(BrowserRouter, {
         children: [/*#__PURE__*/jsxRuntimeExports.jsx(ScrollManager, {}), /*#__PURE__*/jsxRuntimeExports.jsx(CustomerAuthProvider, {
-          children: /*#__PURE__*/jsxRuntimeExports.jsx(StoreProvider, {
-            children: /*#__PURE__*/jsxRuntimeExports.jsx(AdminAuthProvider, {
+          children: /*#__PURE__*/jsxRuntimeExports.jsxs(StoreProvider, {
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx(AdminAuthProvider, {
               children: /*#__PURE__*/jsxRuntimeExports.jsx(ErrorBoundary, {
                 children: /*#__PURE__*/jsxRuntimeExports.jsx(App, {})
               })
-            })
+            }), /*#__PURE__*/jsxRuntimeExports.jsx(AppShell, {})]
           })
         }), /*#__PURE__*/jsxRuntimeExports.jsx(SiteAssist, {})]
       }), previewing && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
