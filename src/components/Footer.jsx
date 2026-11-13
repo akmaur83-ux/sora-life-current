@@ -86,6 +86,7 @@ export default function Footer() {
             <h4>Company</h4>
             <Link to="/about">About {name}</Link>
             <Link to="/contact">Contact &amp; help</Link>
+            <Link to="/help">Help &amp; FAQ</Link>
             <Link to="/account/creator">Creator Program</Link>
           </div>
 

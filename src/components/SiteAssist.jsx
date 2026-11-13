@@ -4,6 +4,7 @@ import Icon from './Icon.jsx';
 import { useConsumerCare } from '../lib/consumerCare.js';
 import { siteHomeTitle, holdTitle, useSiteLd } from '../lib/pageMeta.js';
 import PromoCard from './PromoCard.jsx';
+import { careOpen } from '../lib/careHours.js';
 
 // ============================================================
 // Two small helpers on every storefront page (owner, 2026-11-08: more features),
@@ -162,6 +163,9 @@ export default function SiteAssist() {
   // The product's name is read from the page's heading at the moment of the tap (it renders after this).
   const build = () => waLink(care?.phone, pathname, document.querySelector('main h1, h1')?.textContent || '', window.location.href.split('#')[0]);
   const wa = waLink(care?.phone, '/', '', '');
+  // Online now, or when replies start — from the published support hours (careHours.js); unknown hours, nothing said.
+  const status = careOpen(care?.hours);
+  const statusText = status ? (status.open ? 'Online now' : `Replies from ${status.opens}`) : '';
   const top = () => {
     const still = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     window.scrollTo({ top: 0, behavior: still ? 'auto' : 'smooth' });
@@ -175,8 +179,9 @@ export default function SiteAssist() {
         </button>
       )}
       {wa && (
-        <a className="hx-sa__btn hx-sa__wa" href={wa} target="_blank" rel="noopener noreferrer" aria-label="Chat with us on WhatsApp" onClick={(e) => { e.currentTarget.href = build(); }}>
-          <Icon name="chat" size={22} /><span className="hx-sa__wa-label">Chat with us</span>
+        <a className="hx-sa__btn hx-sa__wa" href={wa} target="_blank" rel="noopener noreferrer" aria-label={`Chat with us on WhatsApp${statusText ? ` (${statusText})` : ''}`} title={statusText || undefined} onClick={(e) => { e.currentTarget.href = build(); }}>
+          <Icon name="chat" size={22} /><span className="hx-sa__wa-label">Chat with us{statusText && <small>{statusText}</small>}</span>
+          {status && <i className={`hx-sa__dot${status.open ? ' is-on' : ''}`} aria-hidden="true" />}
         </a>
       )}
     </div>

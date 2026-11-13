@@ -12,6 +12,8 @@ import { MIN_PASSWORD_LENGTH, validateNewPassword } from '../lib/authRecovery.js
 import { products, productById } from '../data/products.js';
 import { money } from '../lib/format.js';
 import { fulfillmentStatusLabel, safeTrackingUrl } from '../lib/orderFulfillment.js';
+import { useConsumerCare } from '../lib/consumerCare.js';
+import { waNumber } from '../components/SiteAssist.jsx';
 
 // Format an ISO timestamp the same way the rest of the app does (en-IN).
 function fmtOrderDate(iso) {
@@ -41,6 +43,13 @@ function productForLine(line) {
  * still on sale and in stock, with the quantities bought. Fashion and Home & Living
  * lines need a size or colour chosen again, so they open from their product page.
  */
+/** Help with an order on WhatsApp (2026-11-13): the order number already in the message; '' without a number. */
+export function orderHelpLink(phone, orderNumber) {
+  const n = waNumber(phone);
+  if (!n || !orderNumber) return '';
+  return `https://wa.me/${n}?text=${encodeURIComponent(`Hi SORA Lifestyle, I need help with my order ${orderNumber}.`)}`;
+}
+
 export function buyAgainLines(items) {
   return (Array.isArray(items) ? items : [])
     .map((l) => ({ product: productForLine(l), qty: Math.max(1, Math.min(10, Number(l?.qty) || 1)) }))
@@ -395,6 +404,7 @@ function AuthView() {
 function Orders() {
   const { addToCart } = useStore();
   const navigate = useNavigate();
+  const care = useConsumerCare();
   const [orders, setOrders] = useState(null); // null = loading, [] = none
   const [error, setError] = useState('');
 
@@ -485,6 +495,11 @@ function Orders() {
                   {trackingUrl && (
                     <a href={trackingUrl} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-light">
                       Track shipment <Icon name="externalLink" size={14} />
+                    </a>
+                  )}
+                  {orderHelpLink(care?.phone, o.order_number) && (
+                    <a href={orderHelpLink(care?.phone, o.order_number)} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-light">
+                      <Icon name="chat" size={15} /> Help with this order
                     </a>
                   )}
                 </div>

@@ -984,6 +984,7 @@
 .hl .pdpk-share { display: flex; align-items: center; gap: 10px; margin-top: 10px; font-size: 12.5px; color: #565959; }
 .hl .pdpk-share a, .hl .pdpk-share button { padding: 0; border: 0; background: none; font: inherit; color: #007185; cursor: pointer; text-decoration: none; }
 .hl .pdpk-share a:hover, .hl .pdpk-share button:hover { text-decoration: underline; }
+.hl .pdpk-share .pdpk-share__hint { display: inline-flex; align-items: center; gap: 4px; margin-left: 4px; padding-left: 10px; border-left: 1px solid #D5D9D9; }
 .hl .hl-qty { display: flex; align-items: center; gap: 6px; margin: 0 0 10px; font-size: 13px; color: #0F1111; }
 .hl .hl-qty select { height: 32px; padding: 0 8px; border: 1px solid #D5D9D9; background: #F0F2F2; font: inherit; }
 .hl .pdp__main img, .hl .hl-gallery__slide img { transition: transform .12s ease-out; }

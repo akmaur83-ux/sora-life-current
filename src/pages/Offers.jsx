@@ -47,6 +47,50 @@ export const wellnessDeals = (list) => (Array.isArray(list) ? list : [])
 
 export const sortDeals = (deals) => [...deals].sort((a, b) => b.pct - a.pct || (b.mrp - b.price) - (a.mrp - a.price) || String(a.name).localeCompare(String(b.name)));
 
+/** India's date as YYYY-MM-DD for a moment. Pure. */
+export const istDay = (now) => new Date(now + 330 * 60000).toISOString().slice(0, 10);
+
+/**
+ * Today's top pick (2026-11-13: more features): one of the 24 biggest discounts,
+ * chosen by India's date, so it is the same for everyone all day and changes at
+ * midnight. Its price is the product's own; nothing is discounted further. Pure.
+ */
+export function dailyPick(sortedDeals, now) {
+  const top = (Array.isArray(sortedDeals) ? sortedDeals : []).slice(0, 24);
+  if (!top.length) return null;
+  let h = 0;
+  for (const c of istDay(now)) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return top[h % top.length];
+}
+
+/** Time left in India's day, "5h 12m". Pure. */
+export function untilMidnight(now) {
+  const ist = new Date(now + 330 * 60000);
+  const left = 24 * 60 - (ist.getUTCHours() * 60 + ist.getUTCMinutes());
+  return `${Math.floor(left / 60)}h ${left % 60}m`;
+}
+
+function TodayPick({ deals }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => { const t = setInterval(() => setNow(Date.now()), 60000); return () => clearInterval(t); }, []);
+  const d = dailyPick(deals, now);
+  if (!d) return null;
+  return (
+    <section className="hx-today" aria-labelledby="hx-today-h">
+      <Link to={d.href} className="hx-today__card">
+        <span className="hx-today__img">{d.image && <img src={d.image} alt="" width="320" height="320" loading="eager" decoding="async" />}</span>
+        <span className="hx-today__body">
+          <em id="hx-today-h">Today’s top pick</em>
+          <b>{d.name}</b>
+          <span className="hx-today__price"><strong>{money(d.price)}</strong><s>{money(d.mrp)}</s><i>−{d.pct}%</i></span>
+          <span className="hx-today__note">A new pick from our biggest discounts every day · next in {untilMidnight(now)}</span>
+          <span className="hx-today__go">See it <Icon name="arrowRight" size={15} /></span>
+        </span>
+      </Link>
+    </section>
+  );
+}
+
 async function fetchCatalogueDeals(client = supabase) {
   if (!client) return [];
   // A thousand rows per read (the API's cap), until a page comes back short.
@@ -101,6 +145,7 @@ export default function Offers() {
       <OfferBanner wrap="hx-wrap" />
       <div className="hx-wrap">
         <ShareOffer />
+        {store === 'all' && cat !== null && <TodayPick deals={all} />}
         <div className="hx-offers__tabs" role="tablist" aria-label="Store">
           {STORES.map((s) => (
             <button key={s.id} type="button" role="tab" aria-selected={store === s.id} className={`hx-offers__tab${store === s.id ? ' is-on' : ''}`} onClick={() => pick(s.id)}>

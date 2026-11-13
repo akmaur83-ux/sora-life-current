@@ -355,6 +355,11 @@ export function PdpLook({ items }) {
 }
 
 // ---- Share: WhatsApp, the system sheet, or copy the link ----------------------------
+/** "Drop a hint" (2026-11-13): a message to send someone who might gift you this. Pure. */
+export function hintText(name, url) {
+  return `Dropping a hint 🎁 I’d love ${String(name || 'this').trim()} from SORA Lifestyle: ${url}`;
+}
+
 export function PdpShare({ name }) {
   const [copied, setCopied] = useState(false);
   const url = typeof window !== 'undefined' ? window.location.href.split('#')[0] : '';
@@ -370,6 +375,9 @@ export function PdpShare({ name }) {
       <span>Share:</span>
       <a href={`https://wa.me/?text=${encodeURIComponent(`${text} ${url}`)}`} target="_blank" rel="noopener noreferrer">WhatsApp</a>
       <button type="button" onClick={copy}>{copied ? 'Link copied' : 'Copy link'}</button>
+      <a className="pdpk-share__hint" href={`https://wa.me/?text=${encodeURIComponent(hintText(name, url))}`} target="_blank" rel="noopener noreferrer">
+        <Icon name="gift" size={14} /> Drop a hint
+      </a>
     </div>
   );
 }

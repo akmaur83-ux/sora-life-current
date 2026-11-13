@@ -1436,6 +1436,7 @@ body:has(.v2-pdp-root .buybar) .page-main {
 .pdpk-share { display: flex; align-items: center; gap: 10px; margin-top: 10px; font-size: 12.5px; color: #565959; }
 .pdpk-share a, .pdpk-share button { padding: 0; border: 0; background: none; font: inherit; color: #007185; cursor: pointer; text-decoration: none; }
 .pdpk-share a:hover, .pdpk-share button:hover { text-decoration: underline; }
+.pdpk-share .pdpk-share__hint { display: inline-flex; align-items: center; gap: 4px; margin-left: 4px; padding-left: 10px; border-left: 1px solid #D5D9D9; }
 .hl-qty { display: flex; align-items: center; gap: 6px; margin: 0 0 10px; font-size: 13px; color: #0F1111; }
 .hl-qty select { height: 32px; padding: 0 8px; border: 1px solid #D5D9D9; background: #F0F2F2; font: inherit; }
 .pdp__main img, .hl-gallery__slide img { transition: transform .12s ease-out; }
@@ -1527,7 +1528,8 @@ body:has(.v2-pdp-root .buybar) .page-main {
 .pdpk-ask svg { color: #1DA851; flex: none; }
 .pdpk-ask b { color: #007185; font-weight: 400; }
 .pdpk-ask:hover b { color: #C7511F; text-decoration: underline; }
-.pdpk-ask--bulk { margin-top: -4px; }
+.pdpk-ask--bulk { display: block; margin-top: -4px; }
+.pdpk-ask--bulk svg { display: inline-block; vertical-align: -3px; margin-right: 4px; }
 .pdpk-ask--bulk svg { color: #565959; }
 /* "Similar, for less" (2026-11-10): how much less, under the price. */
 .pdpk-rail__save { font-size: 13px; font-weight: 700; color: #067D62; }
