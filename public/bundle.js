@@ -4666,6 +4666,38 @@ function SparrowMark({
     })]
   });
 }
+
+/** The built-in header mark (assets/README.md): the bird lockup, owner's artwork of 2026-11-07. */
+const HEADER_MARK = '/assets/sora-lifestyle-bird-header.webp';
+/** The same sparrow lockup with its green lettering in cream, for dark headers and the footer (2026-11-16). */
+const HEADER_MARK_LIGHT = '/assets/sora-lifestyle-bird-light.webp';
+
+/**
+ * The site's one logo (owner, 2026-11-16: "logo har jgah ek hi rakho, vo sparrow wala"):
+ * the sparrow lockup, or its cream version on a dark surface. Every store header, the
+ * footer, the invoice and the passport show this; a logo uploaded in Admin → Branding
+ * replaces the light-surface one.
+ */
+function BrandMark({
+  light = false,
+  className = '',
+  eager = true
+}) {
+  const src = light ? HEADER_MARK_LIGHT : branding.logoUrl || HEADER_MARK;
+  return /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+    src: src,
+    alt: `${branding.siteName} — ${branding.tagline}`,
+    className: `sora-mark ${className}`.trim(),
+    width: "494",
+    height: "156",
+    decoding: "async",
+    ...(eager ? {
+      fetchpriority: 'high'
+    } : {
+      loading: 'lazy'
+    })
+  });
+}
 function Logo({
   compact = false,
   light = false,
@@ -31614,7 +31646,6 @@ function fashionKeysToPrune(lines) {
 // Every word is rendered as HTML text over a photograph.
 // ============================================================
 const GROCERY_STORE = 'grocery';
-const GROCERY_TAGLINE = 'Good food, brighter days';
 
 /** Delivery promise. One string, used by the header badge and the trust strip. */
 const GROCERY_DELIVERY_WINDOW = '6-7 days';
@@ -31950,7 +31981,6 @@ function groceryKeysToPrune(lines) {
 // "Standard Delivery / 6-7 days". Nothing here says otherwise.
 // ============================================================
 const HOMELIVING_STORE = 'homeliving';
-const HOMELIVING_TAGLINE = 'Comfort for every home';
 
 /** Delivery promise. One string, used by the header badge and the trust strip. */
 const HOMELIVING_DELIVERY_WINDOW = '6-7 days';
@@ -35607,10 +35637,10 @@ function Footer() {
             className: "ftr__logo",
             "aria-label": `${branding.siteName} home`,
             children: /*#__PURE__*/jsxRuntimeExports.jsx("img", {
-              src: "/assets/sora-lifestyle-footer.webp",
+              src: "/assets/sora-lifestyle-bird-light.webp",
               alt: "",
-              width: "540",
-              height: "424",
+              width: "494",
+              height: "156",
               loading: "lazy",
               decoding: "async"
             })
@@ -62273,7 +62303,7 @@ function Passport() {
             role: "img",
             "aria-label": "SORA LIFESTYLE \u2014 Health and Wellness",
             children: /*#__PURE__*/jsxRuntimeExports.jsx("img", {
-              src: "/assets/sora-lifestyle-invoice.webp",
+              src: "/assets/sora-lifestyle-bird-light.webp",
               alt: ""
             })
           }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
@@ -62472,7 +62502,7 @@ function Sidebar({
       className: "psp__side-brand",
       children: /*#__PURE__*/jsxRuntimeExports.jsx("img", {
         className: "psp__side-logo",
-        src: "/assets/sora-lifestyle-invoice.webp",
+        src: "/assets/sora-lifestyle-bird-light.webp",
         alt: "SORA LIFESTYLE \u2014 Health and Wellness"
       })
     }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
@@ -62959,11 +62989,11 @@ function Invoice() {
         children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
           className: "inv__brand",
           children: [/*#__PURE__*/jsxRuntimeExports.jsx("img", {
-            src: "/assets/sora-lifestyle-invoice.webp",
+            src: "/assets/sora-lifestyle-bird-header.webp",
             alt: "SORA LIFESTYLE \u2014 Health and Wellness",
             className: "inv__logo",
-            width: "464",
-            height: "288"
+            width: "494",
+            height: "156"
           }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
             className: "inv__brand-sub",
             children: "Health & Wellness"
@@ -69438,17 +69468,20 @@ function CreatorPortal({
         "aria-label": "SORA LIFESTYLE home",
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
           className: "cs-brand__mark",
-          children: /*#__PURE__*/jsxRuntimeExports.jsx(SparrowMark, {
-            size: 34,
-            light: true
+          children: /*#__PURE__*/jsxRuntimeExports.jsxs("picture", {
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("source", {
+              media: "(max-width: 1019px)",
+              srcSet: HEADER_MARK
+            }), /*#__PURE__*/jsxRuntimeExports.jsx(BrandMark, {
+              light: true,
+              eager: false
+            })]
           })
-        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
           className: "cs-brand__txt",
-          children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
-            children: "SORA LIFESTYLE"
-          }), /*#__PURE__*/jsxRuntimeExports.jsx("em", {
+          children: /*#__PURE__*/jsxRuntimeExports.jsx("em", {
             children: "Creator Program"
-          })]
+          })
         })]
       }), /*#__PURE__*/jsxRuntimeExports.jsx("nav", {
         ref: navRef,
@@ -70129,23 +70162,18 @@ const DELIVERY_STRIP = Object.freeze({
   location: 'Delivering across India',
   promise: 'Delivery in 6–7 business days'
 });
+
+// The site's one logo, the sparrow (owner, 2026-11-16); `light` over the department photographs.
 function FashionLogo({
-  tagline
+  light = false
 }) {
-  return /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+  return /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
     to: "/fashion",
     className: "fs-logo",
     "aria-label": `${branding.siteName} fashion home`,
-    children: [/*#__PURE__*/jsxRuntimeExports.jsx(SparrowMark, {
-      size: 34
-    }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-      className: "fs-logo__txt",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
-        children: branding.siteName
-      }), /*#__PURE__*/jsxRuntimeExports.jsx("em", {
-        children: tagline
-      })]
-    })]
+    children: /*#__PURE__*/jsxRuntimeExports.jsx(BrandMark, {
+      light: light
+    })
   });
 }
 function FashionHeader({
@@ -70241,7 +70269,7 @@ function FashionHeader({
         children: "Men"
       })]
     }), /*#__PURE__*/jsxRuntimeExports.jsx(FashionLogo, {
-      tagline: config.header.tagline
+      light: true
     }), /*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
       className: "wm-header__actions",
       "aria-label": "Search, account, wishlist and cart",
@@ -70295,7 +70323,7 @@ function FashionHeader({
           size: 22
         })
       }), /*#__PURE__*/jsxRuntimeExports.jsx(FashionLogo, {
-        tagline: "Jewellery"
+        light: true
       }), /*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
         className: "jw-header__nav",
         "aria-label": "Jewellery",
@@ -70369,7 +70397,7 @@ function FashionHeader({
         size: 22
       })
     }), /*#__PURE__*/jsxRuntimeExports.jsx(FashionLogo, {
-      tagline: "Tradition in every drape"
+      light: true
     }), /*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
       className: "sw-header__nav",
       "aria-label": "Saree store",
@@ -70441,9 +70469,7 @@ function FashionHeader({
           name: "menu",
           size: 24
         })
-      }), /*#__PURE__*/jsxRuntimeExports.jsx(FashionLogo, {
-        tagline: config.header.tagline
-      }), /*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(FashionLogo, {}), /*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
         className: "fs-hdr__acts",
         "aria-label": "Account, wishlist and cart",
         children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
@@ -77613,17 +77639,14 @@ const BOTTOM_NAV$2 = [{
   label: 'Account',
   icon: 'user'
 }];
+
+// The site's one logo, the sparrow (owner, 2026-11-16).
 function GroceryLogo() {
-  return /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+  return /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
     to: "/grocery",
     className: "gs-logo",
     "aria-label": `${branding.siteName} grocery home`,
-    children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
-      className: "serif",
-      children: branding.siteName
-    }), /*#__PURE__*/jsxRuntimeExports.jsx("em", {
-      children: GROCERY_TAGLINE
-    })]
+    children: /*#__PURE__*/jsxRuntimeExports.jsx(BrandMark, {})
   });
 }
 function GroceryHeader({
@@ -78277,17 +78300,14 @@ const BOTTOM_NAV$1 = [{
   icon: 'user',
   href: '/account'
 }];
+
+// The site's one logo, the sparrow (owner, 2026-11-16).
 function HomeLivingLogo() {
-  return /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+  return /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
     to: "/homeliving",
     className: "hl-logo",
     "aria-label": `${branding.siteName} Home & Living home`,
-    children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
-      className: "serif",
-      children: branding.siteName
-    }), /*#__PURE__*/jsxRuntimeExports.jsx("em", {
-      children: HOMELIVING_TAGLINE
-    })]
+    children: /*#__PURE__*/jsxRuntimeExports.jsx(BrandMark, {})
   });
 }
 
@@ -79321,7 +79341,7 @@ function HomeLivingWishlist() {
 // Nothing here says otherwise, and nothing here claims a benefit to the
 // planet.
 // ============================================================
-const LIFESTYLE_TAGLINE = DEFAULT_LIFESTYLE_STOREFRONT.header.tagline;
+DEFAULT_LIFESTYLE_STOREFRONT.header.tagline;
 
 /** Delivery promise. The Home & Living window; the only factual claim on the page. */
 const LIFESTYLE_DELIVERY_WINDOW = HOMELIVING_DELIVERY_WINDOW;
@@ -79584,19 +79604,14 @@ const OTHER_STORES = [{
   label: 'Grocery store',
   short: 'Grocery'
 }];
-function LifestyleLogo({
-  tagline = LIFESTYLE_TAGLINE
-}) {
-  return /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+
+// The site's one logo, the sparrow (owner, 2026-11-16).
+function LifestyleLogo() {
+  return /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
     to: "/lifestyle",
     className: "ls-logo",
     "aria-label": `${branding.siteName} lifestyle home`,
-    children: [/*#__PURE__*/jsxRuntimeExports.jsx("strong", {
-      className: "serif",
-      children: branding.siteName
-    }), /*#__PURE__*/jsxRuntimeExports.jsx("em", {
-      children: tagline
-    })]
+    children: /*#__PURE__*/jsxRuntimeExports.jsx(BrandMark, {})
   });
 }
 function LifestyleHeader({
@@ -79605,8 +79620,6 @@ function LifestyleHeader({
   const {
     cartCount
   } = useStore();
-  const homepage = reactExports.useSyncExternalStore(subscribeHomepage, getHomepageSnapshot, getHomepageSnapshot);
-  const config = normalizeLifestyleStorefront(homepage.lifestyle_storefront);
   return /*#__PURE__*/jsxRuntimeExports.jsx("header", {
     className: "ls-hdr",
     children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
@@ -79620,9 +79633,7 @@ function LifestyleHeader({
           name: "menu",
           size: 26
         })
-      }), /*#__PURE__*/jsxRuntimeExports.jsx(LifestyleLogo, {
-        tagline: config.header.tagline
-      }), /*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(LifestyleLogo, {}), /*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
         className: "ls-hdr__acts",
         "aria-label": "Search, wishlist and cart",
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {

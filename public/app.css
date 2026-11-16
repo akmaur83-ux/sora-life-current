@@ -9950,6 +9950,22 @@ body .fs .hx-ans .hx-ans__cta { background: #D9B26A; color: #121A16; }
 .pdpk-qa__helpful button { display: inline-flex; align-items: center; gap: 4px; height: 26px; padding: 0 10px; border: 1px solid #D5D9D9; background: #fff; font: inherit; color: var(--sora-ink); cursor: pointer; }
 .pdpk-qa__helpful em { font-style: normal; }
 
+/* The one logo (owner, 2026-11-16): the sparrow lockup in every store header. */
+.sora-mark { display: block; width: auto; max-width: 100%; height: 46px; }
+.fs-logo .sora-mark, .hl-logo .sora-mark, .gs-logo .sora-mark, .ls-logo .sora-mark { height: 48px; }
+.sw-header .fs-logo .sora-mark, .wm-header .fs-logo .sora-mark, .jw-header .fs-logo .sora-mark { height: 50px; filter: none; }
+.ftr__logo img { width: 200px; }
+.inv__logo { height: 64px; }
+@media (max-width: 760px) {
+  .fs-logo .sora-mark, .hl-logo .sora-mark, .gs-logo .sora-mark, .ls-logo .sora-mark { height: 38px; }
+  .sw-header .fs-logo .sora-mark, .wm-header .fs-logo .sora-mark, .jw-header .fs-logo .sora-mark { height: 36px; }
+}
+@media (max-width: 380px) {
+  .fs-logo .sora-mark, .hl-logo .sora-mark, .gs-logo .sora-mark, .ls-logo .sora-mark { height: 33px; }
+}
+.crp.crp--studio a.cs-brand { flex-direction: column; align-items: flex-start; }
+.crp.crp--studio .cs-brand__mark .sora-mark { height: 44px; }
+
 /* ═══ src/styles/storefront-sections.css ═══ */
 /* ============================================================
    Storefront sections an admin edits (Storefronts in the admin; storefrontContent.js).
