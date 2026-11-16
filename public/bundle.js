@@ -3323,6 +3323,13 @@ const WELLNESS = {
     more: text$1(30, 'View-all label'),
     link: link('View-all link (empty: Leather Jackets)')
   }, 'Taj Leather jackets (their range in Fashion; also on the Fashion home)'),
+  // Diamond Leather (partner, 2026-11-16): their men's jackets, on the Fashion home.
+  diamondLeather: group({
+    hidden: hidden(),
+    title: text$1(60, 'Heading'),
+    more: text$1(30, 'View-all label'),
+    link: link('View-all link (empty: Diamond Leather jackets)')
+  }, 'Diamond Leather jackets (their range in Fashion, on the Fashion home)'),
   // Ansari Fashion (partner, 2026-11-13), under Taj Leather; also on the Fashion home.
   ansariPosters: group({
     hidden: hidden(),
@@ -35535,6 +35542,16 @@ const BRANDS = Object.freeze([Object.freeze({
   href: '/fashion/search?q=taj%20leather',
   image: 'https://cdn.shopify.com/s/files/1/0780/8437/4633/files/kbxt1xR35kfGamD.jpg?width=800',
   text: 'Genuine leather jackets and coats for men and women.'
+}), Object.freeze({
+  id: 'diamond-leather',
+  page: '/brands/diamond-leather',
+  story: "Diamond Leather is a Delhi maker of genuine leather jackets for men: bikers, classic collars, quilted and vintage finishes, and a suede shirt jacket, in sizes S to 2XL.",
+  catalogueBrand: 'Diamond Leather',
+  name: 'Diamond Leather',
+  store: 'Fashion',
+  href: '/fashion/search?q=diamond%20leather',
+  image: 'https://m.media-amazon.com/images/X/bxt1/M/Mbxt1hSE$epwfu9._SL800_QL80_FMwebp_.png',
+  text: 'Genuine leather jackets for men, from Delhi.'
 }), Object.freeze({
   id: 'ansari-fashion',
   luxe: true,
@@ -71221,6 +71238,80 @@ function BudgetChips({
 }
 
 // ============================================================
+// Diamond Leather (partner, 2026-11-16: "another tie up"). A Delhi maker of genuine
+// leather jackets (Mohammadpur, near Bhikaji Cama Place). Their 21 men's jackets live in
+// Fashion › Men › Leather Jackets, sizes S (42) to 2XL (50), each at the price their own
+// shop shows for most sizes.
+//
+//   * the range — a sliding row of their jackets on the Fashion home (the Weavers Villa
+//     rule: selectWeaversRange), editable in Storefronts → Wellness (hide, wording, link);
+//   * no posters: their site has product shots only, no campaign art.
+// Nothing to show renders nothing.
+// ============================================================
+const DIAMOND_BRAND = 'Diamond Leather';
+const DIAMOND_LISTING = '/fashion/search?q=diamond%20leather';
+const DIAMOND_RANGE_LIMIT = 12;
+const DIAMOND_SECTION = Object.freeze({
+  hidden: false,
+  title: 'Leather Jackets by Diamond Leather',
+  more: 'View All',
+  link: ''
+});
+
+/** The range's rows: active, in-stock fashion rows of the brand; a failed read counts as none. */
+async function fetchDiamondRows(client = supabase, limit = 48) {
+  const {
+    data,
+    error
+  } = await client.from('catalogue_products').select('id, store, name, slug, mrp, sale_price, images, category_id, sort_order, created_at').eq('store', 'fashion').eq('brand', DIAMOND_BRAND).eq('is_active', true).gt('stock', 0).order('sort_order', {
+    ascending: true
+  }).limit(limit);
+  if (error || !Array.isArray(data)) return [];
+  return data;
+}
+
+/** The range's cards: null until the read answers. */
+function useDiamondRange(limit = DIAMOND_RANGE_LIMIT) {
+  const [rows, setRows] = reactExports.useState(null);
+  reactExports.useEffect(() => {
+    let live = true;
+    fetchDiamondRows(supabase).then(r => {
+      if (live) setRows(r);
+    }, () => {
+      if (live) setRows([]);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+  return reactExports.useMemo(() => rows ? selectWeaversRange(rows, limit) : null, [rows, limit]);
+}
+
+/** `items` is for a test; the page passes nothing and the live catalogue is read. */
+function DiamondLeatherRange({
+  items: given,
+  autoplayMs
+} = {}) {
+  const section = useStorefrontSection('wellness', 'diamondLeather', DIAMOND_SECTION);
+  const loaded = useDiamondRange();
+  const items = (given ?? loaded) || [];
+  return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+    className: "hx-wv-range",
+    children: /*#__PURE__*/jsxRuntimeExports.jsx(SlidingRail, {
+      id: "diamond",
+      label: "Diamond Leather jackets",
+      section: section,
+      defaults: DIAMOND_SECTION,
+      link: section.link || DIAMOND_LISTING,
+      items: items,
+      ...(autoplayMs ? {
+        autoplayMs
+      } : {})
+    })
+  });
+}
+
+// ============================================================
 // Fashion homepage art — the supplied photography, keyed by category slug.
 //
 // The category row (fashion_categories.image_url) holds ONE image per
@@ -71529,7 +71620,7 @@ function FashionHome() {
       wrap: "fs-sec"
     }), /*#__PURE__*/jsxRuntimeExports.jsx(CategoryTiles, {
       tree: tree
-    }), /*#__PURE__*/jsxRuntimeExports.jsx(TajLeatherRange, {}), /*#__PURE__*/jsxRuntimeExports.jsx(AnsariRange, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Benefits, {}), /*#__PURE__*/jsxRuntimeExports.jsx(ShopByCategory, {
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(TajLeatherRange, {}), /*#__PURE__*/jsxRuntimeExports.jsx(DiamondLeatherRange, {}), /*#__PURE__*/jsxRuntimeExports.jsx(AnsariRange, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Benefits, {}), /*#__PURE__*/jsxRuntimeExports.jsx(ShopByCategory, {
       tree: tree,
       copy: config.sections
     }), /*#__PURE__*/jsxRuntimeExports.jsx(TopBrands, {
