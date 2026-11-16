@@ -8,7 +8,8 @@ import { BRANDS, brandImage, brandCounts } from '../lib/brands.js';
 
 // ============================================================
 // "Our brands" on the homepage (2026-11-13 redesign: one sliding row in place of the
-// ten partner sections, one after another). A card per brand — picture, name, what
+// ten partner sections, one after another). Every brand shows at once, no sliding
+// (owner, 2026-11-16): 4 + 3 tiles on a phone (sora-ds.css). A card per brand — picture, name, what
 // they make, how many products — opening the brand's own page (/brands/:id).
 // ============================================================
 const brandOf = (p) => String(p?.brand || productBrandName(p) || '').trim();
@@ -43,10 +44,10 @@ export default function BrandCarousel() {
                 <Link to={b.page} className="sora-bc__card">
                   <span className={`sora-bc__img${b.imageFrom ? ' is-whole' : ''}`}>{img && <img src={img} alt="" width="420" height="520" loading="lazy" decoding="async" />}</span>
                   <span className="sora-bc__body">
-                    <em>{b.store}{counts[b.id] ? ` · ${counts[b.id]} products` : ''}</em>
+                    <em><span className="sora-bc__store">{b.store}{counts[b.id] ? ' · ' : ''}</span>{counts[b.id] ? `${counts[b.id]} products` : ''}</em>
                     <b>{b.name}</b>
                     <span>{b.text}</span>
-                    <i>Shop {b.name} <Icon name="arrowRight" size={14} /></i>
+                    <i>Shop now <Icon name="arrowRight" size={14} /></i>
                   </span>
                 </Link>
               </li>
