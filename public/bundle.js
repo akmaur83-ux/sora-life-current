@@ -41082,13 +41082,16 @@ function BrandCarousel() {
               }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
                 className: "sora-bc__body",
                 children: [/*#__PURE__*/jsxRuntimeExports.jsxs("em", {
-                  children: [b.store, counts[b.id] ? ` · ${counts[b.id]} products` : '']
+                  children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+                    className: "sora-bc__store",
+                    children: [b.store, counts[b.id] ? ' · ' : '']
+                  }), counts[b.id] ? `${counts[b.id]} products` : '']
                 }), /*#__PURE__*/jsxRuntimeExports.jsx("b", {
                   children: b.name
                 }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
                   children: b.text
                 }), /*#__PURE__*/jsxRuntimeExports.jsxs("i", {
-                  children: ["Shop ", b.name, " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+                  children: ["Shop now ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
                     name: "arrowRight",
                     size: 14
                   })]

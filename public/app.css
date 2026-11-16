@@ -9775,8 +9775,8 @@ body .v2-hdr__stores, body .fs-hdr__stores, body .hl .hl-hdr__stores, body .gs-h
 
 /* Our brands row on the homepage (BrandCarousel.jsx). */
 .sora-bc { padding: 36px 0 12px; }
-.sora-bc__row { list-style: none; margin: 0; padding: 0 0 8px; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(230px, 1fr); gap: 16px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: thin; }
-.sora-bc__row > li { scroll-snap-align: start; }
+/* Every brand at once, no sliding (owner, 2026-11-16): one row on a wide screen, 4 + 3 tiles on a phone. */
+.sora-bc__row { list-style: none; margin: 0; padding: 0 0 8px; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; }
 .sora-bc__card { display: flex; flex-direction: column; height: 100%; background: #fff; border: 1px solid var(--sora-line); color: var(--sora-ink); text-decoration: none; transition: box-shadow .25s ease, transform .25s ease; }
 .sora-bc__card:hover { box-shadow: 0 14px 30px -18px rgba(15, 17, 17, .45); transform: translateY(-2px); }
 .sora-bc__img { display: block; aspect-ratio: 4 / 5; overflow: hidden; background: #F3F1EA; }
@@ -9787,7 +9787,20 @@ body .v2-hdr__stores, body .fs-hdr__stores, body .hl .hl-hdr__stores, body .gs-h
 .sora-bc__body b { font: 500 21px/1.2 var(--slv2-disp, Georgia, serif); }
 .sora-bc__body > span { font-size: 13.5px; line-height: 1.45; color: #333; flex: 1; }
 .sora-bc__body i { font-style: normal; font-weight: 700; font-size: 14px; color: var(--sora-forest-2); display: inline-flex; align-items: center; gap: 4px; }
-@media (max-width: 600px) { .sora-bc__row { grid-auto-columns: 72%; } }
+@media (max-width: 1100px) and (min-width: 601px) { .sora-bc__row { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (max-width: 600px) {
+  .sora-bc { padding: 24px 0 8px; }
+  .sora-bc__row { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px 8px; }
+  .sora-bc__row > li { flex: 0 0 calc((100% - 24px) / 4); min-width: 0; }
+  .sora-bc__card { border: 0; background: none; text-align: center; }
+  .sora-bc__card:hover { box-shadow: none; transform: none; }
+  .sora-bc__img { aspect-ratio: 1; border: 1px solid var(--sora-line); background: #F3F1EA; }
+  .sora-bc__img.is-whole img { padding: 8px; }
+  .sora-bc__body { padding: 6px 0 0; gap: 1px; align-items: center; }
+  .sora-bc__body b { font: 600 12.5px/1.25 var(--font-sans, system-ui, sans-serif); color: var(--sora-ink); }
+  .sora-bc__body em { order: 2; font-size: 10.5px; letter-spacing: 0; text-transform: none; }
+  .sora-bc__body > span, .sora-bc__body i { display: none; }
+}
 @media (prefers-reduced-motion: reduce) { .sora-bc__card { transition: none; } .sora-bc__card:hover { transform: none; } }
 
 /* A brand's page (BrandPage.jsx). */
@@ -9998,6 +10011,7 @@ body .fs .hx-ans .hx-ans__cta { background: #D9B26A; color: #121A16; }
 .sora-ingr__list a { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 8px 16px; font-size: 14px; font-weight: 600; color: #1E3A2F; text-decoration: none; background: #FBF8F1; border: 1px solid rgba(30, 58, 47, .16); }
 .sora-ingr__list a:hover { border-color: #2C5341; background: #fff; }
 .sora-ingr__list span { font-size: 12px; font-weight: 500; color: #5c6a62; }
+@media (max-width: 600px) { .sora-bc__store { display: none; } }
 
 /* ═══ src/styles/storefront-sections.css ═══ */
 /* ============================================================
