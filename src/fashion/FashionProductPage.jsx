@@ -18,6 +18,7 @@ import { PdpPrice, PdpSaving, PdpAssurances, PdpFactTable, PdpAbout, aboutBullet
 import { lookPicks } from '../lib/completeLook.js';
 import { CompareButton } from '../components/Compare.jsx';
 import PriceHistory from '../components/PriceHistory.jsx';
+import MakerCard from '../components/MakerCard.jsx';
 import { StylingTips } from '../components/ShopExtras.jsx';
 import { useFashionDetails, countryName } from '../lib/fashionPdpDetails.js';
 import PdpDeliveryDate from '../components/pdp/PdpDeliveryDate.jsx';
@@ -258,6 +259,8 @@ export default function FashionProductPage() {
         }))} />
         <PriceHistory productId={view.id} />
         <PdpService />
+        {/* About the maker (round 9, 2026-11-16): partner brands only (MakerCard.jsx). */}
+        <MakerCard brand={view.brand} />
         <PdpReviews productKey={`fashion:${view.id}`} productName={view.name} />
         <StylingTips slug={node?.slug} />
         <PdpLook items={lookPicks(views.map((p) => ({ key: p.id, href: `/fashion/p/${p.slug}`, name: p.name, image: p.image, price: p.price, inStock: p.inStock, slug: p.category_id ? tree.byId.get(p.category_id)?.slug : '' })),

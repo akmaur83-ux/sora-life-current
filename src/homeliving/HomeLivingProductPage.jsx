@@ -15,6 +15,7 @@ import ProductDeliveryInfo from '../components/pdp/ProductDeliveryInfo.jsx';
 import { PdpCompare, PdpService, PdpBrandRail, PdpBundle, PdpRecent, PdpCheaper, PdpShare, PdpReviews, useRecentlyViewed, useHoverZoom } from '../components/pdp/PdpOwnerKit.jsx';
 import { CompareButton } from '../components/Compare.jsx';
 import PriceHistory from '../components/PriceHistory.jsx';
+import MakerCard from '../components/MakerCard.jsx';
 import PdpDeliveryDate from '../components/pdp/PdpDeliveryDate.jsx';
 import { usePageMeta, priceTitle } from '../lib/pageMeta.js';
 import { useHomeLivingWishlist } from '../lib/homelivingWishlist.js';
@@ -708,6 +709,8 @@ export default function HomeLivingProductPage() {
         canAddAll={bundleAddable} onAddAll={() => bundle.forEach((p, i) => addHomeLivingToCart(p, i === 0 ? st.variant : null, 1))} />
       <PriceHistory productId={view.id} />
       <PdpService />
+      {/* About the maker (round 9, 2026-11-16): partner brands only (MakerCard.jsx). */}
+      <MakerCard brand={view.brand} />
       <PdpReviews productKey={`homeliving:${view.id}`} productName={view.name} />
       <PdpCheaper current={{ key: view.id, price: view.price, group: view.category_id }}
         items={products.map((p) => ({ key: p.id, href: `/homeliving/p/${p.slug}`, name: p.name, image: (p.gallery && p.gallery[0]?.url) || p.images?.[0] || null, price: p.price, group: p.category_id, inStock: p.stock > 0 || (p.variants || []).some((v) => v.stock > 0) }))} />

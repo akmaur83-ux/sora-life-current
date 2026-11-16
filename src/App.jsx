@@ -25,6 +25,7 @@ import Legal from './pages/Legal.jsx';
 import EditableLegal from './pages/EditableLegal.jsx';
 import Passport from './pages/Passport.jsx';
 import Invoice from './pages/Invoice.jsx';
+import GiftReceipt from './pages/GiftReceipt.jsx';
 import CreatorPortal from './pages/CreatorPortal.jsx';
 import CreatorAttribution from './components/CreatorAttribution.jsx';
 import NotFound from './pages/NotFound.jsx';
@@ -211,6 +212,7 @@ export default function App() {
       <Route path="/passport/:passportId?" element={<Passport />} />
       {/* Customer invoice. Standalone (outside Layout) so it prints cleanly. */}
       <Route path="/invoice/:orderNumber" element={<Invoice />} />
+      <Route path="/gift-receipt/:orderNumber" element={<GiftReceipt />} />
       {/* Creator Program portal. Standalone shell, own chrome. */}
       <Route path="/creator/:tab?" element={<CreatorPortal />} />
 

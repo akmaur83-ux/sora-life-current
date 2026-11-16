@@ -12,6 +12,8 @@ import { TajLeatherPosters } from '../components/TajLeather.jsx';
 import { AnsariPosters } from '../components/AnsariFashion.jsx';
 import HomeGroup from '../components/HomeGroup.jsx';
 import { NewArrivals } from '../components/NewArrivals.jsx';
+import PopularThisWeek from '../components/PopularThisWeek.jsx';
+import { ShopByIngredient } from '../components/ShopExtras.jsx';
 import { LuxuryBeds, Bedsheets } from '../components/HomeCategoryRails.jsx';
 import RecentlyViewedHome from '../components/RecentlyViewedHome.jsx';
 import OfferBanner from '../components/OfferBanner.jsx';
@@ -85,6 +87,8 @@ export default function Home() {
       {/* The products flagged new, across the stores (NewArrivals.jsx; View All opens /new).
           Owner, 2026-11-13: New Arrivals and Top deals swapped places. */}
       <NewArrivals />
+      {/* Popular this week (round 9, 2026-11-16): most-opened products, real counts only (PopularThisWeek.jsx). */}
+      <PopularThisWeek />
       <FestivePromo />
       {/* Owner, 2026-11-13: "festive gifting ke niche shop by brand" — the brands row, then
           Taj Leather's and Ansari Fashion's posters as they were ("ache lagte hain"). */}
@@ -98,6 +102,8 @@ export default function Home() {
       {/* The editorial category browse and the need-led one (HomeDiscoveryRails.jsx). */}
       <ShopByCategory />
       <ShopByConcerns />
+      {/* Shop by ingredient (round 9, 2026-11-16): ingredients named in 3+ in-stock products (ShopExtras.jsx). */}
+      <ShopByIngredient products={products} />
       {/* Gift-ready categories across Fashion and Home & Living (GiftShop.jsx). */}
       <GiftShop />
       {/* The biggest verified discounts in stock (HomeExtras.jsx), where New Arrivals was. */}

@@ -1,0 +1,289 @@
+diff --git a/src/App.jsx b/src/App.jsx
+index 27af67e..47086e2 100644
+--- a/src/App.jsx
++++ b/src/App.jsx
+@@ -25,6 +25,7 @@ import Legal from './pages/Legal.jsx';
+ import EditableLegal from './pages/EditableLegal.jsx';
+ import Passport from './pages/Passport.jsx';
+ import Invoice from './pages/Invoice.jsx';
++import GiftReceipt from './pages/GiftReceipt.jsx';
+ import CreatorPortal from './pages/CreatorPortal.jsx';
+ import CreatorAttribution from './components/CreatorAttribution.jsx';
+ import NotFound from './pages/NotFound.jsx';
+@@ -211,6 +212,7 @@ export default function App() {
+       <Route path="/passport/:passportId?" element={<Passport />} />
+       {/* Customer invoice. Standalone (outside Layout) so it prints cleanly. */}
+       <Route path="/invoice/:orderNumber" element={<Invoice />} />
++      <Route path="/gift-receipt/:orderNumber" element={<GiftReceipt />} />
+       {/* Creator Program portal. Standalone shell, own chrome. */}
+       <Route path="/creator/:tab?" element={<CreatorPortal />} />
+ 
+diff --git a/src/components/AppShell.jsx b/src/components/AppShell.jsx
+index c080a3b..664e5ed 100644
+--- a/src/components/AppShell.jsx
++++ b/src/components/AppShell.jsx
+@@ -5,6 +5,7 @@ import { useStore } from '../lib/store.jsx';
+ import { isStandalone } from '../lib/appMode.js';
+ import { CompareTray } from './Compare.jsx';
+ import { logSearch } from '../lib/insights.js';
++import { logView } from '../lib/popular.js';
+ 
+ // ============================================================
+ // The SORA app's runtime (owner, 2026-11-13: the app, deep), mounted once beside
+@@ -121,6 +122,13 @@ export default function AppShell() {
+     return () => clearTimeout(t);
+   }, [pathname, search]);
+ 
++  // Product page views for "Popular this week" (round 9, 2026-11-16): the store and the slug,
++  // once a day per browser, after the page has been open a moment (lib/popular.js).
++  useEffect(() => {
++    const t = setTimeout(() => { logView(pathname); }, 2000);
++    return () => clearTimeout(t);
++  }, [pathname]);
++
+   return (
+     <>
+       <CompareTray />
+diff --git a/src/components/ShopExtras.jsx b/src/components/ShopExtras.jsx
+index 4b1d03d..9d69cfd 100644
+--- a/src/components/ShopExtras.jsx
++++ b/src/components/ShopExtras.jsx
+@@ -102,3 +102,37 @@ export function LastChance({ wrap = 'hx-wrap', max = 10 }) {
+     </section>
+   );
+ }
++
++// ---- Shop by ingredient (round 9, 2026-11-16) ------------------------------------
++// The wellness ingredients named in at least three in-stock product names, most first,
++// each opening the wellness search for it. Names only: nothing here says what an
++// ingredient does. An ingredient the catalogue does not carry is never shown.
++export const INGREDIENTS = Object.freeze(['Sea buckthorn', 'Tulsi', 'Honey', 'Neem', 'Aloe vera', 'Turmeric', 'Noni', 'Moringa', 'Ashwagandha', 'Amla', 'Ginseng', 'Spirulina', 'Shilajit', 'Giloy', 'Triphala', 'Brahmi', 'Saffron', 'Lemon', 'Rose']);
++export const INGREDIENT_MIN = 3;
++
++/** [{ name, count, href }] for ingredients in INGREDIENT_MIN+ in-stock product names, most first, at most `max`. Pure. */
++export function ingredientChips(products, max = 10) {
++  const names = (Array.isArray(products) ? products : []).filter((p) => p && Number(p.stock) > 0).map((p) => ` ${String(p.name || '').toLowerCase()} `);
++  return INGREDIENTS.map((name) => {
++    const needle = name.toLowerCase();
++    const re = new RegExp(`[^a-z]${needle.replace(/ /g, '\\s+')}[^a-z]`);
++    return { name, count: names.filter((n) => re.test(n)).length, href: `/shop?q=${encodeURIComponent(needle)}` };
++  }).filter((c) => c.count >= INGREDIENT_MIN).sort((a, b) => b.count - a.count).slice(0, max);
++}
++
++export function ShopByIngredient({ products }) {
++  const chips = ingredientChips(products);
++  if (chips.length < 3) return null;
++  return (
++    <section className="hx sora-ingr" aria-labelledby="sora-ingr-h">
++      <div className="hx-wrap">
++        <h2 className="hx-stores__h" id="sora-ingr-h">Shop by ingredient</h2>
++        <ul className="sora-ingr__list">
++          {chips.map((c) => (
++            <li key={c.name}><Link to={c.href}>{c.name} <span>{c.count}</span></Link></li>
++          ))}
++        </ul>
++      </div>
++    </section>
++  );
++}
+\ No newline at end of file
+diff --git a/src/fashion/FashionProductCard.jsx b/src/fashion/FashionProductCard.jsx
+index 0126a1d..fa97003 100644
+--- a/src/fashion/FashionProductCard.jsx
++++ b/src/fashion/FashionProductCard.jsx
+@@ -8,6 +8,23 @@ import { useFashionWishlist } from '../lib/fashionWishlist.js';
+ import { useStore } from '../lib/store.jsx';
+ import { VariantSheet } from './FashionVariantPicker.jsx';
+ 
++/**
++ * The sizes in stock, for the card (round 9, 2026-11-16): any colour of that size has
++ * stock. Short labels ("S (42)" → "S"); nothing for a one-size product or none in stock;
++ * at most `max`, the rest as "+n". Pure.
++ */
++export function cardSizes(view, max = 6) {
++  const vs = Array.isArray(view?.variants) ? view.variants : [];
++  const sizes = (Array.isArray(view?.sizes) ? view.sizes : []).filter((s) => s && vs.some((v) => v.size === s && Number(v.stock) > 0));
++  if (sizes.length < 2) return null;
++  // "S (42)", "M-44" → "S", "M"; then smallest first: letter sizes in their order, numbers by value.
++  const label = (x) => { const t = String(x).replace(/\s*\([^)]*\)\s*$/, '').trim(); const m = /^(XXS|XS|S|M|L|XL|XXL|[2-5]XL)[\s-]+\d+$/i.exec(t); return (m ? m[1].toUpperCase() : t) || String(x); };
++  const rank = (t) => { const i = LETTER_SIZES.indexOf(t.toUpperCase() === 'XXL' ? '2XL' : t.toUpperCase()); if (i >= 0) return i; const n = parseFloat(t); return Number.isFinite(n) ? 100 + n : 10000; };
++  const short = [...new Set(sizes.map(label))].sort((x, y) => rank(x) - rank(y) || x.localeCompare(y));
++  return { shown: short.slice(0, max), more: Math.max(0, short.length - max) };
++}
++const LETTER_SIZES = ['XXS', 'XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', '5XL'];
++
+ // ============================================================
+ // Fashion product card — image, discount badge, wishlist heart, quick-add,
+ // price with the MRP struck through, name, rating with review count (once
+@@ -40,6 +57,7 @@ export default function FashionProductCard({ view, layout = 'grid', mediaLoading
+     else if (plan.mode === 'sheet') setSheet(true);
+   };
+   const { shown, more } = swatchOverflow(view.swatches, 4);
++  const sizesLine = cardSizes(view);
+   const href = productHref(view);
+   const out = !view.inStock;
+   return (
+@@ -75,6 +93,11 @@ export default function FashionProductCard({ view, layout = 'grid', mediaLoading
+             <span className="fs-rating__count">({view.reviewCount >= 1000 ? `${(view.reviewCount / 1000).toFixed(view.reviewCount >= 10000 ? 0 : 1).replace(/\.0$/, '')}K` : view.reviewCount})</span>
+           </p>
+         )}
++        {sizesLine && (
++          <p className="fs-sizes" aria-label={`Sizes in stock: ${sizesLine.shown.join(', ')}${sizesLine.more ? ` and ${sizesLine.more} more` : ''}`}>
++            {sizesLine.shown.map((z) => <span key={z}>{z}</span>)}{sizesLine.more > 0 && <span>+{sizesLine.more}</span>}
++          </p>
++        )}
+         {shown.length > 1 && (
+           <p className="fs-swatches" aria-label={`${view.swatches.length} colours`}>
+             {shown.map((s) => <span key={s.colour} className={`fs-swatch${s.stock === 0 ? ' is-out' : ''}`} style={{ background: s.hex || '#D9CBB0' }} title={s.colour} />)}
+diff --git a/src/fashion/FashionProductPage.jsx b/src/fashion/FashionProductPage.jsx
+index 2f8d724..994ad0b 100644
+--- a/src/fashion/FashionProductPage.jsx
++++ b/src/fashion/FashionProductPage.jsx
+@@ -18,6 +18,7 @@ import { PdpPrice, PdpSaving, PdpAssurances, PdpFactTable, PdpAbout, aboutBullet
+ import { lookPicks } from '../lib/completeLook.js';
+ import { CompareButton } from '../components/Compare.jsx';
+ import PriceHistory from '../components/PriceHistory.jsx';
++import MakerCard from '../components/MakerCard.jsx';
+ import { StylingTips } from '../components/ShopExtras.jsx';
+ import { useFashionDetails, countryName } from '../lib/fashionPdpDetails.js';
+ import PdpDeliveryDate from '../components/pdp/PdpDeliveryDate.jsx';
+@@ -258,6 +259,8 @@ export default function FashionProductPage() {
+         }))} />
+         <PriceHistory productId={view.id} />
+         <PdpService />
++        {/* About the maker (round 9, 2026-11-16): partner brands only (MakerCard.jsx). */}
++        <MakerCard brand={view.brand} />
+         <PdpReviews productKey={`fashion:${view.id}`} productName={view.name} />
+         <StylingTips slug={node?.slug} />
+         <PdpLook items={lookPicks(views.map((p) => ({ key: p.id, href: `/fashion/p/${p.slug}`, name: p.name, image: p.image, price: p.price, inStock: p.inStock, slug: p.category_id ? tree.byId.get(p.category_id)?.slug : '' })),
+diff --git a/src/homeliving/HomeLivingProductPage.jsx b/src/homeliving/HomeLivingProductPage.jsx
+index a0d7ac1..4b6013c 100644
+--- a/src/homeliving/HomeLivingProductPage.jsx
++++ b/src/homeliving/HomeLivingProductPage.jsx
+@@ -15,6 +15,7 @@ import ProductDeliveryInfo from '../components/pdp/ProductDeliveryInfo.jsx';
+ import { PdpCompare, PdpService, PdpBrandRail, PdpBundle, PdpRecent, PdpCheaper, PdpShare, PdpReviews, useRecentlyViewed, useHoverZoom } from '../components/pdp/PdpOwnerKit.jsx';
+ import { CompareButton } from '../components/Compare.jsx';
+ import PriceHistory from '../components/PriceHistory.jsx';
++import MakerCard from '../components/MakerCard.jsx';
+ import PdpDeliveryDate from '../components/pdp/PdpDeliveryDate.jsx';
+ import { usePageMeta, priceTitle } from '../lib/pageMeta.js';
+ import { useHomeLivingWishlist } from '../lib/homelivingWishlist.js';
+@@ -708,6 +709,8 @@ export default function HomeLivingProductPage() {
+         canAddAll={bundleAddable} onAddAll={() => bundle.forEach((p, i) => addHomeLivingToCart(p, i === 0 ? st.variant : null, 1))} />
+       <PriceHistory productId={view.id} />
+       <PdpService />
++      {/* About the maker (round 9, 2026-11-16): partner brands only (MakerCard.jsx). */}
++      <MakerCard brand={view.brand} />
+       <PdpReviews productKey={`homeliving:${view.id}`} productName={view.name} />
+       <PdpCheaper current={{ key: view.id, price: view.price, group: view.category_id }}
+         items={products.map((p) => ({ key: p.id, href: `/homeliving/p/${p.slug}`, name: p.name, image: (p.gallery && p.gallery[0]?.url) || p.images?.[0] || null, price: p.price, group: p.category_id, inStock: p.stock > 0 || (p.variants || []).some((v) => v.stock > 0) }))} />
+diff --git a/src/pages/Account.jsx b/src/pages/Account.jsx
+index 538e022..1b0b60f 100644
+--- a/src/pages/Account.jsx
++++ b/src/pages/Account.jsx
+@@ -495,6 +495,8 @@ function Orders() {
+                     <Icon name="card" size={15} /> View Invoice
+                   </Link>
+                   <Link to={`/passport/${o.order_number}`} className="btn btn-sm btn-light btn-goldhover">View Passport</Link>
++                  {/* Gift receipt (round 9, 2026-11-16): the parcel's list without prices. */}
++                  <Link to={`/gift-receipt/${o.order_number}`} className="btn btn-sm btn-light"><Icon name="gift" size={15} /> Gift receipt</Link>
+                   {(() => {
+                     const again = buyAgainLines(items);
+                     if (!again.length) return null;
+diff --git a/src/pages/Home.jsx b/src/pages/Home.jsx
+index d5e711e..997ed5a 100644
+--- a/src/pages/Home.jsx
++++ b/src/pages/Home.jsx
+@@ -12,6 +12,8 @@ import { TajLeatherPosters } from '../components/TajLeather.jsx';
+ import { AnsariPosters } from '../components/AnsariFashion.jsx';
+ import HomeGroup from '../components/HomeGroup.jsx';
+ import { NewArrivals } from '../components/NewArrivals.jsx';
++import PopularThisWeek from '../components/PopularThisWeek.jsx';
++import { ShopByIngredient } from '../components/ShopExtras.jsx';
+ import { LuxuryBeds, Bedsheets } from '../components/HomeCategoryRails.jsx';
+ import RecentlyViewedHome from '../components/RecentlyViewedHome.jsx';
+ import OfferBanner from '../components/OfferBanner.jsx';
+@@ -85,6 +87,8 @@ export default function Home() {
+       {/* The products flagged new, across the stores (NewArrivals.jsx; View All opens /new).
+           Owner, 2026-11-13: New Arrivals and Top deals swapped places. */}
+       <NewArrivals />
++      {/* Popular this week (round 9, 2026-11-16): most-opened products, real counts only (PopularThisWeek.jsx). */}
++      <PopularThisWeek />
+       <FestivePromo />
+       {/* Owner, 2026-11-13: "festive gifting ke niche shop by brand" — the brands row, then
+           Taj Leather's and Ansari Fashion's posters as they were ("ache lagte hain"). */}
+@@ -98,6 +102,8 @@ export default function Home() {
+       {/* The editorial category browse and the need-led one (HomeDiscoveryRails.jsx). */}
+       <ShopByCategory />
+       <ShopByConcerns />
++      {/* Shop by ingredient (round 9, 2026-11-16): ingredients named in 3+ in-stock products (ShopExtras.jsx). */}
++      <ShopByIngredient products={products} />
+       {/* Gift-ready categories across Fashion and Home & Living (GiftShop.jsx). */}
+       <GiftShop />
+       {/* The biggest verified discounts in stock (HomeExtras.jsx), where New Arrivals was. */}
+diff --git a/src/pages/Product.jsx b/src/pages/Product.jsx
+index 92db63f..e0e7c37 100644
+--- a/src/pages/Product.jsx
++++ b/src/pages/Product.jsx
+@@ -31,6 +31,7 @@ import ProductSpecifications from '../components/pdp/ProductSpecifications.jsx';
+ import PromoRail from '../components/promo/PromoRail.jsx';
+ import { PdpAssuranceStrip, PdpAssurances, PdpSaving, PdpPrice, PdpFactTable, PdpAbout, PdpCompare, PdpService, PdpBrandRail, PdpRecent, PdpCheaper, PdpShare, PdpReviews, useRecentlyViewed, useHoverZoom, aboutBullets, titleParts } from '../components/pdp/PdpOwnerKit.jsx';
+ import { CompareButton } from '../components/Compare.jsx';
++import MakerCard from '../components/MakerCard.jsx';
+ import { specificationsFor } from '../data/pdpContent.js';
+ import { overviewFor, suitableForList, faqFor, perUnitPrice } from '../data/pdpContent.js';
+ import { promotionsSource } from '../lib/promotions.js';
+@@ -422,6 +423,8 @@ useEffect(() => {
+           price: p.price, mrp: p.mrp, pct: p.discountPct || 0, size: p.netContent || p.form || null, brand: p.brand || null, current: i === 0,
+         }))} />
+         <PdpService />
++        {/* About the maker (round 9, 2026-11-16): partner brands only (MakerCard.jsx). */}
++        <MakerCard brand={product.brand} />
+         <PdpCheaper current={{ key: product.id, price: product.price, group: product.category }}
+           items={catalogue.filter((p) => p.slug).map((p) => ({ key: p.id, href: `/product/${p.slug}`, name: p.name, image: p.image || null, price: p.price, group: p.category, inStock: Number(p.stock) > 0 }))} />
+         <PdpRecent items={recent} />
+diff --git a/src/styles/sora-ds.css b/src/styles/sora-ds.css
+index a579fae..b067351 100644
+--- a/src/styles/sora-ds.css
++++ b/src/styles/sora-ds.css
+@@ -304,4 +304,37 @@ body .fs .hx-ans .hx-ans__cta { background: #D9B26A; color: #121A16; }
+   .fs-logo .sora-mark, .hl-logo .sora-mark, .gs-logo .sora-mark, .ls-logo .sora-mark { height: 33px; }
+ }
+ .crp.crp--studio a.cs-brand { flex-direction: column; align-items: flex-start; }
+-.crp.crp--studio .cs-brand__mark .sora-mark { height: 44px; }
+\ No newline at end of file
++.crp.crp--studio .cs-brand__mark .sora-mark { height: 44px; }
++/* About the maker (round 9, 2026-11-16): a partner brand's story on its product pages. */
++.sora-maker { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 20px; align-items: center; margin: 28px 0; padding: 20px; background: #FBF8F1; border: 1px solid rgba(30, 58, 47, .12); }
++.sora-maker__img { width: 120px; height: 120px; object-fit: cover; object-position: top; display: block; background: #fff; }
++.sora-maker__eyebrow { margin: 0 0 4px; font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: #8A5A12; }
++.sora-maker__h { margin: 0 0 6px; font-size: 22px; font-weight: 500; color: #1E3A2F; }
++.sora-maker__story { margin: 0 0 10px; font-size: 14px; line-height: 1.55; color: #3d4a43; }
++.sora-maker__cta { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: #2C5341; text-decoration: none; }
++.sora-maker__cta:hover { text-decoration: underline; }
++@media (max-width: 600px) {
++  .sora-maker { grid-template-columns: 84px minmax(0, 1fr); gap: 14px; padding: 16px; }
++  .sora-maker__img { width: 84px; height: 84px; }
++  .sora-maker__h { font-size: 19px; }
++}
++/* Sizes in stock on the fashion cards (round 9, 2026-11-16). */
++.fs-sizes { margin: 6px 0 0; display: flex; flex-wrap: wrap; gap: 4px; }
++.fs-sizes span { min-width: 24px; padding: 2px 5px; font-size: 11px; line-height: 1.3; text-align: center; color: #3d4a43; border: 1px solid rgba(30, 58, 47, .18); background: #fff; }
++/* Gift receipt (round 9, 2026-11-16): the order's list, no prices. */
++.sora-gift__compose { display: grid; gap: 6px; max-width: 760px; margin: 0 auto 16px; }
++.sora-gift__compose label { font-size: 13px; font-weight: 600; color: #1E3A2F; }
++.sora-gift__compose textarea { width: 100%; padding: 10px 12px; font: inherit; font-size: 15px; border: 1px solid rgba(30, 58, 47, .25); background: #fff; resize: vertical; }
++.sora-gift { max-width: 760px; }
++.sora-gift__head { display: grid; justify-items: center; gap: 8px; text-align: center; padding-bottom: 18px; border-bottom: 1px solid rgba(30, 58, 47, .12); }
++.sora-gift__title { margin: 6px 0 0; font-size: 34px; font-weight: 500; color: #1E3A2F; }
++.sora-gift__note { margin: 22px auto 0; max-width: 560px; padding: 16px 20px; font-family: var(--font-display, Georgia, serif); font-size: 18px; font-style: italic; line-height: 1.5; text-align: center; color: #1E3A2F; background: #FBF8F1; white-space: pre-line; }
++.sora-gift__list { list-style: none; margin: 22px 0; padding: 0; }
++.sora-gift__list li { display: flex; justify-content: space-between; gap: 16px; padding: 12px 0; border-bottom: 1px solid rgba(30, 58, 47, .1); }
++.sora-gift__list strong { display: block; font-weight: 600; color: #1E3A2F; }
++.sora-gift__list em { display: block; font-style: normal; font-size: 13px; color: #5c6a62; }
++/* Shop by ingredient (round 9, 2026-11-16). */
++.sora-ingr__list { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 10px; }
++.sora-ingr__list a { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 8px 16px; font-size: 14px; font-weight: 600; color: #1E3A2F; text-decoration: none; background: #FBF8F1; border: 1px solid rgba(30, 58, 47, .16); }
++.sora-ingr__list a:hover { border-color: #2C5341; background: #fff; }
++.sora-ingr__list span { font-size: 12px; font-weight: 500; color: #5c6a62; }
+\ No newline at end of file

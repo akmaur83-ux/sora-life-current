@@ -302,6 +302,7 @@ await test(`the eight fashion pages render byte-identically from the working tre
   // picture and brand line, the category banner that now carries the page's h1. Layout, not data.
   const sansRedesign = (html) => html
     .replace(/(<a[^>]*class="fs-logo"[^>]*>)[\s\S]*?<\/a>/g, '$1</a>') // one logo, the sparrow (2026-11-16)
+    .replace(/<p class="fs-sizes"[^>]*>[\s\S]*?<\/p>/g, '') // sizes in stock on the cards (round 9, 2026-11-16)
     .replace(/stroke-width="[\d.]+"/g, 'stroke-width="S"')
     .replace(/<img class="fs-card__alt"[^>]*>/g, '')
     .replace(/<p class="fs-card__brand fs-card__brand--grid">[^<]*<\/p>/g, '')

@@ -5,6 +5,7 @@ import { useStore } from '../lib/store.jsx';
 import { isStandalone } from '../lib/appMode.js';
 import { CompareTray } from './Compare.jsx';
 import { logSearch } from '../lib/insights.js';
+import { logView } from '../lib/popular.js';
 
 // ============================================================
 // The SORA app's runtime (owner, 2026-11-13: the app, deep), mounted once beside
@@ -120,6 +121,13 @@ export default function AppShell() {
     const t = setTimeout(() => { logSearch(m[1], q, document.querySelectorAll(m[2]).length); }, 3500);
     return () => clearTimeout(t);
   }, [pathname, search]);
+
+  // Product page views for "Popular this week" (round 9, 2026-11-16): the store and the slug,
+  // once a day per browser, after the page has been open a moment (lib/popular.js).
+  useEffect(() => {
+    const t = setTimeout(() => { logView(pathname); }, 2000);
+    return () => clearTimeout(t);
+  }, [pathname]);
 
   return (
     <>

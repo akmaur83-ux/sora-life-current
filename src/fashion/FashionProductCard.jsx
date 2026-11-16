@@ -8,6 +8,23 @@ import { useFashionWishlist } from '../lib/fashionWishlist.js';
 import { useStore } from '../lib/store.jsx';
 import { VariantSheet } from './FashionVariantPicker.jsx';
 
+/**
+ * The sizes in stock, for the card (round 9, 2026-11-16): any colour of that size has
+ * stock. Short labels ("S (42)" → "S"); nothing for a one-size product or none in stock;
+ * at most `max`, the rest as "+n". Pure.
+ */
+export function cardSizes(view, max = 6) {
+  const vs = Array.isArray(view?.variants) ? view.variants : [];
+  const sizes = (Array.isArray(view?.sizes) ? view.sizes : []).filter((s) => s && vs.some((v) => v.size === s && Number(v.stock) > 0));
+  if (sizes.length < 2) return null;
+  // "S (42)", "M-44" → "S", "M"; then smallest first: letter sizes in their order, numbers by value.
+  const label = (x) => { const t = String(x).replace(/\s*\([^)]*\)\s*$/, '').trim(); const m = /^(XXS|XS|S|M|L|XL|XXL|[2-5]XL)[\s-]+\d+$/i.exec(t); return (m ? m[1].toUpperCase() : t) || String(x); };
+  const rank = (t) => { const i = LETTER_SIZES.indexOf(t.toUpperCase() === 'XXL' ? '2XL' : t.toUpperCase()); if (i >= 0) return i; const n = parseFloat(t); return Number.isFinite(n) ? 100 + n : 10000; };
+  const short = [...new Set(sizes.map(label))].sort((x, y) => rank(x) - rank(y) || x.localeCompare(y));
+  return { shown: short.slice(0, max), more: Math.max(0, short.length - max) };
+}
+const LETTER_SIZES = ['XXS', 'XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', '5XL'];
+
 // ============================================================
 // Fashion product card — image, discount badge, wishlist heart, quick-add,
 // price with the MRP struck through, name, rating with review count (once
@@ -40,6 +57,7 @@ export default function FashionProductCard({ view, layout = 'grid', mediaLoading
     else if (plan.mode === 'sheet') setSheet(true);
   };
   const { shown, more } = swatchOverflow(view.swatches, 4);
+  const sizesLine = cardSizes(view);
   const href = productHref(view);
   const out = !view.inStock;
   return (
@@ -73,6 +91,11 @@ export default function FashionProductCard({ view, layout = 'grid', mediaLoading
             <b>{view.rating.toFixed(1)}</b>
             <Stars value={view.rating} />
             <span className="fs-rating__count">({view.reviewCount >= 1000 ? `${(view.reviewCount / 1000).toFixed(view.reviewCount >= 10000 ? 0 : 1).replace(/\.0$/, '')}K` : view.reviewCount})</span>
+          </p>
+        )}
+        {sizesLine && (
+          <p className="fs-sizes" aria-label={`Sizes in stock: ${sizesLine.shown.join(', ')}${sizesLine.more ? ` and ${sizesLine.more} more` : ''}`}>
+            {sizesLine.shown.map((z) => <span key={z}>{z}</span>)}{sizesLine.more > 0 && <span>+{sizesLine.more}</span>}
           </p>
         )}
         {shown.length > 1 && (

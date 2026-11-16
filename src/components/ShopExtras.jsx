@@ -102,3 +102,37 @@ export function LastChance({ wrap = 'hx-wrap', max = 10 }) {
     </section>
   );
 }
+
+// ---- Shop by ingredient (round 9, 2026-11-16) ------------------------------------
+// The wellness ingredients named in at least three in-stock product names, most first,
+// each opening the wellness search for it. Names only: nothing here says what an
+// ingredient does. An ingredient the catalogue does not carry is never shown.
+export const INGREDIENTS = Object.freeze(['Sea buckthorn', 'Tulsi', 'Honey', 'Neem', 'Aloe vera', 'Turmeric', 'Noni', 'Moringa', 'Ashwagandha', 'Amla', 'Ginseng', 'Spirulina', 'Shilajit', 'Giloy', 'Triphala', 'Brahmi', 'Saffron', 'Lemon', 'Rose']);
+export const INGREDIENT_MIN = 3;
+
+/** [{ name, count, href }] for ingredients in INGREDIENT_MIN+ in-stock product names, most first, at most `max`. Pure. */
+export function ingredientChips(products, max = 10) {
+  const names = (Array.isArray(products) ? products : []).filter((p) => p && Number(p.stock) > 0).map((p) => ` ${String(p.name || '').toLowerCase()} `);
+  return INGREDIENTS.map((name) => {
+    const needle = name.toLowerCase();
+    const re = new RegExp(`[^a-z]${needle.replace(/ /g, '\\s+')}[^a-z]`);
+    return { name, count: names.filter((n) => re.test(n)).length, href: `/shop?q=${encodeURIComponent(needle)}` };
+  }).filter((c) => c.count >= INGREDIENT_MIN).sort((a, b) => b.count - a.count).slice(0, max);
+}
+
+export function ShopByIngredient({ products }) {
+  const chips = ingredientChips(products);
+  if (chips.length < 3) return null;
+  return (
+    <section className="hx sora-ingr" aria-labelledby="sora-ingr-h">
+      <div className="hx-wrap">
+        <h2 className="hx-stores__h" id="sora-ingr-h">Shop by ingredient</h2>
+        <ul className="sora-ingr__list">
+          {chips.map((c) => (
+            <li key={c.name}><Link to={c.href}>{c.name} <span>{c.count}</span></Link></li>
+          ))}
+        </ul>
+      </div>
+    </section>
+  );
+}

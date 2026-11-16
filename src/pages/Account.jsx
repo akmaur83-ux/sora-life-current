@@ -495,6 +495,8 @@ function Orders() {
                     <Icon name="card" size={15} /> View Invoice
                   </Link>
                   <Link to={`/passport/${o.order_number}`} className="btn btn-sm btn-light btn-goldhover">View Passport</Link>
+                  {/* Gift receipt (round 9, 2026-11-16): the parcel's list without prices. */}
+                  <Link to={`/gift-receipt/${o.order_number}`} className="btn btn-sm btn-light"><Icon name="gift" size={15} /> Gift receipt</Link>
                   {(() => {
                     const again = buyAgainLines(items);
                     if (!again.length) return null;
