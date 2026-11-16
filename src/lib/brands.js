@@ -17,6 +17,8 @@ export const BRANDS = Object.freeze([
     text: 'Leather handbags, wallets, belts, sling bags and travel bags.' }),
   Object.freeze({ id: 'taj-leather', luxe: true, page: '/brands/taj-leather', story: "Taj Leather makes genuine leather jackets and coats for men and women, from classic bikers to long coats, sold here at Taj Leather's own prices.", catalogueBrand: 'Taj Leather', name: 'Taj Leather', store: 'Fashion', href: '/fashion/search?q=taj%20leather', image: 'https://cdn.shopify.com/s/files/1/0780/8437/4633/files/kbxt1xR35kfGamD.jpg?width=800',
     text: 'Genuine leather jackets and coats for men and women.' }),
+  Object.freeze({ id: 'diamond-leather', page: '/brands/diamond-leather', story: "Diamond Leather is a Delhi maker of genuine leather jackets for men: bikers, classic collars, quilted and vintage finishes, and a suede shirt jacket, in sizes S to 2XL.", catalogueBrand: 'Diamond Leather', name: 'Diamond Leather', store: 'Fashion', href: '/fashion/search?q=diamond%20leather', image: 'https://m.media-amazon.com/images/X/bxt1/M/Mbxt1hSE$epwfu9._SL800_QL80_FMwebp_.png',
+    text: 'Genuine leather jackets for men, from Delhi.' }),
   Object.freeze({ id: 'ansari-fashion', luxe: true, page: '/brands/ansari-fashion', story: "Ansari Fashion is from Banaras: Banarasi silk and cotton suit sets, Jamdani weaves and sarees, sold here at Ansari Fashion's own prices.", catalogueBrand: 'Ansari Fashion', name: 'Ansari Fashion', store: 'Fashion', href: '/fashion/search?q=ansari%20fashion', image: '/img/partners/ansari-fashion/suit-sets.webp',
     text: 'Banarasi silk and cotton suit sets, Jamdani weaves and sarees from Banaras.' }),
 ]);

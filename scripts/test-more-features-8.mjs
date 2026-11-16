@@ -54,7 +54,7 @@ test('brands: counts from the catalogue table for partner brands, from the loade
   assert.equal(c.atomy, 2); assert.equal(c.biosash, 1);
   assert.equal(c['taj-leather'], 508); assert.equal(c['ansari-fashion'], 135);
   assert.equal(c['weavers-villa'], null);
-  assert.ok(BRANDS.filter((b) => b.catalogueBrand).length === 4);
+  assert.ok(BRANDS.filter((b) => b.catalogueBrand).length === 5);
   assert.match(read('src/pages/Brands.jsx'), /counts\[b\.id\] \? ` · \$\{counts\[b\.id\]\} products` : ''/);
 });
 test('empty search: a WhatsApp ask with the search in it, on Fashion and Home & Living', () => {

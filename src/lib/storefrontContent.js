@@ -166,6 +166,11 @@ const WELLNESS = {
     hidden: hidden(), title: text(60, 'Heading'), more: text(30, 'View-all label'),
     link: link('View-all link (empty: Leather Jackets)'),
   }, 'Taj Leather jackets (their range in Fashion; also on the Fashion home)'),
+  // Diamond Leather (partner, 2026-11-16): their men's jackets, on the Fashion home.
+  diamondLeather: group({
+    hidden: hidden(), title: text(60, 'Heading'), more: text(30, 'View-all label'),
+    link: link('View-all link (empty: Diamond Leather jackets)'),
+  }, 'Diamond Leather jackets (their range in Fashion, on the Fashion home)'),
   // Ansari Fashion (partner, 2026-11-13), under Taj Leather; also on the Fashion home.
   ansariPosters: group({
     hidden: hidden(), eyebrow: text(60, 'Eyebrow'), title: text(60, 'Headline'), text: text(200, 'Subline'),

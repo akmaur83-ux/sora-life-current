@@ -27,14 +27,15 @@ test('bulk ask: a WhatsApp message naming the product, the quantity left to fill
   assert.match(t, /https:\/\/www.soralifestyle.in\/fashion\/p\/x$/);
   assert.match(src, /pdpk-ask--bulk/);
 });
-test('our brands: the six partners, each opening the listing its homepage section opens', () => {
-  assert.deepEqual(BRANDS.map((b) => b.name), ['Biosash', 'Atomy', 'Weavers Villa', 'Leather Factory', 'Taj Leather', 'Ansari Fashion']);
+test('our brands: the seven partners, each opening the listing its homepage section opens', () => {
+  assert.deepEqual(BRANDS.map((b) => b.name), ['Biosash', 'Atomy', 'Weavers Villa', 'Leather Factory', 'Taj Leather', 'Diamond Leather', 'Ansari Fashion']);
   const lst = (f, k) => read(`src/lib/${f}`).match(new RegExp(`export const ${k} = '([^']+)'`))[1];
   assert.equal(BRANDS.find((b) => b.id === 'atomy').href, lst('atomy.js', 'ATOMY_LISTING'));
   assert.equal(BRANDS.find((b) => b.id === 'weavers-villa').href, lst('weaversVilla.js', 'WEAVERS_LISTING'));
   assert.equal(BRANDS.find((b) => b.id === 'leather-factory').href, lst('leatherFactory.js', 'LF_LISTING'));
   assert.equal(BRANDS.find((b) => b.id === 'taj-leather').href, lst('tajLeather.js', 'TAJ_LISTING'));
   assert.equal(BRANDS.find((b) => b.id === 'ansari-fashion').href, lst('ansariFashion.js', 'ANSARI_LISTING'));
+  assert.equal(BRANDS.find((b) => b.id === 'diamond-leather').href, lst('diamondLeather.js', 'DIAMOND_LISTING'));
   for (const b of BRANDS) if (b.image && b.image.startsWith('/')) assert.doesNotThrow(() => readFileSync(new URL(`..${b.image}`, import.meta.url)), b.image);
   assert.equal(brandImage(BRANDS[0], [{ image: 'a', stock: 0, b: 1 }, { image: 'b', stock: 2, b: 1 }], (p) => p.b === 1), 'b');
   assert.equal(brandImage(BRANDS[1], []), BRANDS[1].image);

@@ -13,6 +13,7 @@ import { ShopByColour, LastChance } from '../components/ShopExtras.jsx';
 import OfferBanner from '../components/OfferBanner.jsx';
 import { BagReminder } from '../components/HomeExtras.jsx';
 import { TajLeatherPosters, TajLeatherRange } from '../components/TajLeather.jsx';
+import { DiamondLeatherRange } from '../components/DiamondLeather.jsx';
 import { AnsariPosters, AnsariRange } from '../components/AnsariFashion.jsx';
 import { HERO_IMAGE, circleArt, cardArt } from './fashionArt.js';
 import { getHomepageSnapshot, subscribeHomepage } from '../lib/settings.js';
@@ -173,6 +174,8 @@ export default function FashionHome() {
       <LastChance wrap="fs-sec" />
       <CategoryTiles tree={tree} />
       <TajLeatherRange />
+      {/* Diamond Leather (partner, 2026-11-16): their men's jackets (DiamondLeather.jsx). */}
+      <DiamondLeatherRange />
       <AnsariRange />
       <Benefits />
       <ShopByCategory tree={tree} copy={config.sections} />
