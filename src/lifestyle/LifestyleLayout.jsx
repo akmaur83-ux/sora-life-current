@@ -1,12 +1,12 @@
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useEffect, useState } from 'react';
+import { BrandMark } from '../components/Logo.jsx';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import Icon from '../components/Icon.jsx';
 import Footer from '../components/Footer.jsx';
 import Toasts from '../components/Toasts.jsx';
 import { useStore } from '../lib/store.jsx';
-import { branding, getHomepageSnapshot, subscribeHomepage } from '../lib/settings.js';
-import { normalizeLifestyleStorefront } from '../lib/storefrontCustomization.js';
-import { LIFESTYLE_TAGLINE, fashionCategoryHref, homeCategoryHref, useLifestyleCatalogue } from '../data/lifestyleHomepage.js';
+import { branding } from '../lib/settings.js';
+import { fashionCategoryHref, homeCategoryHref, useLifestyleCatalogue } from '../data/lifestyleHomepage.js';
 
 // ============================================================
 // The lifestyle storefront shell (/lifestyle) — the roof over the fashion
@@ -37,24 +37,22 @@ export const OTHER_STORES = [
   { href: '/grocery', label: 'Grocery store', short: 'Grocery' },
 ];
 
-function LifestyleLogo({ tagline = LIFESTYLE_TAGLINE }) {
+// The site's one logo, the sparrow (owner, 2026-11-16).
+function LifestyleLogo() {
   return (
     <Link to="/lifestyle" className="ls-logo" aria-label={`${branding.siteName} lifestyle home`}>
-      <strong className="serif">{branding.siteName}</strong>
-      <em>{tagline}</em>
+      <BrandMark />
     </Link>
   );
 }
 
 export function LifestyleHeader({ onMenu }) {
   const { cartCount } = useStore();
-  const homepage = useSyncExternalStore(subscribeHomepage, getHomepageSnapshot, getHomepageSnapshot);
-  const config = normalizeLifestyleStorefront(homepage.lifestyle_storefront);
   return (
     <header className="ls-hdr">
       <div className="ls-hdr__row">
         <button type="button" className="ls-hdr__menu" aria-label="Open menu" onClick={onMenu}><Icon name="menu" size={26} /></button>
-        <LifestyleLogo tagline={config.header.tagline} />
+        <LifestyleLogo />
         <nav className="ls-hdr__acts" aria-label="Search, wishlist and cart">
           <span className="ls-hdr__stores" role="navigation" aria-label="Other stores">
             {OTHER_STORES.map((s) => (

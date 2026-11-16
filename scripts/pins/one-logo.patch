@@ -1,0 +1,307 @@
+diff --git a/src/components/Footer.jsx b/src/components/Footer.jsx
+index f7b82b9..408b220 100644
+--- a/src/components/Footer.jsx
++++ b/src/components/Footer.jsx
+@@ -32,9 +32,9 @@ export default function Footer() {
+       <div className="container">
+         <div className="ftr__top">
+           <div className="ftr__brand">
+-            {/* The sea-buckthorn mark, stacked, its lettering in cream for the dark footer. */}
++            {/* The site's one logo, the sparrow (owner, 2026-11-16), its lettering in cream for the dark footer. */}
+             <Link to="/" className="ftr__logo" aria-label={`${branding.siteName} home`}>
+-              <img src="/assets/sora-lifestyle-footer.webp" alt="" width="540" height="424" loading="lazy" decoding="async" />
++              <img src="/assets/sora-lifestyle-bird-light.webp" alt="" width="494" height="156" loading="lazy" decoding="async" />
+             </Link>
+             <p>A marketplace for wellness, personal care and everyday essentials.</p>
+             {hasContactChannel(info) && (
+diff --git a/src/components/Logo.jsx b/src/components/Logo.jsx
+index 41c4c51..41e1e29 100644
+--- a/src/components/Logo.jsx
++++ b/src/components/Logo.jsx
+@@ -35,6 +35,22 @@ export function SparrowMark({ size = 26, light = false, foil = false }) {
+ 
+ /** The built-in header mark (assets/README.md): the bird lockup, owner's artwork of 2026-11-07. */
+ export const HEADER_MARK = '/assets/sora-lifestyle-bird-header.webp';
++/** The same sparrow lockup with its green lettering in cream, for dark headers and the footer (2026-11-16). */
++export const HEADER_MARK_LIGHT = '/assets/sora-lifestyle-bird-light.webp';
++
++/**
++ * The site's one logo (owner, 2026-11-16: "logo har jgah ek hi rakho, vo sparrow wala"):
++ * the sparrow lockup, or its cream version on a dark surface. Every store header, the
++ * footer, the invoice and the passport show this; a logo uploaded in Admin → Branding
++ * replaces the light-surface one.
++ */
++export function BrandMark({ light = false, className = '', eager = true }) {
++  const src = light ? HEADER_MARK_LIGHT : (branding.logoUrl || HEADER_MARK);
++  return (
++    <img src={src} alt={`${branding.siteName} — ${branding.tagline}`} className={`sora-mark ${className}`.trim()}
++      width="494" height="156" decoding="async" {...(eager ? { fetchpriority: 'high' } : { loading: 'lazy' })} />
++  );
++}
+ 
+ export default function Logo({ compact = false, light = false, tagline = true }) {
+   const [imgOk, setImgOk] = useState(true);
+diff --git a/src/fashion/FashionLayout.jsx b/src/fashion/FashionLayout.jsx
+index 1beb378..69898d3 100644
+--- a/src/fashion/FashionLayout.jsx
++++ b/src/fashion/FashionLayout.jsx
+@@ -1,7 +1,7 @@
+ import { useEffect, useState, useSyncExternalStore } from 'react';
+ import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
+ import Icon from '../components/Icon.jsx';
+-import { SparrowMark } from '../components/Logo.jsx';
++import { BrandMark } from '../components/Logo.jsx';
+ import Footer from '../components/Footer.jsx';
+ import MobileTabBar from '../components/MobileTabBar.jsx';
+ import StickyCats from '../components/StickyCats.jsx';
+@@ -29,11 +29,11 @@ const SEARCH_PLACEHOLDER = 'Search for fashion, lifestyle and more…';
+ /** The delivery strip under the search bar — the admin's (Storefronts → Fashion → strips); this is its built-in content. */
+ export const DELIVERY_STRIP = Object.freeze({ hidden: false, location: 'Delivering across India', promise: 'Delivery in 6–7 business days' });
+ 
+-function FashionLogo({ tagline }) {
++// The site's one logo, the sparrow (owner, 2026-11-16); `light` over the department photographs.
++function FashionLogo({ light = false }) {
+   return (
+     <Link to="/fashion" className="fs-logo" aria-label={`${branding.siteName} fashion home`}>
+-      <SparrowMark size={34} />
+-      <span className="fs-logo__txt"><strong>{branding.siteName}</strong><em>{tagline}</em></span>
++      <BrandMark light={light} />
+     </Link>
+   );
+ }
+@@ -73,7 +73,7 @@ export function FashionHeader({ onMenu }) {
+     <header className="wm-header">
+       <button type="button" className="wm-header__menu" aria-label="Open menu" onClick={onMenu}><Icon name="menu" size={22} /></button>
+       <nav className="wm-header__nav" aria-label="Women's fashion"><a href="#wm-products">Shop</a><a href="#wm-categories">Categories</a><Link to="/fashion/women/sarees">Sarees</Link><Link to="/fashion/jewellery">Jewellery</Link><Link to="/fashion/men">Men</Link></nav>
+-      <FashionLogo tagline={config.header.tagline} />
++      <FashionLogo light />
+       <nav className="wm-header__actions" aria-label="Search, account, wishlist and cart">
+         <Link to="/fashion/search" aria-label="Search fashion"><Icon name="search" size={20} /></Link>
+         <Link to="/account" aria-label="Account"><Icon name="user" size={20} /></Link>
+@@ -87,7 +87,7 @@ export function FashionHeader({ onMenu }) {
+     <header className="jw-header">
+       <div className="jw-header__row">
+         <button type="button" className="jw-header__menu" aria-label="Open menu" onClick={onMenu}><Icon name="menu" size={22} /></button>
+-        <FashionLogo tagline="Jewellery" />
++        <FashionLogo light />
+         <nav className="jw-header__nav" aria-label="Jewellery"><Link to="/fashion/jewellery">Home</Link><a href="#jw-products">Shop</a><a href="#jw-categories">Collections</a><Link to="/fashion/women">Women</Link><Link to="/about">About</Link><Link to="/contact">Contact</Link></nav>
+         <nav className="jw-header__actions" aria-label="Search, account, wishlist and cart">
+           <Link to="/fashion/search" aria-label="Search fashion"><Icon name="search" size={19} /></Link>
+@@ -101,7 +101,7 @@ export function FashionHeader({ onMenu }) {
+   if (/^\/fashion\/women\/sarees\/?$/.test(location.pathname)) return (
+     <header className="sw-header">
+       <button type="button" className="sw-header__menu" aria-label="Open menu" onClick={onMenu}><Icon name="menu" size={22} /></button>
+-      <FashionLogo tagline="Tradition in every drape" />
++      <FashionLogo light />
+       <nav className="sw-header__nav" aria-label="Saree store"><Link to="/fashion/women/sarees">Home</Link><a href="#fd-products">Shop</a><a href="#sw-collections">Collections <Icon name="chevronDown" size={12} /></a><Link to="/about">About</Link><Link to="/contact">Contact</Link></nav>
+       <nav className="sw-header__actions" aria-label="Search, account, wishlist and cart">
+         <Link to="/fashion/search" aria-label="Search fashion"><Icon name="search" size={19} /></Link>
+@@ -115,7 +115,7 @@ export function FashionHeader({ onMenu }) {
+     <header className="fs-hdr">
+       <div className="fs-hdr__row">
+         <button type="button" className="fs-hdr__menu" aria-label="Open menu" onClick={onMenu}><Icon name="menu" size={24} /></button>
+-        <FashionLogo tagline={config.header.tagline} />
++        <FashionLogo />
+         <nav className="fs-hdr__acts" aria-label="Account, wishlist and cart">
+           <Link to="/account" className="fs-hdr__act" aria-label="Account"><Icon name="user" size={24} /></Link>
+           <Link to="/fashion/wishlist" className="fs-hdr__act" aria-label={`Wishlist${wish.count ? `, ${wish.count} items` : ''}`}>
+diff --git a/src/grocery/GroceryLayout.jsx b/src/grocery/GroceryLayout.jsx
+index 8f9995b..c0fd2f0 100644
+--- a/src/grocery/GroceryLayout.jsx
++++ b/src/grocery/GroceryLayout.jsx
+@@ -1,11 +1,12 @@
+ import { useEffect, useState } from 'react';
++import { BrandMark } from '../components/Logo.jsx';
+ import { Link, Outlet, useLocation } from 'react-router-dom';
+ import Icon from '../components/Icon.jsx';
+ import Footer from '../components/Footer.jsx';
+ import Toasts from '../components/Toasts.jsx';
+ import { useStore } from '../lib/store.jsx';
+ import { branding } from '../lib/settings.js';
+-import { GROCERY_DELIVERY_WINDOW, GROCERY_TAGLINE, categoryHref, useGroceryCatalogue } from '../data/groceryHomepage.js';
++import { GROCERY_DELIVERY_WINDOW, categoryHref, useGroceryCatalogue } from '../data/groceryHomepage.js';
+ 
+ // ============================================================
+ // The grocery store shell — its own header (menu, centred wordmark,
+@@ -30,11 +31,11 @@ export const BOTTOM_NAV = [
+   { id: 'account', label: 'Account', icon: 'user' },
+ ];
+ 
++// The site's one logo, the sparrow (owner, 2026-11-16).
+ function GroceryLogo() {
+   return (
+     <Link to="/grocery" className="gs-logo" aria-label={`${branding.siteName} grocery home`}>
+-      <strong className="serif">{branding.siteName}</strong>
+-      <em>{GROCERY_TAGLINE}</em>
++      <BrandMark />
+     </Link>
+   );
+ }
+diff --git a/src/homeliving/HomeLivingLayout.jsx b/src/homeliving/HomeLivingLayout.jsx
+index 6dd0635..83be898 100644
+--- a/src/homeliving/HomeLivingLayout.jsx
++++ b/src/homeliving/HomeLivingLayout.jsx
+@@ -1,11 +1,12 @@
+ import { useEffect, useState } from 'react';
++import { BrandMark } from '../components/Logo.jsx';
+ import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
+ import Icon from '../components/Icon.jsx';
+ import Footer from '../components/Footer.jsx';
+ import Toasts from '../components/Toasts.jsx';
+ import { useStore } from '../lib/store.jsx';
+ import { branding } from '../lib/settings.js';
+-import { HOMELIVING_DELIVERY_WINDOW, HOMELIVING_TAGLINE, categoryHref, useHomeLivingCatalogue } from '../data/homelivingHomepage.js';
++import { HOMELIVING_DELIVERY_WINDOW, categoryHref, useHomeLivingCatalogue } from '../data/homelivingHomepage.js';
+ import SearchSuggest, { SUGGEST_MAX, suggestKeys, RecentSearches, readRecentSearches, rememberSearch, clearRecentSearches } from '../components/SearchSuggest.jsx';
+ import { searchItems, didYouMean } from '../lib/searchMatch.js';
+ import VoiceSearch from '../components/VoiceSearch.jsx';
+@@ -56,11 +57,11 @@ export const BOTTOM_NAV = [
+   { id: 'account', label: 'Account', icon: 'user', href: '/account' },
+ ];
+ 
++// The site's one logo, the sparrow (owner, 2026-11-16).
+ function HomeLivingLogo() {
+   return (
+     <Link to="/homeliving" className="hl-logo" aria-label={`${branding.siteName} Home & Living home`}>
+-      <strong className="serif">{branding.siteName}</strong>
+-      <em>{HOMELIVING_TAGLINE}</em>
++      <BrandMark />
+     </Link>
+   );
+ }
+diff --git a/src/lifestyle/LifestyleLayout.jsx b/src/lifestyle/LifestyleLayout.jsx
+index ac7ab90..cc9a17c 100644
+--- a/src/lifestyle/LifestyleLayout.jsx
++++ b/src/lifestyle/LifestyleLayout.jsx
+@@ -1,12 +1,12 @@
+-import { useEffect, useState, useSyncExternalStore } from 'react';
++import { useEffect, useState } from 'react';
++import { BrandMark } from '../components/Logo.jsx';
+ import { Link, Outlet, useLocation } from 'react-router-dom';
+ import Icon from '../components/Icon.jsx';
+ import Footer from '../components/Footer.jsx';
+ import Toasts from '../components/Toasts.jsx';
+ import { useStore } from '../lib/store.jsx';
+-import { branding, getHomepageSnapshot, subscribeHomepage } from '../lib/settings.js';
+-import { normalizeLifestyleStorefront } from '../lib/storefrontCustomization.js';
+-import { LIFESTYLE_TAGLINE, fashionCategoryHref, homeCategoryHref, useLifestyleCatalogue } from '../data/lifestyleHomepage.js';
++import { branding } from '../lib/settings.js';
++import { fashionCategoryHref, homeCategoryHref, useLifestyleCatalogue } from '../data/lifestyleHomepage.js';
+ 
+ // ============================================================
+ // The lifestyle storefront shell (/lifestyle) — the roof over the fashion
+@@ -37,24 +37,22 @@ export const OTHER_STORES = [
+   { href: '/grocery', label: 'Grocery store', short: 'Grocery' },
+ ];
+ 
+-function LifestyleLogo({ tagline = LIFESTYLE_TAGLINE }) {
++// The site's one logo, the sparrow (owner, 2026-11-16).
++function LifestyleLogo() {
+   return (
+     <Link to="/lifestyle" className="ls-logo" aria-label={`${branding.siteName} lifestyle home`}>
+-      <strong className="serif">{branding.siteName}</strong>
+-      <em>{tagline}</em>
++      <BrandMark />
+     </Link>
+   );
+ }
+ 
+ export function LifestyleHeader({ onMenu }) {
+   const { cartCount } = useStore();
+-  const homepage = useSyncExternalStore(subscribeHomepage, getHomepageSnapshot, getHomepageSnapshot);
+-  const config = normalizeLifestyleStorefront(homepage.lifestyle_storefront);
+   return (
+     <header className="ls-hdr">
+       <div className="ls-hdr__row">
+         <button type="button" className="ls-hdr__menu" aria-label="Open menu" onClick={onMenu}><Icon name="menu" size={26} /></button>
+-        <LifestyleLogo tagline={config.header.tagline} />
++        <LifestyleLogo />
+         <nav className="ls-hdr__acts" aria-label="Search, wishlist and cart">
+           <span className="ls-hdr__stores" role="navigation" aria-label="Other stores">
+             {OTHER_STORES.map((s) => (
+diff --git a/src/pages/CreatorPortal.jsx b/src/pages/CreatorPortal.jsx
+index eb8c5b9..be90acd 100644
+--- a/src/pages/CreatorPortal.jsx
++++ b/src/pages/CreatorPortal.jsx
+@@ -1,7 +1,7 @@
+ import { useCallback, useEffect, useRef, useState } from 'react';
+ import { Link, useNavigate, useParams } from 'react-router-dom';
+ import Icon from '../components/Icon.jsx';
+-import { SparrowMark } from '../components/Logo.jsx';
++import { BrandMark, HEADER_MARK } from '../components/Logo.jsx';
+ import { useCustomerAuth } from '../lib/customerAuth.jsx';
+ import {
+   claimCreatorAccount, getMyCreator, getMyCampaigns, getMyLinks, buildTrackingUrl,
+@@ -227,8 +227,10 @@ export default function CreatorPortal({ initial = null }) {
+     <div className="crp crp--studio" data-rank={rank}>
+       <aside className="cs-side">
+         <Link to="/" className="cs-brand" aria-label="SORA LIFESTYLE home">
+-          <span className="cs-brand__mark"><SparrowMark size={34} light /></span>
+-          <span className="cs-brand__txt"><strong>SORA LIFESTYLE</strong><em>Creator Program</em></span>
++          {/* The site's one logo, the sparrow (owner, 2026-11-16), in cream on the dark sidebar. */}
++          {/* Cream on the forest sidebar; the green original where the bar turns cream (≤1019px, creator-dashboard.css). */}
++          <span className="cs-brand__mark"><picture><source media="(max-width: 1019px)" srcSet={HEADER_MARK} /><BrandMark light eager={false} /></picture></span>
++          <span className="cs-brand__txt"><em>Creator Program</em></span>
+         </Link>
+         <nav ref={navRef} className="cs-nav" aria-label="Creator portal">
+           {NAV.map((n) => (
+diff --git a/src/pages/Invoice.jsx b/src/pages/Invoice.jsx
+index eb78134..876bcd2 100644
+--- a/src/pages/Invoice.jsx
++++ b/src/pages/Invoice.jsx
+@@ -130,7 +130,7 @@ export default function Invoice() {
+       <article className="container inv">
+         <header className="inv__head">
+           <div className="inv__brand">
+-            <img src="/assets/sora-lifestyle-invoice.webp" alt="SORA LIFESTYLE — Health and Wellness" className="inv__logo" width="464" height="288" />
++            <img src="/assets/sora-lifestyle-bird-header.webp" alt="SORA LIFESTYLE — Health and Wellness" className="inv__logo" width="494" height="156" />
+             <p className="inv__brand-sub">Health &amp; Wellness</p>
+           </div>
+           <div className="inv__ident">
+diff --git a/src/pages/Passport.jsx b/src/pages/Passport.jsx
+index b1d9b5e..71495ae 100644
+--- a/src/pages/Passport.jsx
++++ b/src/pages/Passport.jsx
+@@ -196,7 +196,7 @@ export default function Passport() {
+ 
+             {/* Official SORA LIFE brand lockup (real asset), foil-lit. */}
+             <div className="psp__brandlock" role="img" aria-label="SORA LIFESTYLE — Health and Wellness">
+-              <img src="/assets/sora-lifestyle-invoice.webp" alt="" />
++              <img src="/assets/sora-lifestyle-bird-light.webp" alt="" />
+             </div>
+ 
+             <div className="psp__head-right">
+@@ -305,7 +305,7 @@ function Sidebar({ open, onClose, member }) {
+   return (
+     <aside className={`psp__side ${open ? 'open' : ''}`} aria-label="Primary">
+       <div className="psp__side-brand">
+-        <img className="psp__side-logo" src="/assets/sora-lifestyle-invoice.webp" alt="SORA LIFESTYLE — Health and Wellness" />
++        <img className="psp__side-logo" src="/assets/sora-lifestyle-bird-light.webp" alt="SORA LIFESTYLE — Health and Wellness" />
+       </div>
+ 
+       <div className="psp__profile">
+diff --git a/src/styles/sora-ds.css b/src/styles/sora-ds.css
+index ceb961b..a579fae 100644
+--- a/src/styles/sora-ds.css
++++ b/src/styles/sora-ds.css
+@@ -289,3 +289,19 @@ body .fs .hx-ans .hx-ans__cta { background: #D9B26A; color: #121A16; }
+ .pdpk-qa__helpful { display: flex; align-items: center; gap: 10px; margin: 6px 0 0; font-size: 12.5px; color: var(--sora-muted); }
+ .pdpk-qa__helpful button { display: inline-flex; align-items: center; gap: 4px; height: 26px; padding: 0 10px; border: 1px solid #D5D9D9; background: #fff; font: inherit; color: var(--sora-ink); cursor: pointer; }
+ .pdpk-qa__helpful em { font-style: normal; }
++
++/* The one logo (owner, 2026-11-16): the sparrow lockup in every store header. */
++.sora-mark { display: block; width: auto; max-width: 100%; height: 46px; }
++.fs-logo .sora-mark, .hl-logo .sora-mark, .gs-logo .sora-mark, .ls-logo .sora-mark { height: 48px; }
++.sw-header .fs-logo .sora-mark, .wm-header .fs-logo .sora-mark, .jw-header .fs-logo .sora-mark { height: 50px; filter: none; }
++.ftr__logo img { width: 200px; }
++.inv__logo { height: 64px; }
++@media (max-width: 760px) {
++  .fs-logo .sora-mark, .hl-logo .sora-mark, .gs-logo .sora-mark, .ls-logo .sora-mark { height: 38px; }
++  .sw-header .fs-logo .sora-mark, .wm-header .fs-logo .sora-mark, .jw-header .fs-logo .sora-mark { height: 36px; }
++}
++@media (max-width: 380px) {
++  .fs-logo .sora-mark, .hl-logo .sora-mark, .gs-logo .sora-mark, .ls-logo .sora-mark { height: 33px; }
++}
++.crp.crp--studio a.cs-brand { flex-direction: column; align-items: flex-start; }
++.crp.crp--studio .cs-brand__mark .sora-mark { height: 44px; }
+\ No newline at end of file

@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
+import { BrandMark } from '../components/Logo.jsx';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import Icon from '../components/Icon.jsx';
 import Footer from '../components/Footer.jsx';
 import Toasts from '../components/Toasts.jsx';
 import { useStore } from '../lib/store.jsx';
 import { branding } from '../lib/settings.js';
-import { HOMELIVING_DELIVERY_WINDOW, HOMELIVING_TAGLINE, categoryHref, useHomeLivingCatalogue } from '../data/homelivingHomepage.js';
+import { HOMELIVING_DELIVERY_WINDOW, categoryHref, useHomeLivingCatalogue } from '../data/homelivingHomepage.js';
 import SearchSuggest, { SUGGEST_MAX, suggestKeys, RecentSearches, readRecentSearches, rememberSearch, clearRecentSearches } from '../components/SearchSuggest.jsx';
 import { searchItems, didYouMean } from '../lib/searchMatch.js';
 import VoiceSearch from '../components/VoiceSearch.jsx';
@@ -56,11 +57,11 @@ export const BOTTOM_NAV = [
   { id: 'account', label: 'Account', icon: 'user', href: '/account' },
 ];
 
+// The site's one logo, the sparrow (owner, 2026-11-16).
 function HomeLivingLogo() {
   return (
     <Link to="/homeliving" className="hl-logo" aria-label={`${branding.siteName} Home & Living home`}>
-      <strong className="serif">{branding.siteName}</strong>
-      <em>{HOMELIVING_TAGLINE}</em>
+      <BrandMark />
     </Link>
   );
 }

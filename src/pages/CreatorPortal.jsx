@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import Icon from '../components/Icon.jsx';
-import { SparrowMark } from '../components/Logo.jsx';
+import { BrandMark, HEADER_MARK } from '../components/Logo.jsx';
 import { useCustomerAuth } from '../lib/customerAuth.jsx';
 import {
   claimCreatorAccount, getMyCreator, getMyCampaigns, getMyLinks, buildTrackingUrl,
@@ -227,8 +227,10 @@ export default function CreatorPortal({ initial = null }) {
     <div className="crp crp--studio" data-rank={rank}>
       <aside className="cs-side">
         <Link to="/" className="cs-brand" aria-label="SORA LIFESTYLE home">
-          <span className="cs-brand__mark"><SparrowMark size={34} light /></span>
-          <span className="cs-brand__txt"><strong>SORA LIFESTYLE</strong><em>Creator Program</em></span>
+          {/* The site's one logo, the sparrow (owner, 2026-11-16), in cream on the dark sidebar. */}
+          {/* Cream on the forest sidebar; the green original where the bar turns cream (≤1019px, creator-dashboard.css). */}
+          <span className="cs-brand__mark"><picture><source media="(max-width: 1019px)" srcSet={HEADER_MARK} /><BrandMark light eager={false} /></picture></span>
+          <span className="cs-brand__txt"><em>Creator Program</em></span>
         </Link>
         <nav ref={navRef} className="cs-nav" aria-label="Creator portal">
           {NAV.map((n) => (

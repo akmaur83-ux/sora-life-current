@@ -106,7 +106,7 @@ export async function buildGroceryApp({ cartCount = 0, onAdd = null, initial = I
   const branding = { siteName: 'SORA LIFE', tagline: 'HEALTH & WELLNESS' };
   const money = (n) => `₹${Number(n).toLocaleString('en-IN')}`;
   const card = loadModule('src/grocery/GroceryProductCard.jsx', { Icon, money, useStore });
-  const layout = loadModule('src/grocery/GroceryLayout.jsx', { Link, Outlet, useLocation, Icon, Footer, Toasts, useStore, branding, ...data });
+  const layout = loadModule('src/grocery/GroceryLayout.jsx', { BrandMark: () => React.createElement('img', { className: 'sora-mark', src: '/assets/sora-lifestyle-bird-header.webp', alt: 'SORA LIFESTYLE' }), Link, Outlet, useLocation, Icon, Footer, Toasts, useStore, branding, ...data });
   const home = loadModule('src/grocery/GroceryHome.jsx', { Link, Icon, ...data, GroceryProductCard: card.default });
   const App = ({ path }) => h(StaticRouter, { location: path },
     h(Routes, null,

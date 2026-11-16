@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
+import { BrandMark } from '../components/Logo.jsx';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import Icon from '../components/Icon.jsx';
 import Footer from '../components/Footer.jsx';
 import Toasts from '../components/Toasts.jsx';
 import { useStore } from '../lib/store.jsx';
 import { branding } from '../lib/settings.js';
-import { GROCERY_DELIVERY_WINDOW, GROCERY_TAGLINE, categoryHref, useGroceryCatalogue } from '../data/groceryHomepage.js';
+import { GROCERY_DELIVERY_WINDOW, categoryHref, useGroceryCatalogue } from '../data/groceryHomepage.js';
 
 // ============================================================
 // The grocery store shell — its own header (menu, centred wordmark,
@@ -30,11 +31,11 @@ export const BOTTOM_NAV = [
   { id: 'account', label: 'Account', icon: 'user' },
 ];
 
+// The site's one logo, the sparrow (owner, 2026-11-16).
 function GroceryLogo() {
   return (
     <Link to="/grocery" className="gs-logo" aria-label={`${branding.siteName} grocery home`}>
-      <strong className="serif">{branding.siteName}</strong>
-      <em>{GROCERY_TAGLINE}</em>
+      <BrandMark />
     </Link>
   );
 }

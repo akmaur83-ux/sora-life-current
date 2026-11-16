@@ -57,6 +57,7 @@ const noop = async () => ({ ok: true });
 // ---- real leaf components, loaded with their real deps -------------------
 const Icon = component('src/components/Icon.jsx', 'Icon', {});
 const SparrowMark = component('src/components/Logo.jsx', 'SparrowMark', { Link, branding: { siteName: 'SORA LIFE', tagline: 'Wellness marketplace' } });
+const BrandMark = component('src/components/Logo.jsx', 'BrandMark', { Link, branding: { siteName: 'SORA LIFE', tagline: 'Wellness marketplace' } });
 const CopyButton = component('src/components/CopyButton.jsx', 'CopyButton', { Icon });
 const UI = {};
 for (const n of ['Section', 'Empty', 'Pill', 'Step', 'Band', 'Cell', 'Balance', 'IdBar', 'CountUp', 'Metric', 'Sparkline']) UI[n] = component('src/components/creator/CreatorUI.jsx', n, { Icon, sparkGeometry: seriesRules.sparkGeometry });
@@ -83,7 +84,7 @@ const initialsOf = component('src/components/creator/CreatorProfilePage.jsx', 'i
 
 const portalFor = (tab) => component('src/pages/CreatorPortal.jsx', 'CreatorPortal', {
   Link, useNavigate: () => () => {}, useParams: () => ({ tab }),
-  Icon, SparrowMark, CopyButton,
+  Icon, SparrowMark, BrandMark, HEADER_MARK: '/assets/sora-lifestyle-bird-header.webp', CopyButton,
   useCustomerAuth: () => ({ session: { user: { id: 'u' } }, loading: false, signOut: () => {} }),
   claimCreatorAccount: noop, getMyCreator: noop, getMyCampaigns: async () => [], getMyLinks: async () => [], buildTrackingUrl,
   getMyCreatorAnalytics: noop, getMyCreatorEarnings: noop, getMyKyc: noop, submitKyc: noop, uploadKycDocument: noop, requestPayout: noop,

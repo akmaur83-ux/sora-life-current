@@ -32,9 +32,9 @@ export default function Footer() {
       <div className="container">
         <div className="ftr__top">
           <div className="ftr__brand">
-            {/* The sea-buckthorn mark, stacked, its lettering in cream for the dark footer. */}
+            {/* The site's one logo, the sparrow (owner, 2026-11-16), its lettering in cream for the dark footer. */}
             <Link to="/" className="ftr__logo" aria-label={`${branding.siteName} home`}>
-              <img src="/assets/sora-lifestyle-footer.webp" alt="" width="540" height="424" loading="lazy" decoding="async" />
+              <img src="/assets/sora-lifestyle-bird-light.webp" alt="" width="494" height="156" loading="lazy" decoding="async" />
             </Link>
             <p>A marketplace for wellness, personal care and everyday essentials.</p>
             {hasContactChannel(info) && (

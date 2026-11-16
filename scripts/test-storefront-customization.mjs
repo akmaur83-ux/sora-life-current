@@ -48,7 +48,9 @@ await test('Fashion renders saved header, hero and section copy without changing
   });
   const app = await buildFashionApp({ homepage: { fashion_storefront: fashion } });
   const html = app.render('/fashion');
-  for (const copy of ['Admin Fashion', 'Find an outfit', 'Styled in Admin', 'Browse looks', 'Admin Categories', 'Admin Brands', 'Admin Products']) assert.ok(html.includes(copy), copy);
+  // The header shows the sparrow lockup now (owner, 2026-11-16: one logo everywhere), not the tagline.
+  assert.ok(html.includes('/assets/sora-lifestyle-bird-header.webp'), 'the sparrow logo');
+  for (const copy of ['Find an outfit', 'Styled in Admin', 'Browse looks', 'Admin Categories', 'Admin Brands', 'Admin Products']) assert.ok(html.includes(copy), copy);
   assert.match(html, /href="\/fashion\/search">Browse looks/);
   assert.ok(html.includes('Meadow Linen Shirt'), 'catalogue still renders');
 });
@@ -63,7 +65,8 @@ await test('Lifestyle renders saved header, slide, banner, headings and promo', 
   });
   const app = await buildLifestyleApp({ homepage: { lifestyle_storefront: lifestyle } });
   const html = app.render('/lifestyle');
-  for (const copy of ['Admin Lifestyle', 'Admin Home', 'Enter home', 'Admin Doorway', 'Enter fashion', 'Admin Fashion Categories', 'Admin Trending', 'Admin Promo', 'See promo']) assert.ok(html.includes(copy), copy);
+  assert.ok(html.includes('/assets/sora-lifestyle-bird-header.webp'), 'the sparrow logo (2026-11-16)');
+  for (const copy of ['Admin Home', 'Enter home', 'Admin Doorway', 'Enter fashion', 'Admin Fashion Categories', 'Admin Trending', 'Admin Promo', 'See promo']) assert.ok(html.includes(copy), copy);
   assert.ok(html.includes('Botanical Bedsheet'), 'combined catalogue still renders');
 });
 

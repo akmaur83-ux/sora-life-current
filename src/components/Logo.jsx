@@ -35,6 +35,22 @@ export function SparrowMark({ size = 26, light = false, foil = false }) {
 
 /** The built-in header mark (assets/README.md): the bird lockup, owner's artwork of 2026-11-07. */
 export const HEADER_MARK = '/assets/sora-lifestyle-bird-header.webp';
+/** The same sparrow lockup with its green lettering in cream, for dark headers and the footer (2026-11-16). */
+export const HEADER_MARK_LIGHT = '/assets/sora-lifestyle-bird-light.webp';
+
+/**
+ * The site's one logo (owner, 2026-11-16: "logo har jgah ek hi rakho, vo sparrow wala"):
+ * the sparrow lockup, or its cream version on a dark surface. Every store header, the
+ * footer, the invoice and the passport show this; a logo uploaded in Admin → Branding
+ * replaces the light-surface one.
+ */
+export function BrandMark({ light = false, className = '', eager = true }) {
+  const src = light ? HEADER_MARK_LIGHT : (branding.logoUrl || HEADER_MARK);
+  return (
+    <img src={src} alt={`${branding.siteName} — ${branding.tagline}`} className={`sora-mark ${className}`.trim()}
+      width="494" height="156" decoding="async" {...(eager ? { fetchpriority: 'high' } : { loading: 'lazy' })} />
+  );
+}
 
 export default function Logo({ compact = false, light = false, tagline = true }) {
   const [imgOk, setImgOk] = useState(true);

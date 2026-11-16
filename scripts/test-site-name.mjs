@@ -169,7 +169,9 @@ await test('N4 on a phone the fashion headers fit the longer name between the me
 });
 
 await test('N3 the renamed site keeps its marks where the owner put them (2026-11-07), and the "Health & Wellness" tagline as it was', () => {
-  for (const file of ['src/pages/Invoice.jsx', 'src/pages/Passport.jsx']) assert.match(read(file), /\/assets\/sora-lifestyle-invoice\.webp/, file);
+  // One logo everywhere (owner, 2026-11-16): the sparrow on the invoice, its cream cut on the dark passport.
+  assert.match(read('src/pages/Invoice.jsx'), /\/assets\/sora-lifestyle-bird-header\.webp/);
+  assert.match(read('src/pages/Passport.jsx'), /\/assets\/sora-lifestyle-bird-light\.webp/);
   assert.match(read('src/lib/settings.js'), /\/assets\/sora-lifestyle-bird-header\.webp/, "the header: the bird lockup (owner, 2026-11-07)");
   assert.match(read('src/pages/Invoice.jsx'), /<p className="inv__brand-sub">Health &amp; Wellness<\/p>/);
   assert.match(read('src/pages/Invoice.jsx'), /alt="SORA LIFESTYLE — Health and Wellness"/);

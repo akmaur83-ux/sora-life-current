@@ -1,7 +1,7 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import Icon from '../components/Icon.jsx';
-import { SparrowMark } from '../components/Logo.jsx';
+import { BrandMark } from '../components/Logo.jsx';
 import Footer from '../components/Footer.jsx';
 import MobileTabBar from '../components/MobileTabBar.jsx';
 import StickyCats from '../components/StickyCats.jsx';
@@ -29,11 +29,11 @@ const SEARCH_PLACEHOLDER = 'Search for fashion, lifestyle and more…';
 /** The delivery strip under the search bar — the admin's (Storefronts → Fashion → strips); this is its built-in content. */
 export const DELIVERY_STRIP = Object.freeze({ hidden: false, location: 'Delivering across India', promise: 'Delivery in 6–7 business days' });
 
-function FashionLogo({ tagline }) {
+// The site's one logo, the sparrow (owner, 2026-11-16); `light` over the department photographs.
+function FashionLogo({ light = false }) {
   return (
     <Link to="/fashion" className="fs-logo" aria-label={`${branding.siteName} fashion home`}>
-      <SparrowMark size={34} />
-      <span className="fs-logo__txt"><strong>{branding.siteName}</strong><em>{tagline}</em></span>
+      <BrandMark light={light} />
     </Link>
   );
 }
@@ -73,7 +73,7 @@ export function FashionHeader({ onMenu }) {
     <header className="wm-header">
       <button type="button" className="wm-header__menu" aria-label="Open menu" onClick={onMenu}><Icon name="menu" size={22} /></button>
       <nav className="wm-header__nav" aria-label="Women's fashion"><a href="#wm-products">Shop</a><a href="#wm-categories">Categories</a><Link to="/fashion/women/sarees">Sarees</Link><Link to="/fashion/jewellery">Jewellery</Link><Link to="/fashion/men">Men</Link></nav>
-      <FashionLogo tagline={config.header.tagline} />
+      <FashionLogo light />
       <nav className="wm-header__actions" aria-label="Search, account, wishlist and cart">
         <Link to="/fashion/search" aria-label="Search fashion"><Icon name="search" size={20} /></Link>
         <Link to="/account" aria-label="Account"><Icon name="user" size={20} /></Link>
@@ -87,7 +87,7 @@ export function FashionHeader({ onMenu }) {
     <header className="jw-header">
       <div className="jw-header__row">
         <button type="button" className="jw-header__menu" aria-label="Open menu" onClick={onMenu}><Icon name="menu" size={22} /></button>
-        <FashionLogo tagline="Jewellery" />
+        <FashionLogo light />
         <nav className="jw-header__nav" aria-label="Jewellery"><Link to="/fashion/jewellery">Home</Link><a href="#jw-products">Shop</a><a href="#jw-categories">Collections</a><Link to="/fashion/women">Women</Link><Link to="/about">About</Link><Link to="/contact">Contact</Link></nav>
         <nav className="jw-header__actions" aria-label="Search, account, wishlist and cart">
           <Link to="/fashion/search" aria-label="Search fashion"><Icon name="search" size={19} /></Link>
@@ -101,7 +101,7 @@ export function FashionHeader({ onMenu }) {
   if (/^\/fashion\/women\/sarees\/?$/.test(location.pathname)) return (
     <header className="sw-header">
       <button type="button" className="sw-header__menu" aria-label="Open menu" onClick={onMenu}><Icon name="menu" size={22} /></button>
-      <FashionLogo tagline="Tradition in every drape" />
+      <FashionLogo light />
       <nav className="sw-header__nav" aria-label="Saree store"><Link to="/fashion/women/sarees">Home</Link><a href="#fd-products">Shop</a><a href="#sw-collections">Collections <Icon name="chevronDown" size={12} /></a><Link to="/about">About</Link><Link to="/contact">Contact</Link></nav>
       <nav className="sw-header__actions" aria-label="Search, account, wishlist and cart">
         <Link to="/fashion/search" aria-label="Search fashion"><Icon name="search" size={19} /></Link>
@@ -115,7 +115,7 @@ export function FashionHeader({ onMenu }) {
     <header className="fs-hdr">
       <div className="fs-hdr__row">
         <button type="button" className="fs-hdr__menu" aria-label="Open menu" onClick={onMenu}><Icon name="menu" size={24} /></button>
-        <FashionLogo tagline={config.header.tagline} />
+        <FashionLogo />
         <nav className="fs-hdr__acts" aria-label="Account, wishlist and cart">
           <Link to="/account" className="fs-hdr__act" aria-label="Account"><Icon name="user" size={24} /></Link>
           <Link to="/fashion/wishlist" className="fs-hdr__act" aria-label={`Wishlist${wish.count ? `, ${wish.count} items` : ''}`}>
