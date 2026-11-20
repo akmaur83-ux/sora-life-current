@@ -258,6 +258,7 @@ export default function App() {
         <Route path="category/:slug" element={<HomeLivingCategory />} />
         <Route path="p/:slug" element={<HomeLivingProductPage />} />
         <Route path="search" element={<HomeLivingSearch />} />
+        <Route path="bedroom" element={<FashionEdit id="bedroom" />} />
         <Route path="wishlist" element={<HomeLivingWishlist />} />
       </Route>
 

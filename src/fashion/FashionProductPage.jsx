@@ -19,6 +19,7 @@ import { lookPicks } from '../lib/completeLook.js';
 import { CompareButton } from '../components/Compare.jsx';
 import PriceHistory from '../components/PriceHistory.jsx';
 import MakerCard from '../components/MakerCard.jsx';
+import { slugWords, similarByWords, searchFor } from '../lib/notFoundHelp.js';
 import ProductOrigin from '../components/ProductOrigin.jsx';
 import { StylingTips } from '../components/ShopExtras.jsx';
 import { useFashionDetails, countryName } from '../lib/fashionPdpDetails.js';
@@ -151,9 +152,20 @@ export default function FashionProductPage() {
       <div className="fs-listing">
         <CategoryChips />
         <div className="fs-empty">
-          <p>{status === 'loading' ? 'Loading the catalogue…' : `There is no “${slug}” in the fashion store.`}</p>
+          <p>{status === 'loading' ? 'Loading the catalogue…' : 'This piece is no longer in the fashion store — it may have sold out or been replaced.'}</p>
+          {status !== 'loading' && slugWords(slug).length > 0 && <Link to={searchFor('fashion', slugWords(slug))} className="fs-btn">Search for “{slugWords(slug).join(' ')}”</Link>}
           <Link to="/fashion" className="fs-btn">Back to fashion</Link>
         </div>
+        {/* Not a dead end (round 17, 2026-11-20): live pieces named like the old link (notFoundHelp.js). */}
+        {status !== 'loading' && (() => {
+          const like = similarByWords(views.filter((v) => v.inStock), slugWords(slug), (v) => `${v.name} ${v.brand}`);
+          return like.length > 0 && (
+            <section className="fs-sec" aria-labelledby="fs-like-h">
+              <header className="fs-sec__head"><h2 className="fs-sec__h serif" id="fs-like-h">You might be looking for</h2></header>
+              <div className="fs-grid">{like.map((v) => <FashionProductCard key={v.id} view={v} />)}</div>
+            </section>
+          );
+        })()}
       </div>
     );
   }

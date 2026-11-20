@@ -229,6 +229,11 @@ export default function HomeLivingHome() {
       <OfferBanner wrap="hl-wrap" />
       <CategoryCircles categories={categories} />
       <FeaturedRow products={products} status={status} />
+      {/* The Bedroom edit (round 17, 2026-11-20). */}
+      <div className="hl-wrap"><Link to="/homeliving/bedroom" className="hx-wedstrip sora-bedstrip">
+        <span><em>Home &amp; Living</em><b>The Bedroom edit</b><i>Beds, bedding and rugs, in one place</i></span>
+        <span className="hx-wedstrip__go">Explore <Icon name="arrowRight" size={16} /></span>
+      </Link></div>
       <RecentlyViewedHome prefix="hl-" />
       <BudgetChips base="/homeliving/search" wrap="hl-wrap" />
       <PromoStrip />

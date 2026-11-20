@@ -16,6 +16,7 @@ import { PdpCompare, PdpService, PdpBrandRail, PdpBundle, PdpRecent, PdpCheaper,
 import { CompareButton } from '../components/Compare.jsx';
 import PriceHistory from '../components/PriceHistory.jsx';
 import MakerCard from '../components/MakerCard.jsx';
+import { slugWords, similarByWords, searchFor } from '../lib/notFoundHelp.js';
 import ProductOrigin from '../components/ProductOrigin.jsx';
 import PdpDeliveryDate from '../components/pdp/PdpDeliveryDate.jsx';
 import { usePageMeta, priceTitle } from '../lib/pageMeta.js';
@@ -583,9 +584,21 @@ export default function HomeLivingProductPage() {
       <div className="hl-wrap hl-listing">
         <Breadcrumb trail={[{ name: 'Home & Living', href: '/homeliving' }, { name: 'Not found' }]} />
         <div className="hl-empty hl-empty--listing">
-          <p>{status === 'loading' ? 'Loading the catalogue…' : status === 'error' ? 'The Home & Living catalogue could not be loaded. Please try again shortly.' : `There is no “${slug}” in the Home & Living store.`}</p>
+          <p>{status === 'loading' ? 'Loading the catalogue…' : status === 'error' ? 'The Home & Living catalogue could not be loaded. Please try again shortly.' : 'This product is no longer in the Home & Living store — it may have sold out or been replaced.'}</p>
+          {status === 'ready' && slugWords(slug).length > 0 && <Link to={searchFor('homeliving', slugWords(slug))} className="hl-btn">Search for “{slugWords(slug).join(' ')}”</Link>}
           <Link to="/homeliving" className="hl-btn">Back to Home &amp; Living</Link>
         </div>
+        {/* Not a dead end (round 17, 2026-11-20): live products named like the old link (notFoundHelp.js). */}
+        {status === 'ready' && (() => {
+          const live = (products || []).filter((p) => (p.variants?.length ? p.variants.some((v) => v.stock > 0) : p.stock > 0));
+          const like = similarByWords(live, slugWords(slug), (p) => `${p.name} ${p.brand || ''}`);
+          return like.length > 0 && (
+            <section className="hl-sec" aria-labelledby="hl-like-h">
+              <h2 className="hl-sec__h serif" id="hl-like-h">You might be looking for</h2>
+              <div className="hl-grid">{like.map((p) => <HomeLivingProductCard key={p.id} product={p} layout="grid" />)}</div>
+            </section>
+          );
+        })()}
       </div>
     );
   }

@@ -1,0 +1,281 @@
+diff --git a/src/App.jsx b/src/App.jsx
+index 003d647..47c5da3 100644
+--- a/src/App.jsx
++++ b/src/App.jsx
+@@ -258,6 +258,7 @@ export default function App() {
+         <Route path="category/:slug" element={<HomeLivingCategory />} />
+         <Route path="p/:slug" element={<HomeLivingProductPage />} />
+         <Route path="search" element={<HomeLivingSearch />} />
++        <Route path="bedroom" element={<FashionEdit id="bedroom" />} />
+         <Route path="wishlist" element={<HomeLivingWishlist />} />
+       </Route>
+ 
+diff --git a/src/admin/pages/Insights.jsx b/src/admin/pages/Insights.jsx
+index fb18535..b23f7ff 100644
+--- a/src/admin/pages/Insights.jsx
++++ b/src/admin/pages/Insights.jsx
+@@ -101,6 +101,11 @@ export function topViewed(rows) {
+ }
+ export const productHref = (store, slug) => (store === 'fashion' ? `/fashion/p/${slug}` : store === 'homeliving' ? `/homeliving/p/${slug}` : `/product/${slug}`);
+ 
++/** Stock watch → CSV: out of stock first, then 1–3 left (round 17, 2026-11-20). Pure. */
++export const stockCsv = (w) => toCsv([...(w?.out || []).map((r) => ({ ...r, state: 'Out of stock' })), ...(w?.low || []).map((r) => ({ ...r, state: 'Running low' }))], [
++  ['State', (r) => r.state], ['Product', (r) => r.name], ['Store', (r) => r.store], ['Brand', (r) => r.brand], ['Left', (r) => r.stock],
++]);
++
+ const STORE = { wellness: 'Wellness', fashion: 'Fashion', homeliving: 'Home & Living', grocery: 'Grocery' };
+ const box = { border: '1px solid #E4E8E1', background: '#fff', padding: 14 };
+ 
+@@ -211,6 +216,12 @@ export default function Insights() {
+         </section>
+         <List title="Most viewed" hint="Product pages opened most in the period: once per product, per browser, per day." rows={viewed} empty="No product views recorded in this period yet."
+           render={(r) => <li key={`${r.store}/${r.slug}`}><a href={productHref(r.store, r.slug)} target="_blank" rel="noopener noreferrer"><b>{r.name}</b></a> <span style={{ color: '#5F6D64' }}>· {STORE[r.store] || r.store} · {r.n} views</span></li>} />
++        {stock && (stock.out.length + stock.low.length) > 0 && (
++          <section style={{ ...box, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
++            <span className="adm-hint">Out of stock and running low, every store, as a spreadsheet (round 17).</span>
++            <button type="button" className="btn btn-sm btn-ghost" onClick={() => downloadCsv('sora-stock-watch.csv', stockCsv(stock))}>Download stock CSV</button>
++          </section>
++        )}
+         <List title={`Out of stock${stock ? ` (${stock.out.length})` : ''}`} hint="Live products with none left: restock them, or hide them from the shop." rows={stock?.out ?? null} empty="Nothing is out of stock."
+           render={(r, i) => <li key={`${r.store}|${r.name}|${i}`}><b>{r.name}</b> <span style={{ color: '#5F6D64' }}>· {STORE[r.store] || r.store}{r.brand ? ` · ${r.brand}` : ''}</span></li>} />
+         <List title={`Running low${stock ? ` (${stock.low.length})` : ''}`} hint="Live products with 1–3 left, fewest first." rows={stock?.low ?? null} empty="Nothing is running low."
+diff --git a/src/fashion/FashionEdit.jsx b/src/fashion/FashionEdit.jsx
+index ecc465c..a43f28a 100644
+--- a/src/fashion/FashionEdit.jsx
++++ b/src/fashion/FashionEdit.jsx
+@@ -24,7 +24,7 @@ export default function FashionEdit({ id }) {
+   return (
+     <div className="hx hx-wed">
+       <div className="hx-wrap">
+-        <nav className="hx-offers__crumbs" aria-label="Breadcrumb"><Link to="/fashion">Fashion</Link> <Icon name="chevronRight" size={12} /> <span>{edit.title}</span></nav>
++        <nav className="hx-offers__crumbs" aria-label="Breadcrumb"><Link to={(edit.home || ['/fashion'])[0]}>{(edit.home || [0, 'Fashion'])[1]}</Link> <Icon name="chevronRight" size={12} /> <span>{edit.title}</span></nav>
+         <header className="hx-wed__hero">
+           <p className="hx-wed__eyebrow">{edit.eyebrow}</p>
+           <h1 className="hx-offers__h">{edit.title}</h1>
+@@ -39,7 +39,7 @@ export default function FashionEdit({ id }) {
+           )}
+         </header>
+         {sections === null ? <SkeletonGrid label="Loading the edit…" />
+-          : sections.length === 0 ? <p className="hx-offers__empty">The edit is being put together. <Link to="/fashion">Browse Fashion</Link></p>
++          : sections.length === 0 ? <p className="hx-offers__empty">The edit is being put together. <Link to={(edit.home || ['/fashion'])[0]}>Browse {(edit.home || [0, 'Fashion'])[1]}</Link></p>
+             : sections.map((s) => (
+               <section key={s.id} className="hx-wed__sec" id={`${id}-${s.id}`} aria-labelledby={`${id}-${s.id}-h`}>
+                 <div className="hx-wed__head">
+diff --git a/src/fashion/FashionProductPage.jsx b/src/fashion/FashionProductPage.jsx
+index 9bb15f8..478f99d 100644
+--- a/src/fashion/FashionProductPage.jsx
++++ b/src/fashion/FashionProductPage.jsx
+@@ -19,6 +19,7 @@ import { lookPicks } from '../lib/completeLook.js';
+ import { CompareButton } from '../components/Compare.jsx';
+ import PriceHistory from '../components/PriceHistory.jsx';
+ import MakerCard from '../components/MakerCard.jsx';
++import { slugWords, similarByWords, searchFor } from '../lib/notFoundHelp.js';
+ import ProductOrigin from '../components/ProductOrigin.jsx';
+ import { StylingTips } from '../components/ShopExtras.jsx';
+ import { useFashionDetails, countryName } from '../lib/fashionPdpDetails.js';
+@@ -151,9 +152,20 @@ export default function FashionProductPage() {
+       <div className="fs-listing">
+         <CategoryChips />
+         <div className="fs-empty">
+-          <p>{status === 'loading' ? 'Loading the catalogue…' : `There is no “${slug}” in the fashion store.`}</p>
++          <p>{status === 'loading' ? 'Loading the catalogue…' : 'This piece is no longer in the fashion store — it may have sold out or been replaced.'}</p>
++          {status !== 'loading' && slugWords(slug).length > 0 && <Link to={searchFor('fashion', slugWords(slug))} className="fs-btn">Search for “{slugWords(slug).join(' ')}”</Link>}
+           <Link to="/fashion" className="fs-btn">Back to fashion</Link>
+         </div>
++        {/* Not a dead end (round 17, 2026-11-20): live pieces named like the old link (notFoundHelp.js). */}
++        {status !== 'loading' && (() => {
++          const like = similarByWords(views.filter((v) => v.inStock), slugWords(slug), (v) => `${v.name} ${v.brand}`);
++          return like.length > 0 && (
++            <section className="fs-sec" aria-labelledby="fs-like-h">
++              <header className="fs-sec__head"><h2 className="fs-sec__h serif" id="fs-like-h">You might be looking for</h2></header>
++              <div className="fs-grid">{like.map((v) => <FashionProductCard key={v.id} view={v} />)}</div>
++            </section>
++          );
++        })()}
+       </div>
+     );
+   }
+diff --git a/src/homeliving/HomeLivingHome.jsx b/src/homeliving/HomeLivingHome.jsx
+index 74c19ab..b8f02f9 100644
+--- a/src/homeliving/HomeLivingHome.jsx
++++ b/src/homeliving/HomeLivingHome.jsx
+@@ -229,6 +229,11 @@ export default function HomeLivingHome() {
+       <OfferBanner wrap="hl-wrap" />
+       <CategoryCircles categories={categories} />
+       <FeaturedRow products={products} status={status} />
++      {/* The Bedroom edit (round 17, 2026-11-20). */}
++      <div className="hl-wrap"><Link to="/homeliving/bedroom" className="hx-wedstrip sora-bedstrip">
++        <span><em>Home &amp; Living</em><b>The Bedroom edit</b><i>Beds, bedding and rugs, in one place</i></span>
++        <span className="hx-wedstrip__go">Explore <Icon name="arrowRight" size={16} /></span>
++      </Link></div>
+       <RecentlyViewedHome prefix="hl-" />
+       <BudgetChips base="/homeliving/search" wrap="hl-wrap" />
+       <PromoStrip />
+diff --git a/src/homeliving/HomeLivingProductPage.jsx b/src/homeliving/HomeLivingProductPage.jsx
+index 4191a00..1cadb5e 100644
+--- a/src/homeliving/HomeLivingProductPage.jsx
++++ b/src/homeliving/HomeLivingProductPage.jsx
+@@ -16,6 +16,7 @@ import { PdpCompare, PdpService, PdpBrandRail, PdpBundle, PdpRecent, PdpCheaper,
+ import { CompareButton } from '../components/Compare.jsx';
+ import PriceHistory from '../components/PriceHistory.jsx';
+ import MakerCard from '../components/MakerCard.jsx';
++import { slugWords, similarByWords, searchFor } from '../lib/notFoundHelp.js';
+ import ProductOrigin from '../components/ProductOrigin.jsx';
+ import PdpDeliveryDate from '../components/pdp/PdpDeliveryDate.jsx';
+ import { usePageMeta, priceTitle } from '../lib/pageMeta.js';
+@@ -583,9 +584,21 @@ export default function HomeLivingProductPage() {
+       <div className="hl-wrap hl-listing">
+         <Breadcrumb trail={[{ name: 'Home & Living', href: '/homeliving' }, { name: 'Not found' }]} />
+         <div className="hl-empty hl-empty--listing">
+-          <p>{status === 'loading' ? 'Loading the catalogue…' : status === 'error' ? 'The Home & Living catalogue could not be loaded. Please try again shortly.' : `There is no “${slug}” in the Home & Living store.`}</p>
++          <p>{status === 'loading' ? 'Loading the catalogue…' : status === 'error' ? 'The Home & Living catalogue could not be loaded. Please try again shortly.' : 'This product is no longer in the Home & Living store — it may have sold out or been replaced.'}</p>
++          {status === 'ready' && slugWords(slug).length > 0 && <Link to={searchFor('homeliving', slugWords(slug))} className="hl-btn">Search for “{slugWords(slug).join(' ')}”</Link>}
+           <Link to="/homeliving" className="hl-btn">Back to Home &amp; Living</Link>
+         </div>
++        {/* Not a dead end (round 17, 2026-11-20): live products named like the old link (notFoundHelp.js). */}
++        {status === 'ready' && (() => {
++          const live = (products || []).filter((p) => (p.variants?.length ? p.variants.some((v) => v.stock > 0) : p.stock > 0));
++          const like = similarByWords(live, slugWords(slug), (p) => `${p.name} ${p.brand || ''}`);
++          return like.length > 0 && (
++            <section className="hl-sec" aria-labelledby="hl-like-h">
++              <h2 className="hl-sec__h serif" id="hl-like-h">You might be looking for</h2>
++              <div className="hl-grid">{like.map((p) => <HomeLivingProductCard key={p.id} product={p} layout="grid" />)}</div>
++            </section>
++          );
++        })()}
+       </div>
+     );
+   }
+diff --git a/src/lib/fashionEdits.js b/src/lib/fashionEdits.js
+index 22b4958..07ff9c0 100644
+--- a/src/lib/fashionEdits.js
++++ b/src/lib/fashionEdits.js
+@@ -25,6 +25,18 @@ export const FASHION_EDITS = Object.freeze({
+       { id: 'gifts', title: 'Winter gifting', note: 'Shawls in gift boxes', slugs: ['shawl-gift-sets'] },
+     ],
+   },
++  // Home & Living (round 17, 2026-11-20): the bedroom, from the store's own categories.
++  bedroom: {
++    store: 'homeliving', home: ['/homeliving', 'Home & Living'],
++    path: '/homeliving/bedroom', eyebrow: 'Home & Living', title: 'The Bedroom edit',
++    lede: 'Beds, bedding and rugs from the Home & Living store — everything for the bedroom in one place.',
++    meta: 'Beds, bedsheets, quilts, cushion covers and rugs for the bedroom at SORA LIFESTYLE.',
++    sections: [
++      { id: 'beds', title: 'Beds', note: 'Frames and storage beds', slugs: ['beds'] },
++      { id: 'bedding', title: 'Bedding', note: 'Bedsheets, quilts and cushion covers', slugs: ['bedsheets', 'quilts-blankets', 'cushion-covers'] },
++      { id: 'floor', title: 'Rugs & mats', note: 'For beside the bed and the doorway', slugs: ['rugs-mats'] },
++    ],
++  },
+   leather: {
+     path: '/fashion/leather', eyebrow: 'The leather store', title: 'Everything leather',
+     lede: 'Jackets, coats, bags, wallets and belts from the leather makers on SORA — Taj Leather, Diamond Leather and Leather Factory.',
+@@ -43,14 +55,21 @@ export const FASHION_EDITS = Object.freeze({
+ 
+ /** Rows → the edit's sections (the Wedding edit's rule, with this edit's sections). Pure. */
+ export function editSections(rows, edit, per = 8) {
+-  return weddingSections(rows, per, edit.sections);
++  const out = weddingSections(rows, per, edit.sections);
++  if (edit.store !== 'homeliving') return out;
++  // The wedding rule writes Fashion links; a Home & Living edit points at its own store.
++  return out.map((s) => ({
++    ...s,
++    href: `/homeliving/category/${s.slugs[0]}`,
++    items: s.items.map((c) => ({ ...c, key: c.key.replace(/^fashion-/, 'homeliving-'), href: c.href.replace(/^\/fashion\/p\//, '/homeliving/p/') })),
++  }));
+ }
+ 
+ export async function fetchEditRows(edit, client = supabase) {
+   const slugs = edit.sections.flatMap((s) => s.slugs);
+   const { data, error } = await client.from('catalogue_products')
+     .select('id, name, slug, mrp, sale_price, images, stock, is_demo, sort_order, category:catalogue_categories!inner(slug), variants:catalogue_variants(stock, is_active)')
+-    .eq('store', 'fashion').eq('is_active', true).in('category.slug', slugs)
++    .eq('store', edit.store || 'fashion').eq('is_active', true).in('category.slug', slugs)
+     .order('sort_order', { ascending: true }).limit(1200);
+   return error || !Array.isArray(data) ? [] : data;
+ }
+diff --git a/src/pages/NotFound.jsx b/src/pages/NotFound.jsx
+index a0f8124..665089b 100644
+--- a/src/pages/NotFound.jsx
++++ b/src/pages/NotFound.jsx
+@@ -1,18 +1,54 @@
+-import { Link } from 'react-router-dom';
++import { useState } from 'react';
++import { Link, useLocation, useNavigate } from 'react-router-dom';
+ import Icon from '../components/Icon.jsx';
++import { products } from '../data/products.js';
++import { money } from '../lib/format.js';
++import { slugWords, similarByWords, searchFor } from '../lib/notFoundHelp.js';
+ 
++// ============================================================
++// Not found (round 17, 2026-11-20: not a dead end). A search box and the main ways
++// in; and for an old wellness product link (/product/<slug>), live products named
++// like it and a search for its words (notFoundHelp.js).
++// ============================================================
+ export default function NotFound() {
++  const { pathname } = useLocation();
++  const navigate = useNavigate();
++  const [q, setQ] = useState('');
++  const m = /^\/product\/([^/?#]+)/.exec(pathname || '');
++  const words = m ? slugWords(m[1]) : [];
++  const like = m ? similarByWords((products || []).filter((p) => Number(p.stock) > 0 && p.image), words, (p) => `${p.name} ${p.brand || ''}`, 4) : [];
++  const go = (e) => { e.preventDefault(); const t = q.trim(); if (t) navigate(`/shop?q=${encodeURIComponent(t)}`); };
+   return (
+     <div className="container section">
+       <div className="state">
+         <span className="state-ic"><Icon name="leaf" size={32} /></span>
+-        <h3 style={{ fontSize: 'var(--text-4xl)' }}>404</h3>
+-        <p>We couldn't find that page. It may have moved, or the link is out of date.</p>
++        <h3 style={{ fontSize: 'var(--text-4xl)' }}>{m ? 'No longer here' : '404'}</h3>
++        <p>{m ? 'This product is no longer in the shop — it may have sold out or been replaced.' : "We couldn't find that page. It may have moved, or the link is out of date."}</p>
++        <form className="sora-nf__search" role="search" onSubmit={go}>
++          <label className="sr-only" htmlFor="sora-nf-q">Search the shop</label>
++          <input id="sora-nf-q" className="input" type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={words.length ? words.join(' ') : 'Search the shop'} />
++          <button type="submit" className="btn">Search</button>
++        </form>
+         <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+-          <Link to="/" className="btn">Back home</Link>
+-          <Link to="/shop" className="btn btn-outline">Browse the shop</Link>
++          {words.length > 0 && <Link to={searchFor('wellness', words)} className="btn">Search for “{words.join(' ')}”</Link>}
++          <Link to="/" className="btn btn-outline">Back home</Link>
++          <Link to="/categories" className="btn btn-outline">All categories</Link>
+         </div>
+       </div>
++      {like.length > 0 && (
++        <section className="sora-nf__like" aria-labelledby="sora-nf-like-h">
++          <h2 className="serif" id="sora-nf-like-h">You might be looking for</h2>
++          <ul className="hx-offers__grid">
++            {like.map((p) => (
++              <li key={p.id}><Link to={`/product/${p.slug}`} className="hx-deals__card">
++                <span className="hx-deals__img"><img src={p.image} alt="" width="300" height="300" loading="lazy" decoding="async" /></span>
++                <span className="hx-deals__name">{p.name}</span>
++                <span className="hx-deals__price"><b>{money(p.price)}</b></span>
++              </Link></li>
++            ))}
++          </ul>
++        </section>
++      )}
+     </div>
+   );
+ }
+diff --git a/src/styles/sora-ds.css b/src/styles/sora-ds.css
+index d4edd9d..c3c521f 100644
+--- a/src/styles/sora-ds.css
++++ b/src/styles/sora-ds.css
+@@ -447,4 +447,14 @@ body .fs .hx-ans .hx-ans__cta { background: #D9B26A; color: #121A16; }
+ /* Share this page (round 15, 2026-11-20). */
+ .sora-pshare { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 0; }
+ .sora-pshare a, .sora-pshare button { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 6px 12px; font: inherit; font-size: 13.5px; font-weight: 600; color: #1E3A2F; text-decoration: none; background: #fff; border: 1px solid rgba(30, 58, 47, .2); cursor: pointer; }
+-.sora-pshare a:hover, .sora-pshare button:hover { border-color: #2C5341; }
+\ No newline at end of file
++.sora-pshare a:hover, .sora-pshare button:hover { border-color: #2C5341; }
++/* Not a dead end (round 17, 2026-11-20). */
++.sora-nf__search { display: flex; gap: 8px; width: 100%; max-width: 460px; margin: 4px auto 14px; }
++.sora-nf__search .input { flex: 1; min-width: 0; }
++.sora-nf__like { margin: 28px 0 0; }
++.sora-nf__like h2 { margin: 0 0 12px; font-size: 24px; font-weight: 500; color: #1E3A2F; }
++/* The Bedroom edit's way in (round 17, 2026-11-20). */
++.sora-bedstrip { margin: 8px 0 18px; background: linear-gradient(100deg, #2B2A44, #4A4675 55%, #7C6F9E); }
++.sora-bedstrip em { color: #E3DDF5; }
++/* A link styled as a Fashion button keeps its light text: `.fs a { color: inherit }` outranked `.fs-btn` (2026-11-20). */
++.fs a.fs-btn { color: var(--slv2-ivory); }
+\ No newline at end of file

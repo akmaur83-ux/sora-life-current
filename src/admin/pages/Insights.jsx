@@ -101,6 +101,11 @@ export function topViewed(rows) {
 }
 export const productHref = (store, slug) => (store === 'fashion' ? `/fashion/p/${slug}` : store === 'homeliving' ? `/homeliving/p/${slug}` : `/product/${slug}`);
 
+/** Stock watch → CSV: out of stock first, then 1–3 left (round 17, 2026-11-20). Pure. */
+export const stockCsv = (w) => toCsv([...(w?.out || []).map((r) => ({ ...r, state: 'Out of stock' })), ...(w?.low || []).map((r) => ({ ...r, state: 'Running low' }))], [
+  ['State', (r) => r.state], ['Product', (r) => r.name], ['Store', (r) => r.store], ['Brand', (r) => r.brand], ['Left', (r) => r.stock],
+]);
+
 const STORE = { wellness: 'Wellness', fashion: 'Fashion', homeliving: 'Home & Living', grocery: 'Grocery' };
 const box = { border: '1px solid #E4E8E1', background: '#fff', padding: 14 };
 
@@ -211,6 +216,12 @@ export default function Insights() {
         </section>
         <List title="Most viewed" hint="Product pages opened most in the period: once per product, per browser, per day." rows={viewed} empty="No product views recorded in this period yet."
           render={(r) => <li key={`${r.store}/${r.slug}`}><a href={productHref(r.store, r.slug)} target="_blank" rel="noopener noreferrer"><b>{r.name}</b></a> <span style={{ color: '#5F6D64' }}>· {STORE[r.store] || r.store} · {r.n} views</span></li>} />
+        {stock && (stock.out.length + stock.low.length) > 0 && (
+          <section style={{ ...box, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+            <span className="adm-hint">Out of stock and running low, every store, as a spreadsheet (round 17).</span>
+            <button type="button" className="btn btn-sm btn-ghost" onClick={() => downloadCsv('sora-stock-watch.csv', stockCsv(stock))}>Download stock CSV</button>
+          </section>
+        )}
         <List title={`Out of stock${stock ? ` (${stock.out.length})` : ''}`} hint="Live products with none left: restock them, or hide them from the shop." rows={stock?.out ?? null} empty="Nothing is out of stock."
           render={(r, i) => <li key={`${r.store}|${r.name}|${i}`}><b>{r.name}</b> <span style={{ color: '#5F6D64' }}>· {STORE[r.store] || r.store}{r.brand ? ` · ${r.brand}` : ''}</span></li>} />
         <List title={`Running low${stock ? ` (${stock.low.length})` : ''}`} hint="Live products with 1–3 left, fewest first." rows={stock?.low ?? null} empty="Nothing is running low."

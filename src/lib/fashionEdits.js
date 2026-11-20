@@ -25,6 +25,18 @@ export const FASHION_EDITS = Object.freeze({
       { id: 'gifts', title: 'Winter gifting', note: 'Shawls in gift boxes', slugs: ['shawl-gift-sets'] },
     ],
   },
+  // Home & Living (round 17, 2026-11-20): the bedroom, from the store's own categories.
+  bedroom: {
+    store: 'homeliving', home: ['/homeliving', 'Home & Living'],
+    path: '/homeliving/bedroom', eyebrow: 'Home & Living', title: 'The Bedroom edit',
+    lede: 'Beds, bedding and rugs from the Home & Living store — everything for the bedroom in one place.',
+    meta: 'Beds, bedsheets, quilts, cushion covers and rugs for the bedroom at SORA LIFESTYLE.',
+    sections: [
+      { id: 'beds', title: 'Beds', note: 'Frames and storage beds', slugs: ['beds'] },
+      { id: 'bedding', title: 'Bedding', note: 'Bedsheets, quilts and cushion covers', slugs: ['bedsheets', 'quilts-blankets', 'cushion-covers'] },
+      { id: 'floor', title: 'Rugs & mats', note: 'For beside the bed and the doorway', slugs: ['rugs-mats'] },
+    ],
+  },
   leather: {
     path: '/fashion/leather', eyebrow: 'The leather store', title: 'Everything leather',
     lede: 'Jackets, coats, bags, wallets and belts from the leather makers on SORA — Taj Leather, Diamond Leather and Leather Factory.',
@@ -43,14 +55,21 @@ export const FASHION_EDITS = Object.freeze({
 
 /** Rows → the edit's sections (the Wedding edit's rule, with this edit's sections). Pure. */
 export function editSections(rows, edit, per = 8) {
-  return weddingSections(rows, per, edit.sections);
+  const out = weddingSections(rows, per, edit.sections);
+  if (edit.store !== 'homeliving') return out;
+  // The wedding rule writes Fashion links; a Home & Living edit points at its own store.
+  return out.map((s) => ({
+    ...s,
+    href: `/homeliving/category/${s.slugs[0]}`,
+    items: s.items.map((c) => ({ ...c, key: c.key.replace(/^fashion-/, 'homeliving-'), href: c.href.replace(/^\/fashion\/p\//, '/homeliving/p/') })),
+  }));
 }
 
 export async function fetchEditRows(edit, client = supabase) {
   const slugs = edit.sections.flatMap((s) => s.slugs);
   const { data, error } = await client.from('catalogue_products')
     .select('id, name, slug, mrp, sale_price, images, stock, is_demo, sort_order, category:catalogue_categories!inner(slug), variants:catalogue_variants(stock, is_active)')
-    .eq('store', 'fashion').eq('is_active', true).in('category.slug', slugs)
+    .eq('store', edit.store || 'fashion').eq('is_active', true).in('category.slug', slugs)
     .order('sort_order', { ascending: true }).limit(1200);
   return error || !Array.isArray(data) ? [] : data;
 }

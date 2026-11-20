@@ -24,7 +24,7 @@ export default function FashionEdit({ id }) {
   return (
     <div className="hx hx-wed">
       <div className="hx-wrap">
-        <nav className="hx-offers__crumbs" aria-label="Breadcrumb"><Link to="/fashion">Fashion</Link> <Icon name="chevronRight" size={12} /> <span>{edit.title}</span></nav>
+        <nav className="hx-offers__crumbs" aria-label="Breadcrumb"><Link to={(edit.home || ['/fashion'])[0]}>{(edit.home || [0, 'Fashion'])[1]}</Link> <Icon name="chevronRight" size={12} /> <span>{edit.title}</span></nav>
         <header className="hx-wed__hero">
           <p className="hx-wed__eyebrow">{edit.eyebrow}</p>
           <h1 className="hx-offers__h">{edit.title}</h1>
@@ -39,7 +39,7 @@ export default function FashionEdit({ id }) {
           )}
         </header>
         {sections === null ? <SkeletonGrid label="Loading the edit…" />
-          : sections.length === 0 ? <p className="hx-offers__empty">The edit is being put together. <Link to="/fashion">Browse Fashion</Link></p>
+          : sections.length === 0 ? <p className="hx-offers__empty">The edit is being put together. <Link to={(edit.home || ['/fashion'])[0]}>Browse {(edit.home || [0, 'Fashion'])[1]}</Link></p>
             : sections.map((s) => (
               <section key={s.id} className="hx-wed__sec" id={`${id}-${s.id}`} aria-labelledby={`${id}-${s.id}-h`}>
                 <div className="hx-wed__head">
