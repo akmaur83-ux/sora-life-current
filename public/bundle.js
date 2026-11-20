@@ -73379,7 +73379,10 @@ function FashionProductCard({
           loading: "lazy",
           decoding: "async",
           width: "600",
-          height: "600"
+          height: "600",
+          onError: e => {
+            e.currentTarget.remove();
+          }
         })]
       }), out ? /*#__PURE__*/jsxRuntimeExports.jsx("span", {
         className: "fs-badge fs-badge--out",
@@ -77126,7 +77129,10 @@ function HomeLivingProductCard({
             loading: "lazy",
             decoding: "async",
             width: "400",
-            height: "400"
+            height: "400",
+            onError: e => {
+              e.currentTarget.remove();
+            }
           })]
         }) : /*#__PURE__*/jsxRuntimeExports.jsx("span", {
           className: "hl-card__noimg",

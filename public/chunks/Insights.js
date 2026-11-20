@@ -123,6 +123,49 @@ const stockCsv = w => toCsv([...(w?.out || []).map(r => ({
   ...r,
   state: 'Running low'
 }))], [['State', r => r.state], ['Product', r => r.name], ['Store', r => r.store], ['Brand', r => r.brand], ['Left', r => r.stock]]);
+
+/**
+ * Photo check (round 18, 2026-11-20): partners' pictures live on their own servers and
+ * can disappear. Loads each live product's main picture the way a shopper's browser
+ * would (an <img>, so any site's pictures can be checked) and lists the ones that do
+ * not load. `load(url)` resolves true/false; at most `parallel` at a time.
+ */
+async function checkPhotos(rows, load, parallel = 12, onProgress = () => {}) {
+  const list = (Array.isArray(rows) ? rows : []).filter(r => Array.isArray(r.images) && r.images[0]);
+  const bad = [];
+  let done = 0;
+  const q = [...list];
+  await Promise.all(Array.from({
+    length: parallel
+  }, async () => {
+    while (q.length) {
+      const r = q.shift();
+      if (!(await load(r.images[0]))) bad.push({
+        name: r.name,
+        store: r.store,
+        brand: r.brand || '',
+        slug: r.slug,
+        url: r.images[0]
+      });
+      done += 1;
+      onProgress(done, list.length);
+    }
+  }));
+  return bad.sort((a, b) => a.name.localeCompare(b.name));
+}
+const loadImage = url => new Promise(res => {
+  const i = new Image();
+  const t = setTimeout(() => res(false), 15000);
+  i.onload = () => {
+    clearTimeout(t);
+    res(i.naturalWidth > 0);
+  };
+  i.onerror = () => {
+    clearTimeout(t);
+    res(false);
+  };
+  i.src = url;
+});
 const STORE = {
   wellness: 'Wellness',
   fashion: 'Fashion',
@@ -178,6 +221,34 @@ function Insights() {
   const [brands, setBrands] = reactExports.useState(null);
   const [stock, setStock] = reactExports.useState(null);
   const [viewed, setViewed] = reactExports.useState(null);
+  const [photos, setPhotos] = reactExports.useState({
+    state: 'idle',
+    done: 0,
+    total: 0,
+    bad: []
+  });
+  const runPhotoCheck = async () => {
+    setPhotos({
+      state: 'running',
+      done: 0,
+      total: 0,
+      bad: []
+    });
+    const {
+      data
+    } = await supabase.from('catalogue_products').select('name, store, brand, slug, images').eq('is_active', true).limit(5000);
+    const bad = await checkPhotos(data || [], loadImage, 12, (done, total) => setPhotos(p => ({
+      ...p,
+      done,
+      total
+    })));
+    setPhotos({
+      state: 'done',
+      done: (data || []).length,
+      total: (data || []).length,
+      bad
+    });
+  };
   const [error, setError] = reactExports.useState('');
   reactExports.useEffect(() => {
     let live = true;
@@ -456,6 +527,63 @@ function Insights() {
           onClick: () => downloadCsv('sora-stock-watch.csv', stockCsv(stock)),
           children: "Download stock CSV"
         })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+        style: box,
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+          style: {
+            margin: '0 0 4px',
+            fontSize: 16
+          },
+          children: "Photo check"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "adm-hint",
+          style: {
+            margin: '0 0 10px'
+          },
+          children: "Partners\u2019 pictures live on their own servers and can disappear. This loads every live product\u2019s main picture and lists any that do not open."
+        }), photos.state === 'idle' && /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+          type: "button",
+          className: "btn btn-sm",
+          onClick: runPhotoCheck,
+          children: "Check product photos"
+        }), photos.state === 'running' && /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+          children: ["Checking\u2026 ", photos.done, " of ", photos.total || '…']
+        }), photos.state === 'done' && (photos.bad.length === 0 ? /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+          children: ["All ", photos.total, " main pictures open. ", /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+            type: "button",
+            className: "btn btn-sm btn-ghost",
+            onClick: runPhotoCheck,
+            children: "Check again"
+          })]
+        }) : /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("b", {
+              children: photos.bad.length
+            }), " of ", photos.total, " do not open \u2014 replace their pictures in the store catalogue:"]
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("ol", {
+            style: {
+              margin: 0,
+              paddingLeft: 20,
+              display: 'grid',
+              gap: 6
+            },
+            children: photos.bad.slice(0, 50).map(r => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+              children: [/*#__PURE__*/jsxRuntimeExports.jsx("a", {
+                href: productHref(r.store, r.slug),
+                target: "_blank",
+                rel: "noopener noreferrer",
+                children: /*#__PURE__*/jsxRuntimeExports.jsx("b", {
+                  children: r.name
+                })
+              }), " ", /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+                style: {
+                  color: '#5F6D64'
+                },
+                children: ["\xB7 ", STORE[r.store] || r.store, r.brand ? ` · ${r.brand}` : '']
+              })]
+            }, `${r.store}/${r.slug}`))
+          })]
+        }))]
       }), /*#__PURE__*/jsxRuntimeExports.jsx(List, {
         title: `Out of stock${stock ? ` (${stock.out.length})` : ''}`,
         hint: "Live products with none left: restock them, or hide them from the shop.",
@@ -491,5 +619,5 @@ function Insights() {
   });
 }
 
-export { RANGES, bestSellers, Insights as default, lineBrand, productHref, salesByBrand, stockCsv, stockWatch, summariseSearches, topViewed };
+export { RANGES, bestSellers, checkPhotos, Insights as default, lineBrand, productHref, salesByBrand, stockCsv, stockWatch, summariseSearches, topViewed };
 //# sourceMappingURL=Insights.js.map

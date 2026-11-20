@@ -10118,6 +10118,8 @@ body .fs .hx-ans .hx-ans__cta { background: #D9B26A; color: #121A16; }
 .sora-bedstrip em { color: #E3DDF5; }
 /* A link styled as a Fashion button keeps its light text: `.fs a { color: inherit }` outranked `.fs-btn` (2026-11-20). */
 .fs a.fs-btn { color: var(--slv2-ivory); }
+/* Disabled buy buttons still readable (round 18 audit, 2026-11-20): #8A8F8F on #F0F2F2 was 2.9:1. */
+.fs .fs-pdp--mk .fs-btn--add:disabled, .fs .fs-pdp--mk .fs-btn--buy:disabled, .fs .fs-pdp__bar .fs-btn--add:disabled, .fs .fs-pdp__bar .fs-btn--buy:disabled { color: #666B6B; }
 
 /* ═══ src/styles/storefront-sections.css ═══ */
 /* ============================================================
