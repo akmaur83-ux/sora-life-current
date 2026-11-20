@@ -159,6 +159,8 @@ async function openDashboard({ lists = [[]], productsFail = false, categoriesFai
     adminListCategories: async () => { if (categoriesFail) throw READ_FAILED; return [{ slug: 'wellness' }, { slug: 'skin-care' }]; },
     adminSeedDefaultCategories: async () => { calls.seed += 1; },
     adminImportBiosashCatalog: async (onProgress) => { calls.imports += 1; onProgress?.(149, 149); return { added: 149, total: 149 }; },
+    // The Today panel's reads (round 21): nothing to do.
+    supabase: { from: () => { const q = new Proxy({}, { get: (_, k) => (k === 'then' ? (res) => res({ data: [], count: 0, error: null }) : () => q) }); return q; } },
   });
   const handle = await mount(h(page.default));
   return { handle, calls, win };

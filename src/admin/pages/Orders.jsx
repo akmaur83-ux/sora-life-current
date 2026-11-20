@@ -77,6 +77,21 @@ export const ORDER_CSV_COLUMNS = [
 ];
 export const ordersCsv = (orders) => toCsv(orders, ORDER_CSV_COLUMNS);
 
+/**
+ * Asking a customer for a review (round 21, 2026-11-20): a polite WhatsApp message for a
+ * delivered order, pointing to their orders page where "Rate your purchase" opens the
+ * product's reviews. No incentive is offered (reviews stay honest). '' without a phone.
+ */
+export function reviewAskText(o, site = 'https://www.soralifestyle.in') {
+  const first = String(o?.customer?.firstName || '').trim().split(' ')[0];
+  return `Hi${first ? ` ${first}` : ''}, this is SORA LIFESTYLE. Your order ${o?.order_number || ''} was delivered — we hope you like it! If you have a minute, a short review helps other shoppers: ${site}/account/orders (tap "Rate your purchase").`;
+}
+export function reviewAskHref(o) {
+  const d = String(o?.customer?.phone || '').replace(/\D/g, '');
+  const n = d.length === 10 ? `91${d}` : d.length === 12 && d.startsWith('91') ? d : '';
+  return n ? `https://wa.me/${n}?text=${encodeURIComponent(reviewAskText(o))}` : '';
+}
+
 // The audit trail an order can prove from its own columns. Steps with no
 // timestamp are not shown — nothing here is inferred or back-dated.
 function timeline(o) {
@@ -274,6 +289,10 @@ export default function Orders() {
                                 <div><dt>Phone</dt><dd>{c.phone || '—'}</dd></div>
                                 <div><dt>Email</dt><dd>{c.email || '—'}</dd></div>
                               </dl>
+                              {/* Ask for a review (round 21, 2026-11-20): delivered orders, on WhatsApp, the admin presses send. */}
+                              {o.fulfillment_status === 'delivered' && reviewAskHref(o) && (
+                                <a className="btn btn-sm btn-outline" style={{ marginTop: 10 }} href={reviewAskHref(o)} target="_blank" rel="noopener noreferrer">Ask for a review on WhatsApp</a>
+                              )}
                             </section>
 
                             {/* Order + payment meta */}

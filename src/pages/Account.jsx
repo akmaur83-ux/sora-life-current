@@ -55,10 +55,15 @@ export function orderHelpLink(phone, orderNumber) {
  * "Rate your purchase" (2026-11-13, owner feature 34): once an order is delivered, the
  * reviews of its first product still on sale. '' otherwise. Pure.
  */
-export function rateLink(order) {
+export function rateLink(order, catalogueSlugs = {}) {
   if (!order || order.fulfillment_status !== 'delivered') return '';
-  const p = (Array.isArray(order.items) ? order.items : []).map(productForLine).find((x) => x && x.slug);
-  return p ? `/product/${p.slug}#reviews` : '';
+  const lines = Array.isArray(order.items) ? order.items : [];
+  const p = lines.filter((l) => !l?.catalogue).map(productForLine).find((x) => x && x.slug);
+  if (p) return `/product/${p.slug}#reviews`;
+  // Fashion and Home & Living lines (round 21, 2026-11-20): their product's own page, by its slug.
+  const c = lines.find((l) => l?.catalogue && catalogueSlugs[l.product_id]);
+  if (!c) return '';
+  return `${c.catalogue === 'homeliving' ? '/homeliving/p/' : '/fashion/p/'}${catalogueSlugs[c.product_id]}#reviews`;
 }
 
 export function buyAgainLines(items) {
@@ -419,6 +424,7 @@ function Orders() {
   const navigate = useNavigate();
   const care = useConsumerCare();
   const [orders, setOrders] = useState(null); // null = loading, [] = none
+  const [catSlugs, setCatSlugs] = useState({}); // Fashion / Home & Living slugs for "Rate your purchase" (round 21)
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -435,6 +441,12 @@ function Orders() {
       if (cancelled) return;
       if (err) { setError('We could not load your orders right now.'); setOrders([]); return; }
       setOrders(Array.isArray(data) ? data : []);
+      // Slugs for delivered Fashion / Home & Living lines, so "Rate your purchase" can open them.
+      const ids = [...new Set((data || []).filter((o) => o.fulfillment_status === 'delivered').flatMap((o) => (Array.isArray(o.items) ? o.items : [])).filter((l) => l?.catalogue && l.product_id).map((l) => l.product_id))];
+      if (ids.length) {
+        const { data: rows } = await supabase.from('catalogue_products').select('id, slug').in('id', ids);
+        if (!cancelled) setCatSlugs(Object.fromEntries((rows || []).map((r) => [r.id, r.slug])));
+      }
     })();
     return () => { cancelled = true; };
   }, []);
@@ -507,8 +519,8 @@ function Orders() {
                       </button>
                     );
                   })()}
-                  {rateLink(o) && (
-                    <Link to={rateLink(o)} className="btn btn-sm btn-light"><Icon name="star" size={15} /> Rate your purchase</Link>
+                  {rateLink(o, catSlugs) && (
+                    <Link to={rateLink(o, catSlugs)} className="btn btn-sm btn-light"><Icon name="star" size={15} /> Rate your purchase</Link>
                   )}
                   {trackingUrl && (
                     <a href={trackingUrl} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-light">

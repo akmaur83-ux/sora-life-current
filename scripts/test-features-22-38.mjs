@@ -78,7 +78,7 @@ test('mega menu: Fashion roots with their sub-categories and a picture each; not
 });
 test('orders: "Rate your purchase" once delivered; the back-in-stock email names the product and a link to it', () => {
   const acc = read('src/pages/Account.jsx');
-  assert.match(acc, /export function rateLink\(order\) \{\n  if \(!order \|\| order\.fulfillment_status !== 'delivered'\) return '';/);
+  assert.match(acc, /export function rateLink\(order(, catalogueSlugs = \{\})?\) \{\n  if \(!order \|\| order\.fulfillment_status !== 'delivered'\) return '';/);
   assert.match(acc, /Rate your purchase/);
   const rev = read('src/admin/pages/Reviews.jsx');
   assert.match(rev, /&body=\$\{encodeURIComponent\(backInStockBody\(g\)\)\}/);

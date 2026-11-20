@@ -1,0 +1,190 @@
+diff --git a/src/admin/admin.css b/src/admin/admin.css
+index fc66d6c..597e0ec 100644
+--- a/src/admin/admin.css
++++ b/src/admin/admin.css
+@@ -33,6 +33,11 @@
+ .adm__stat { background: var(--paper); border: 1px solid var(--line-soft); border-radius: var(--r-lg); padding: var(--sp-5); }
+ .adm__stat strong { display: block; font-family: var(--font-display); font-size: var(--text-3xl); color: var(--color-primary); }
+ .adm__stat span { font-size: var(--text-xs); color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
++/* Today (round 21, 2026-11-20): the dashboard's to-do counts, each a link. */
++.adm-todo { display: block; background: var(--paper); border: 1px solid var(--line-soft); border-radius: var(--r-lg); padding: var(--sp-5); color: inherit; text-decoration: none; }
++.adm-todo:hover { border-color: var(--color-primary); }
++.adm-todo strong { display: block; font-family: var(--font-display); font-size: var(--text-3xl); color: var(--color-primary); }
++.adm-todo span { font-size: var(--text-xs); color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
+ 
+ .adm-table-wrap { background: var(--paper); border: 1px solid var(--line-soft); border-radius: var(--r-lg); overflow: hidden; }
+ .adm-table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); }
+diff --git a/src/admin/pages/Dashboard.jsx b/src/admin/pages/Dashboard.jsx
+index b16e217..b8ee937 100644
+--- a/src/admin/pages/Dashboard.jsx
++++ b/src/admin/pages/Dashboard.jsx
+@@ -1,6 +1,68 @@
+ import { useEffect, useState } from 'react';
+ import { Link } from 'react-router-dom';
+ import { adminListProducts, adminListCategories, adminImportBiosashCatalog, adminSeedDefaultCategories } from '../../lib/adminApi.js';
++import { supabase } from '../../lib/supabase.js';
++
++// ============================================================
++// Today (owner, 2026-11-20: round 21): what needs doing, at the top of the dashboard.
++//   * orders to ship — paid online, or cash on delivery not cancelled, and not yet
++//     shipped, delivered or cancelled;
++//   * new enquiries — sell on SORA, bulk gifting, product requests;
++//   * out of stock — live products with none left, every store;
++//   * ask for reviews — orders delivered in the last 60 days (the shop has no reviews yet).
++// Counts only, each opening the page where it is done.
++// ============================================================
++const DONE = new Set(['shipped', 'delivered', 'cancelled']);
++/** Orders → { toShip, delivered60 }. Pure. */
++export function orderTodo(orders, now = Date.now()) {
++  let toShip = 0; let delivered60 = 0;
++  for (const o of Array.isArray(orders) ? orders : []) {
++    const cancelled = o.status === 'cancelled' || o.fulfillment_status === 'cancelled' || o.payment_status === 'failed';
++    const committed = o.payment_status === 'paid' || (o.payment_method === 'cod' && !cancelled);
++    if (committed && !cancelled && !DONE.has(o.fulfillment_status)) toShip += 1;
++    const at = Date.parse(o.delivered_at || '');
++    if (o.fulfillment_status === 'delivered' && (!at || now - at <= 60 * 86400e3)) delivered60 += 1;
++  }
++  return { toShip, delivered60 };
++}
++
++function Today() {
++  const [t, setT] = useState(null);
++  useEffect(() => {
++    let live = true;
++    Promise.all([
++      supabase.from('orders').select('status, payment_status, payment_method, fulfillment_status, delivered_at').order('created_at', { ascending: false }).limit(2000),
++      supabase.from('enquiries').select('id', { count: 'exact', head: true }).eq('status', 'new'),
++      supabase.from('catalogue_products').select('id', { count: 'exact', head: true }).eq('is_active', true).lte('stock', 0),
++      supabase.from('products').select('id', { count: 'exact', head: true }).neq('is_active', false).lte('stock', 0),
++    ]).then(([o, e, c, w]) => {
++      if (!live) return;
++      setT({ ...orderTodo(o.data || []), enquiries: e.count || 0, out: (c.count || 0) + (w.count || 0) });
++    }, () => { if (live) setT({ toShip: 0, delivered60: 0, enquiries: 0, out: 0 }); });
++    return () => { live = false; };
++  }, []);
++  const items = t ? [
++    ['Orders to ship', t.toShip, '/admin/orders', 'Paid or cash on delivery, not shipped yet'],
++    ['New enquiries', t.enquiries, '/admin/enquiries', 'Brands, bulk orders and product requests'],
++    ['Out of stock', t.out, '/admin/insights', 'Live products with none left'],
++    ['Ask for reviews', t.delivered60, '/admin/orders', 'Orders delivered in the last 60 days'],
++  ] : [];
++  return (
++    <section className="surface pad-lg" style={{ marginBottom: 16 }} aria-labelledby="adm-today-h">
++      <h2 id="adm-today-h" style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-lg)', marginBottom: 12 }}>Today</h2>
++      {!t ? <p className="muted">Loading…</p> : (
++        <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))' }}>
++          {items.map(([label, n, to, hint]) => (
++            <Link key={label} to={to} className="adm-todo" style={{ borderLeft: n > 0 ? '3px solid #B4532A' : undefined }}>
++              <strong>{n}</strong><span>{label}</span><em style={{ display: 'block', fontStyle: 'normal', fontSize: 12, color: '#5F6D64' }}>{hint}</em>
++            </Link>
++          ))}
++        </div>
++      )}
++    </section>
++  );
++}
++
+ 
+ export default function Dashboard() {
+   const [loading, setLoading] = useState(true);
+@@ -76,6 +138,8 @@ export default function Dashboard() {
+         </div>
+       )}
+ 
++      <Today />
++
+       <div className="adm__stats">
+         <div className="adm__stat"><strong>{count(products, products?.length)}</strong><span>Products</span></div>
+         <div className="adm__stat"><strong>{count(products, active)}</strong><span>Active products</span></div>
+diff --git a/src/admin/pages/Orders.jsx b/src/admin/pages/Orders.jsx
+index 0af291c..ce9476c 100644
+--- a/src/admin/pages/Orders.jsx
++++ b/src/admin/pages/Orders.jsx
+@@ -77,6 +77,21 @@ export const ORDER_CSV_COLUMNS = [
+ ];
+ export const ordersCsv = (orders) => toCsv(orders, ORDER_CSV_COLUMNS);
+ 
++/**
++ * Asking a customer for a review (round 21, 2026-11-20): a polite WhatsApp message for a
++ * delivered order, pointing to their orders page where "Rate your purchase" opens the
++ * product's reviews. No incentive is offered (reviews stay honest). '' without a phone.
++ */
++export function reviewAskText(o, site = 'https://www.soralifestyle.in') {
++  const first = String(o?.customer?.firstName || '').trim().split(' ')[0];
++  return `Hi${first ? ` ${first}` : ''}, this is SORA LIFESTYLE. Your order ${o?.order_number || ''} was delivered — we hope you like it! If you have a minute, a short review helps other shoppers: ${site}/account/orders (tap "Rate your purchase").`;
++}
++export function reviewAskHref(o) {
++  const d = String(o?.customer?.phone || '').replace(/\D/g, '');
++  const n = d.length === 10 ? `91${d}` : d.length === 12 && d.startsWith('91') ? d : '';
++  return n ? `https://wa.me/${n}?text=${encodeURIComponent(reviewAskText(o))}` : '';
++}
++
+ // The audit trail an order can prove from its own columns. Steps with no
+ // timestamp are not shown — nothing here is inferred or back-dated.
+ function timeline(o) {
+@@ -274,6 +289,10 @@ export default function Orders() {
+                                 <div><dt>Phone</dt><dd>{c.phone || '—'}</dd></div>
+                                 <div><dt>Email</dt><dd>{c.email || '—'}</dd></div>
+                               </dl>
++                              {/* Ask for a review (round 21, 2026-11-20): delivered orders, on WhatsApp, the admin presses send. */}
++                              {o.fulfillment_status === 'delivered' && reviewAskHref(o) && (
++                                <a className="btn btn-sm btn-outline" style={{ marginTop: 10 }} href={reviewAskHref(o)} target="_blank" rel="noopener noreferrer">Ask for a review on WhatsApp</a>
++                              )}
+                             </section>
+ 
+                             {/* Order + payment meta */}
+diff --git a/src/pages/Account.jsx b/src/pages/Account.jsx
+index 1b0b60f..f31606f 100644
+--- a/src/pages/Account.jsx
++++ b/src/pages/Account.jsx
+@@ -55,10 +55,15 @@ export function orderHelpLink(phone, orderNumber) {
+  * "Rate your purchase" (2026-11-13, owner feature 34): once an order is delivered, the
+  * reviews of its first product still on sale. '' otherwise. Pure.
+  */
+-export function rateLink(order) {
++export function rateLink(order, catalogueSlugs = {}) {
+   if (!order || order.fulfillment_status !== 'delivered') return '';
+-  const p = (Array.isArray(order.items) ? order.items : []).map(productForLine).find((x) => x && x.slug);
+-  return p ? `/product/${p.slug}#reviews` : '';
++  const lines = Array.isArray(order.items) ? order.items : [];
++  const p = lines.filter((l) => !l?.catalogue).map(productForLine).find((x) => x && x.slug);
++  if (p) return `/product/${p.slug}#reviews`;
++  // Fashion and Home & Living lines (round 21, 2026-11-20): their product's own page, by its slug.
++  const c = lines.find((l) => l?.catalogue && catalogueSlugs[l.product_id]);
++  if (!c) return '';
++  return `${c.catalogue === 'homeliving' ? '/homeliving/p/' : '/fashion/p/'}${catalogueSlugs[c.product_id]}#reviews`;
+ }
+ 
+ export function buyAgainLines(items) {
+@@ -419,6 +424,7 @@ function Orders() {
+   const navigate = useNavigate();
+   const care = useConsumerCare();
+   const [orders, setOrders] = useState(null); // null = loading, [] = none
++  const [catSlugs, setCatSlugs] = useState({}); // Fashion / Home & Living slugs for "Rate your purchase" (round 21)
+   const [error, setError] = useState('');
+ 
+   useEffect(() => {
+@@ -435,6 +441,12 @@ function Orders() {
+       if (cancelled) return;
+       if (err) { setError('We could not load your orders right now.'); setOrders([]); return; }
+       setOrders(Array.isArray(data) ? data : []);
++      // Slugs for delivered Fashion / Home & Living lines, so "Rate your purchase" can open them.
++      const ids = [...new Set((data || []).filter((o) => o.fulfillment_status === 'delivered').flatMap((o) => (Array.isArray(o.items) ? o.items : [])).filter((l) => l?.catalogue && l.product_id).map((l) => l.product_id))];
++      if (ids.length) {
++        const { data: rows } = await supabase.from('catalogue_products').select('id, slug').in('id', ids);
++        if (!cancelled) setCatSlugs(Object.fromEntries((rows || []).map((r) => [r.id, r.slug])));
++      }
+     })();
+     return () => { cancelled = true; };
+   }, []);
+@@ -507,8 +519,8 @@ function Orders() {
+                       </button>
+                     );
+                   })()}
+-                  {rateLink(o) && (
+-                    <Link to={rateLink(o)} className="btn btn-sm btn-light"><Icon name="star" size={15} /> Rate your purchase</Link>
++                  {rateLink(o, catSlugs) && (
++                    <Link to={rateLink(o, catSlugs)} className="btn btn-sm btn-light"><Icon name="star" size={15} /> Rate your purchase</Link>
+                   )}
+                   {trackingUrl && (
+                     <a href={trackingUrl} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-light">
