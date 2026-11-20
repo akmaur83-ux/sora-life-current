@@ -42515,6 +42515,32 @@ const FASHION_EDITS = Object.freeze({
       slugs: ['shawl-gift-sets']
     }]
   },
+  // Home & Living (round 17, 2026-11-20): the bedroom, from the store's own categories.
+  bedroom: {
+    store: 'homeliving',
+    home: ['/homeliving', 'Home & Living'],
+    path: '/homeliving/bedroom',
+    eyebrow: 'Home & Living',
+    title: 'The Bedroom edit',
+    lede: 'Beds, bedding and rugs from the Home & Living store — everything for the bedroom in one place.',
+    meta: 'Beds, bedsheets, quilts, cushion covers and rugs for the bedroom at SORA LIFESTYLE.',
+    sections: [{
+      id: 'beds',
+      title: 'Beds',
+      note: 'Frames and storage beds',
+      slugs: ['beds']
+    }, {
+      id: 'bedding',
+      title: 'Bedding',
+      note: 'Bedsheets, quilts and cushion covers',
+      slugs: ['bedsheets', 'quilts-blankets', 'cushion-covers']
+    }, {
+      id: 'floor',
+      title: 'Rugs & mats',
+      note: 'For beside the bed and the doorway',
+      slugs: ['rugs-mats']
+    }]
+  },
   leather: {
     path: '/fashion/leather',
     eyebrow: 'The leather store',
@@ -42558,14 +42584,25 @@ const FASHION_EDITS = Object.freeze({
 
 /** Rows → the edit's sections (the Wedding edit's rule, with this edit's sections). Pure. */
 function editSections(rows, edit, per = 8) {
-  return weddingSections(rows, per, edit.sections);
+  const out = weddingSections(rows, per, edit.sections);
+  if (edit.store !== 'homeliving') return out;
+  // The wedding rule writes Fashion links; a Home & Living edit points at its own store.
+  return out.map(s => ({
+    ...s,
+    href: `/homeliving/category/${s.slugs[0]}`,
+    items: s.items.map(c => ({
+      ...c,
+      key: c.key.replace(/^fashion-/, 'homeliving-'),
+      href: c.href.replace(/^\/fashion\/p\//, '/homeliving/p/')
+    }))
+  }));
 }
 async function fetchEditRows(edit, client = supabase) {
   const slugs = edit.sections.flatMap(s => s.slugs);
   const {
     data,
     error
-  } = await client.from('catalogue_products').select('id, name, slug, mrp, sale_price, images, stock, is_demo, sort_order, category:catalogue_categories!inner(slug), variants:catalogue_variants(stock, is_active)').eq('store', 'fashion').eq('is_active', true).in('category.slug', slugs).order('sort_order', {
+  } = await client.from('catalogue_products').select('id, name, slug, mrp, sale_price, images, stock, is_demo, sort_order, category:catalogue_categories!inner(slug), variants:catalogue_variants(stock, is_active)').eq('store', edit.store || 'fashion').eq('is_active', true).in('category.slug', slugs).order('sort_order', {
     ascending: true
   }).limit(1200);
   return error || !Array.isArray(data) ? [] : data;
@@ -42927,8 +42964,8 @@ function FashionEdit({
         className: "hx-offers__crumbs",
         "aria-label": "Breadcrumb",
         children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-          to: "/fashion",
-          children: "Fashion"
+          to: (edit.home || ['/fashion'])[0],
+          children: (edit.home || [0, 'Fashion'])[1]
         }), " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
           name: "chevronRight",
           size: 12
@@ -42971,9 +43008,9 @@ function FashionEdit({
         label: "Loading the edit\u2026"
       }) : sections.length === 0 ? /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
         className: "hx-offers__empty",
-        children: ["The edit is being put together. ", /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-          to: "/fashion",
-          children: "Browse Fashion"
+        children: ["The edit is being put together. ", /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: (edit.home || ['/fashion'])[0],
+          children: ["Browse ", (edit.home || [0, 'Fashion'])[1]]
         })]
       }) : sections.map(s => /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
         className: "hx-wed__sec",
@@ -51353,10 +51390,61 @@ function SpotlightBackdrop({
   });
 }
 
+// ============================================================
+// When a product link no longer finds its product (round 17, 2026-11-20). Partners'
+// catalogues change and old links get shared, so instead of a dead end the page
+// offers live products named like the old link, and a search for its words. The
+// words come from the link itself; nothing is guessed beyond that.
+// ============================================================
+const STOP = new Set(['and', 'the', 'for', 'with', 'men', 'mens', 'women', 'womens', 'genuine', 'new', 'pure', 'premium', 'style', 'stylish', 'set', 'pack', 'size', 'free', 'sora', 'lifestyle']);
+
+/** A link's slug → its meaningful words, at most 6 ("diamond-leather-rider-leather-biker-jacket-black" → diamond, leather, rider, biker, jacket, black). Pure. */
+function slugWords(slug, max = 6) {
+  const seen = new Set();
+  return String(slug || '').toLowerCase().split(/[^a-z0-9]+/).filter(w => {
+    if (w.length < 3 || /^\d+$/.test(w) || STOP.has(w) || seen.has(w)) return false;
+    seen.add(w);
+    return true;
+  }).slice(0, max);
+}
+
+/** Items named most like the words: at least two words in common (one, when the link has one), most first, at most `max`. Pure. */
+function similarByWords(items, words, textOf, max = 8) {
+  const need = Math.min(2, words.length);
+  if (!need) return [];
+  return (Array.isArray(items) ? items : []).map((it, i) => {
+    const t = ` ${String(textOf(it) || '').toLowerCase()} `;
+    return {
+      it,
+      i,
+      score: words.filter(w => t.includes(w)).length
+    };
+  }).filter(x => x.score >= need).sort((a, b) => b.score - a.score || a.i - b.i).slice(0, max).map(x => x.it);
+}
+
+/** The search for an old link's words, in the right store. Pure. */
+function searchFor(store, words) {
+  const q = encodeURIComponent(words.join(' '));
+  return store === 'fashion' ? `/fashion/search?q=${q}` : store === 'homeliving' ? `/homeliving/search?q=${q}` : `/shop?q=${q}`;
+}
+
 function NotFound() {
-  return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+  const {
+    pathname
+  } = useLocation();
+  const navigate = useNavigate();
+  const [q, setQ] = reactExports.useState('');
+  const m = /^\/product\/([^/?#]+)/.exec(pathname || '');
+  const words = m ? slugWords(m[1]) : [];
+  const like = m ? similarByWords((products || []).filter(p => Number(p.stock) > 0 && p.image), words, p => `${p.name} ${p.brand || ''}`, 4) : [];
+  const go = e => {
+    e.preventDefault();
+    const t = q.trim();
+    if (t) navigate(`/shop?q=${encodeURIComponent(t)}`);
+  };
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
     className: "container section",
-    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
       className: "state",
       children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
         className: "state-ic",
@@ -51368,9 +51456,29 @@ function NotFound() {
         style: {
           fontSize: 'var(--text-4xl)'
         },
-        children: "404"
+        children: m ? 'No longer here' : '404'
       }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-        children: "We couldn't find that page. It may have moved, or the link is out of date."
+        children: m ? 'This product is no longer in the shop — it may have sold out or been replaced.' : "We couldn't find that page. It may have moved, or the link is out of date."
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("form", {
+        className: "sora-nf__search",
+        role: "search",
+        onSubmit: go,
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+          className: "sr-only",
+          htmlFor: "sora-nf-q",
+          children: "Search the shop"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+          id: "sora-nf-q",
+          className: "input",
+          type: "search",
+          value: q,
+          onChange: e => setQ(e.target.value),
+          placeholder: words.length ? words.join(' ') : 'Search the shop'
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+          type: "submit",
+          className: "btn",
+          children: "Search"
+        })]
       }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
         style: {
           display: 'flex',
@@ -51378,17 +51486,56 @@ function NotFound() {
           justifyContent: 'center',
           flexWrap: 'wrap'
         },
-        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-          to: "/",
+        children: [words.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: searchFor('wellness', words),
           className: "btn",
+          children: ["Search for \u201C", words.join(' '), "\u201D"]
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+          to: "/",
+          className: "btn btn-outline",
           children: "Back home"
         }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-          to: "/shop",
+          to: "/categories",
           className: "btn btn-outline",
-          children: "Browse the shop"
+          children: "All categories"
         })]
       })]
-    })
+    }), like.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+      className: "sora-nf__like",
+      "aria-labelledby": "sora-nf-like-h",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+        className: "serif",
+        id: "sora-nf-like-h",
+        children: "You might be looking for"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+        className: "hx-offers__grid",
+        children: like.map(p => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+          children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+            to: `/product/${p.slug}`,
+            className: "hx-deals__card",
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+              className: "hx-deals__img",
+              children: /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+                src: p.image,
+                alt: "",
+                width: "300",
+                height: "300",
+                loading: "lazy",
+                decoding: "async"
+              })
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+              className: "hx-deals__name",
+              children: p.name
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+              className: "hx-deals__price",
+              children: /*#__PURE__*/jsxRuntimeExports.jsx("b", {
+                children: money(p.price)
+              })
+            })]
+          })
+        }, p.id))
+      })]
+    })]
   });
 }
 
@@ -78631,13 +78778,35 @@ function HomeLivingProductPage() {
       }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
         className: "hl-empty hl-empty--listing",
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
-          children: status === 'loading' ? 'Loading the catalogue…' : status === 'error' ? 'The Home & Living catalogue could not be loaded. Please try again shortly.' : `There is no “${slug}” in the Home & Living store.`
+          children: status === 'loading' ? 'Loading the catalogue…' : status === 'error' ? 'The Home & Living catalogue could not be loaded. Please try again shortly.' : 'This product is no longer in the Home & Living store — it may have sold out or been replaced.'
+        }), status === 'ready' && slugWords(slug).length > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: searchFor('homeliving', slugWords(slug)),
+          className: "hl-btn",
+          children: ["Search for \u201C", slugWords(slug).join(' '), "\u201D"]
         }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
           to: "/homeliving",
           className: "hl-btn",
           children: "Back to Home & Living"
         })]
-      })]
+      }), status === 'ready' && (() => {
+        const live = (products || []).filter(p => p.variants?.length ? p.variants.some(v => v.stock > 0) : p.stock > 0);
+        const like = similarByWords(live, slugWords(slug), p => `${p.name} ${p.brand || ''}`);
+        return like.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+          className: "hl-sec",
+          "aria-labelledby": "hl-like-h",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+            className: "hl-sec__h serif",
+            id: "hl-like-h",
+            children: "You might be looking for"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+            className: "hl-grid",
+            children: like.map(p => /*#__PURE__*/jsxRuntimeExports.jsx(HomeLivingProductCard, {
+              product: p,
+              layout: "grid"
+            }, p.id))
+          })]
+        });
+      })()]
     });
   }
   const node = view.category_id != null ? categories.find(c => String(c.id) === String(view.category_id)) || null : null;
@@ -79498,13 +79667,36 @@ function FashionProductPage() {
       children: [/*#__PURE__*/jsxRuntimeExports.jsx(CategoryChips, {}), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
         className: "fs-empty",
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
-          children: status === 'loading' ? 'Loading the catalogue…' : `There is no “${slug}” in the fashion store.`
+          children: status === 'loading' ? 'Loading the catalogue…' : 'This piece is no longer in the fashion store — it may have sold out or been replaced.'
+        }), status !== 'loading' && slugWords(slug).length > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: searchFor('fashion', slugWords(slug)),
+          className: "fs-btn",
+          children: ["Search for \u201C", slugWords(slug).join(' '), "\u201D"]
         }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
           to: "/fashion",
           className: "fs-btn",
           children: "Back to fashion"
         })]
-      })]
+      }), status !== 'loading' && (() => {
+        const like = similarByWords(views.filter(v => v.inStock), slugWords(slug), v => `${v.name} ${v.brand}`);
+        return like.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+          className: "fs-sec",
+          "aria-labelledby": "fs-like-h",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("header", {
+            className: "fs-sec__head",
+            children: /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+              className: "fs-sec__h serif",
+              id: "fs-like-h",
+              children: "You might be looking for"
+            })
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+            className: "fs-grid",
+            children: like.map(v => /*#__PURE__*/jsxRuntimeExports.jsx(FashionProductCard, {
+              view: v
+            }, v.id))
+          })]
+        });
+      })()]
     });
   }
   const node = view.category_id ? tree.byId.get(view.category_id) : null;
@@ -81397,6 +81589,27 @@ function HomeLivingHome() {
     }), /*#__PURE__*/jsxRuntimeExports.jsx(FeaturedRow, {
       products: products,
       status: status
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+      className: "hl-wrap",
+      children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+        to: "/homeliving/bedroom",
+        className: "hx-wedstrip sora-bedstrip",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("em", {
+            children: "Home & Living"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("b", {
+            children: "The Bedroom edit"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("i", {
+            children: "Beds, bedding and rugs, in one place"
+          })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+          className: "hx-wedstrip__go",
+          children: ["Explore ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "arrowRight",
+            size: 16
+          })]
+        })]
+      })
     }), /*#__PURE__*/jsxRuntimeExports.jsx(RecentlyViewedHome, {
       prefix: "hl-"
     }), /*#__PURE__*/jsxRuntimeExports.jsx(BudgetChips, {
@@ -82967,6 +83180,11 @@ function App() {
         }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
           path: "search",
           element: /*#__PURE__*/jsxRuntimeExports.jsx(HomeLivingSearch, {})
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
+          path: "bedroom",
+          element: /*#__PURE__*/jsxRuntimeExports.jsx(FashionEdit, {
+            id: "bedroom"
+          })
         }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
           path: "wishlist",
           element: /*#__PURE__*/jsxRuntimeExports.jsx(HomeLivingWishlist, {})

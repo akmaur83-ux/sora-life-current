@@ -114,6 +114,15 @@ function topViewed(rows) {
   return [...m.values()].sort((a, b) => b.n - a.n || a.slug.localeCompare(b.slug));
 }
 const productHref = (store, slug) => store === 'fashion' ? `/fashion/p/${slug}` : store === 'homeliving' ? `/homeliving/p/${slug}` : `/product/${slug}`;
+
+/** Stock watch → CSV: out of stock first, then 1–3 left (round 17, 2026-11-20). Pure. */
+const stockCsv = w => toCsv([...(w?.out || []).map(r => ({
+  ...r,
+  state: 'Out of stock'
+})), ...(w?.low || []).map(r => ({
+  ...r,
+  state: 'Running low'
+}))], [['State', r => r.state], ['Product', r => r.name], ['Store', r => r.store], ['Brand', r => r.brand], ['Left', r => r.stock]]);
 const STORE = {
   wellness: 'Wellness',
   fashion: 'Fashion',
@@ -430,6 +439,23 @@ function Insights() {
             children: ["\xB7 ", STORE[r.store] || r.store, " \xB7 ", r.n, " views"]
           })]
         }, `${r.store}/${r.slug}`)
+      }), stock && stock.out.length + stock.low.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+        style: {
+          ...box,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 10
+        },
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "adm-hint",
+          children: "Out of stock and running low, every store, as a spreadsheet (round 17)."
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+          type: "button",
+          className: "btn btn-sm btn-ghost",
+          onClick: () => downloadCsv('sora-stock-watch.csv', stockCsv(stock)),
+          children: "Download stock CSV"
+        })]
       }), /*#__PURE__*/jsxRuntimeExports.jsx(List, {
         title: `Out of stock${stock ? ` (${stock.out.length})` : ''}`,
         hint: "Live products with none left: restock them, or hide them from the shop.",
@@ -465,5 +491,5 @@ function Insights() {
   });
 }
 
-export { RANGES, bestSellers, Insights as default, lineBrand, productHref, salesByBrand, stockWatch, summariseSearches, topViewed };
+export { RANGES, bestSellers, Insights as default, lineBrand, productHref, salesByBrand, stockCsv, stockWatch, summariseSearches, topViewed };
 //# sourceMappingURL=Insights.js.map
