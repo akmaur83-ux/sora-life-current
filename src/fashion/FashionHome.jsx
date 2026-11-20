@@ -11,7 +11,7 @@ import BudgetChips from '../components/BudgetChips.jsx';
 import { WeddingStrip } from './WeddingEdit.jsx';
 import { EditStrips } from './FashionEdit.jsx';
 import ShopByOccasion from '../components/ShopByOccasion.jsx';
-import { ShopByColour, LastChance } from '../components/ShopExtras.jsx';
+import { ShopByColour, ShopByFabric, LastChance } from '../components/ShopExtras.jsx';
 import OfferBanner from '../components/OfferBanner.jsx';
 import { BagReminder } from '../components/HomeExtras.jsx';
 import { TajLeatherPosters, TajLeatherRange } from '../components/TajLeather.jsx';
@@ -177,6 +177,8 @@ export default function FashionHome() {
       <ShopByOccasion className="fs-sec" />
       {/* Colour swatches and the pieces almost gone (ShopExtras.jsx, 2026-11-13). */}
       <ShopByColour />
+      {/* Shop by fabric & craft (round 16, 2026-11-20): the makers' own words, live counts (ShopExtras.jsx). */}
+      <ShopByFabric views={views} />
       <LastChance wrap="fs-sec" />
       <CategoryTiles tree={tree} />
       <TajLeatherRange />

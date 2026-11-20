@@ -29,7 +29,15 @@ export function requestTally(rows) {
   return [...m.values()].sort((a, b) => b.n - a.n || a.query.localeCompare(b.query));
 }
 
-const waHref = (p) => { const d = String(p || '').replace(/\D/g, ''); return d ? `https://wa.me/${d.length === 10 ? `91${d}` : d}` : ''; };
+/** A polite first line to reply with (round 16, 2026-11-20), by kind; the admin edits it before sending. Pure. */
+export function replyText(r) {
+  const hi = `Hi${r?.name ? ` ${String(r.name).split(' ')[0]}` : ''}, this is SORA LIFESTYLE.`;
+  if (r?.kind === 'partner') return `${hi} Thank you for your interest in selling${r.business ? ` ${r.business}` : ''} on SORA. Could you share a few product photos and your price list? We'd be glad to talk it through.`;
+  if (r?.kind === 'bulk') return `${hi} Thank you for your gifting enquiry. Could you tell us the quantity, budget per gift and the date you need them by? We'll put options together for you.`;
+  if (r?.kind === 'request') return `${hi} You asked us for “${r.query || 'a product'}”. We're checking with our makers and will let you know what we find.`;
+  return hi;
+}
+const waHref = (p, text = '') => { const d = String(p || '').replace(/\D/g, ''); return d ? `https://wa.me/${d.length === 10 ? `91${d}` : d}${text ? `?text=${encodeURIComponent(text)}` : ''}` : ''; };
 const when = (iso) => (iso ? new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : '');
 const box = { border: '1px solid #E4E8E1', background: '#fff', padding: 14 };
 
@@ -99,8 +107,8 @@ export default function Enquiries() {
               {r.message && <p style={{ margin: '8px 0', whiteSpace: 'pre-line' }}>{r.message}</p>}
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginTop: 8 }}>
                 {r.phone && <a className="btn btn-sm btn-ghost" href={`tel:${r.phone}`}>Call {r.phone}</a>}
-                {r.phone && <a className="btn btn-sm btn-ghost" href={waHref(r.phone)} target="_blank" rel="noopener noreferrer">WhatsApp</a>}
-                {r.email && <a className="btn btn-sm btn-ghost" href={`mailto:${r.email}`}>{r.email}</a>}
+                {r.phone && <a className="btn btn-sm btn-ghost" href={waHref(r.phone, replyText(r))} target="_blank" rel="noopener noreferrer">WhatsApp</a>}
+                {r.email && <a className="btn btn-sm btn-ghost" href={`mailto:${r.email}?subject=${encodeURIComponent(`Your enquiry at SORA LIFESTYLE`)}&body=${encodeURIComponent(replyText(r))}`}>{r.email}</a>}
                 {r.website && <span className="adm-hint">{r.website}</span>}
                 <span style={{ flex: 1 }} />
                 {STATUSES.filter(([v]) => v !== r.status).map(([v, l]) => <button key={v} type="button" className="btn btn-sm" onClick={() => mark(r, v)}>Mark {l.toLowerCase()}</button>)}

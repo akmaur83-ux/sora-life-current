@@ -36,6 +36,35 @@ export function ShopByColour() {
   );
 }
 
+// ---- Shop by fabric & craft (round 16, 2026-11-20) --------------------------------
+// The materials and weaves named on the Fashion store's own products, with how many
+// live pieces carry each name, opening the search for it. Names only — the words the
+// makers use — and an entry with fewer than three pieces is left out.
+export const FABRICS = Object.freeze(['Leather', 'Banarasi', 'Cotton', 'Silk', 'Wool', 'Jamdani', 'Suede', 'Viscose', 'Kullu', 'Phulkari', 'Lambskin']);
+export const FABRIC_MIN = 3;
+
+/** Fashion views → [{ name, count, href }], most pieces first. A word must stand alone ("silk", not "silky"). Pure. */
+export function fabricChips(views, min = FABRIC_MIN) {
+  const texts = (Array.isArray(views) ? views : []).map((v) => ` ${String(`${v?.name || ''} ${v?.description || ''}`).toLowerCase()} `);
+  return FABRICS.map((name) => {
+    const re = new RegExp(`[^a-z]${name.toLowerCase()}[^a-z]`);
+    return { name, count: texts.filter((t) => re.test(t)).length, href: `/fashion/search?q=${encodeURIComponent(name.toLowerCase())}` };
+  }).filter((c) => c.count >= min).sort((a, b) => b.count - a.count);
+}
+
+export function ShopByFabric({ views }) {
+  const chips = fabricChips(views);
+  if (chips.length < 3) return null;
+  return (
+    <section className="fs-sec sora-ingr" aria-labelledby="sora-fabric-h">
+      <div className="fs-sec__head"><h2 className="fs-sec__h serif" id="sora-fabric-h">Shop by fabric &amp; craft</h2></div>
+      <ul className="sora-ingr__list">
+        {chips.map((c) => <li key={c.name}><Link to={c.href}>{c.name} <span>{c.count}</span></Link></li>)}
+      </ul>
+    </section>
+  );
+}
+
 export const STYLING_TIPS = Object.freeze([
   [/suit|dress-material|salwar|kurta/, ['Pair with a contrasting dupatta, or let a woven one carry the colour.', 'Juttis or block heels keep it festive; kolhapuris keep it easy.', 'Jhumkas or chandbalis suit a Banarasi neckline; keep the rest light.']],
   [/saree/, ['A plain blouse lets a woven saree speak; a brocade blouse lifts a plain one.', 'Pleat the pallu for a day function, leave it open in the evening.', 'A potli or a clutch in the border’s colour ties the look together.']],

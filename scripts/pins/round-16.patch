@@ -1,0 +1,159 @@
+diff --git a/src/admin/pages/Enquiries.jsx b/src/admin/pages/Enquiries.jsx
+index 61fb4e2..fb687ea 100644
+--- a/src/admin/pages/Enquiries.jsx
++++ b/src/admin/pages/Enquiries.jsx
+@@ -29,7 +29,15 @@ export function requestTally(rows) {
+   return [...m.values()].sort((a, b) => b.n - a.n || a.query.localeCompare(b.query));
+ }
+ 
+-const waHref = (p) => { const d = String(p || '').replace(/\D/g, ''); return d ? `https://wa.me/${d.length === 10 ? `91${d}` : d}` : ''; };
++/** A polite first line to reply with (round 16, 2026-11-20), by kind; the admin edits it before sending. Pure. */
++export function replyText(r) {
++  const hi = `Hi${r?.name ? ` ${String(r.name).split(' ')[0]}` : ''}, this is SORA LIFESTYLE.`;
++  if (r?.kind === 'partner') return `${hi} Thank you for your interest in selling${r.business ? ` ${r.business}` : ''} on SORA. Could you share a few product photos and your price list? We'd be glad to talk it through.`;
++  if (r?.kind === 'bulk') return `${hi} Thank you for your gifting enquiry. Could you tell us the quantity, budget per gift and the date you need them by? We'll put options together for you.`;
++  if (r?.kind === 'request') return `${hi} You asked us for “${r.query || 'a product'}”. We're checking with our makers and will let you know what we find.`;
++  return hi;
++}
++const waHref = (p, text = '') => { const d = String(p || '').replace(/\D/g, ''); return d ? `https://wa.me/${d.length === 10 ? `91${d}` : d}${text ? `?text=${encodeURIComponent(text)}` : ''}` : ''; };
+ const when = (iso) => (iso ? new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : '');
+ const box = { border: '1px solid #E4E8E1', background: '#fff', padding: 14 };
+ 
+@@ -99,8 +107,8 @@ export default function Enquiries() {
+               {r.message && <p style={{ margin: '8px 0', whiteSpace: 'pre-line' }}>{r.message}</p>}
+               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginTop: 8 }}>
+                 {r.phone && <a className="btn btn-sm btn-ghost" href={`tel:${r.phone}`}>Call {r.phone}</a>}
+-                {r.phone && <a className="btn btn-sm btn-ghost" href={waHref(r.phone)} target="_blank" rel="noopener noreferrer">WhatsApp</a>}
+-                {r.email && <a className="btn btn-sm btn-ghost" href={`mailto:${r.email}`}>{r.email}</a>}
++                {r.phone && <a className="btn btn-sm btn-ghost" href={waHref(r.phone, replyText(r))} target="_blank" rel="noopener noreferrer">WhatsApp</a>}
++                {r.email && <a className="btn btn-sm btn-ghost" href={`mailto:${r.email}?subject=${encodeURIComponent(`Your enquiry at SORA LIFESTYLE`)}&body=${encodeURIComponent(replyText(r))}`}>{r.email}</a>}
+                 {r.website && <span className="adm-hint">{r.website}</span>}
+                 <span style={{ flex: 1 }} />
+                 {STATUSES.filter(([v]) => v !== r.status).map(([v, l]) => <button key={v} type="button" className="btn btn-sm" onClick={() => mark(r, v)}>Mark {l.toLowerCase()}</button>)}
+diff --git a/src/components/ShopExtras.jsx b/src/components/ShopExtras.jsx
+index 9d69cfd..259ad1b 100644
+--- a/src/components/ShopExtras.jsx
++++ b/src/components/ShopExtras.jsx
+@@ -36,6 +36,35 @@ export function ShopByColour() {
+   );
+ }
+ 
++// ---- Shop by fabric & craft (round 16, 2026-11-20) --------------------------------
++// The materials and weaves named on the Fashion store's own products, with how many
++// live pieces carry each name, opening the search for it. Names only — the words the
++// makers use — and an entry with fewer than three pieces is left out.
++export const FABRICS = Object.freeze(['Leather', 'Banarasi', 'Cotton', 'Silk', 'Wool', 'Jamdani', 'Suede', 'Viscose', 'Kullu', 'Phulkari', 'Lambskin']);
++export const FABRIC_MIN = 3;
++
++/** Fashion views → [{ name, count, href }], most pieces first. A word must stand alone ("silk", not "silky"). Pure. */
++export function fabricChips(views, min = FABRIC_MIN) {
++  const texts = (Array.isArray(views) ? views : []).map((v) => ` ${String(`${v?.name || ''} ${v?.description || ''}`).toLowerCase()} `);
++  return FABRICS.map((name) => {
++    const re = new RegExp(`[^a-z]${name.toLowerCase()}[^a-z]`);
++    return { name, count: texts.filter((t) => re.test(t)).length, href: `/fashion/search?q=${encodeURIComponent(name.toLowerCase())}` };
++  }).filter((c) => c.count >= min).sort((a, b) => b.count - a.count);
++}
++
++export function ShopByFabric({ views }) {
++  const chips = fabricChips(views);
++  if (chips.length < 3) return null;
++  return (
++    <section className="fs-sec sora-ingr" aria-labelledby="sora-fabric-h">
++      <div className="fs-sec__head"><h2 className="fs-sec__h serif" id="sora-fabric-h">Shop by fabric &amp; craft</h2></div>
++      <ul className="sora-ingr__list">
++        {chips.map((c) => <li key={c.name}><Link to={c.href}>{c.name} <span>{c.count}</span></Link></li>)}
++      </ul>
++    </section>
++  );
++}
++
+ export const STYLING_TIPS = Object.freeze([
+   [/suit|dress-material|salwar|kurta/, ['Pair with a contrasting dupatta, or let a woven one carry the colour.', 'Juttis or block heels keep it festive; kolhapuris keep it easy.', 'Jhumkas or chandbalis suit a Banarasi neckline; keep the rest light.']],
+   [/saree/, ['A plain blouse lets a woven saree speak; a brocade blouse lifts a plain one.', 'Pleat the pallu for a day function, leave it open in the evening.', 'A potli or a clutch in the border’s colour ties the look together.']],
+diff --git a/src/components/pdp/PdpDeliveryDate.jsx b/src/components/pdp/PdpDeliveryDate.jsx
+index 96492a0..e116df1 100644
+--- a/src/components/pdp/PdpDeliveryDate.jsx
++++ b/src/components/pdp/PdpDeliveryDate.jsx
+@@ -13,17 +13,20 @@ export function bulkText(name, href) {
+   return `Hi SORA Lifestyle, I'd like to buy ${String(name || 'this product').trim()} in bulk (quantity: __). Could you share a bulk price and delivery time? ${href}`;
+ }
+ 
+-function AskWhatsApp({ productName }) {
++function AskWhatsApp({ productName, askChoice = '' }) {
+   const care = useConsumerCare();
+   const [href, setHref] = useState('');
+   const [bulk, setBulk] = useState('');
+   useEffect(() => {
+     const page = window.location.href.split('#')[0];
+-    setHref(waLink(care?.phone, window.location.pathname, productName, page));
++    // The size and colour chosen go with the question (round 16, 2026-11-20): "will M fit…?"
++    // (waLink keeps a title up to its first " - ", so the choice follows the name as waLink would cut it.)
++    const base = String(productName || '').split(/\s[|–—-]\s/)[0].trim();
++    setHref(waLink(care?.phone, window.location.pathname, askChoice && base ? `${base} (${askChoice})` : productName, page));
+     // Bulk orders (2026-11-13: more features): weddings, gifting, shops — the same number, its own message.
+     const n = waNumber(care?.phone);
+     setBulk(n ? `https://wa.me/${n}?text=${encodeURIComponent(bulkText(productName, page))}` : '');
+-  }, [care?.phone, productName]);
++  }, [care?.phone, productName, askChoice]);
+   if (!href) return null;
+   return (
+     <>
+@@ -61,12 +64,12 @@ function OfferCountdown() {
+ // arrival dates while the item can be bought; "Notify me when it is back" while it
+ // is out of stock (PdpEngage.jsx). Rendered after mount, so a server render or a
+ // page left open past midnight never shows a stale date.
+-export default function PdpDeliveryDate({ className = '', out = false, productKey = '', productName = '', choice = '' }) {
++export default function PdpDeliveryDate({ className = '', out = false, productKey = '', productName = '', choice = '', askChoice = '' }) {
+   const [win, setWin] = useState(null);
+   useEffect(() => { setWin(deliveryWindow(new Date())); }, []);
+   // "Free Size · As shown" says nothing to a customer: only a real size or colour is named.
+   const named = String(choice || '').split('·').map((x) => x.trim()).filter((x) => x && !/^(free size|one size|as shown)$/i.test(x)).join(' · ');
+-  if (out) return <><PdpNotifyMe productKey={productKey} productName={productName} choice={named} /><AskWhatsApp productName={productName} /></>;
++  if (out) return <><PdpNotifyMe productKey={productKey} productName={productName} choice={named} /><AskWhatsApp productName={productName} askChoice={askChoice} /></>;
+   if (!win) return null;
+   return (
+     <>
+@@ -75,7 +78,7 @@ export default function PdpDeliveryDate({ className = '', out = false, productKe
+       <Icon name="truck" size={16} />
+       <span>FREE delivery <b>{win.label}</b><em>Estimated delivery date</em></span>
+     </p>
+-    <AskWhatsApp productName={productName} />
++    <AskWhatsApp productName={productName} askChoice={askChoice} />
+     </>
+   );
+ }
+diff --git a/src/fashion/FashionHome.jsx b/src/fashion/FashionHome.jsx
+index dc22f56..98df34d 100644
+--- a/src/fashion/FashionHome.jsx
++++ b/src/fashion/FashionHome.jsx
+@@ -11,7 +11,7 @@ import BudgetChips from '../components/BudgetChips.jsx';
+ import { WeddingStrip } from './WeddingEdit.jsx';
+ import { EditStrips } from './FashionEdit.jsx';
+ import ShopByOccasion from '../components/ShopByOccasion.jsx';
+-import { ShopByColour, LastChance } from '../components/ShopExtras.jsx';
++import { ShopByColour, ShopByFabric, LastChance } from '../components/ShopExtras.jsx';
+ import OfferBanner from '../components/OfferBanner.jsx';
+ import { BagReminder } from '../components/HomeExtras.jsx';
+ import { TajLeatherPosters, TajLeatherRange } from '../components/TajLeather.jsx';
+@@ -177,6 +177,8 @@ export default function FashionHome() {
+       <ShopByOccasion className="fs-sec" />
+       {/* Colour swatches and the pieces almost gone (ShopExtras.jsx, 2026-11-13). */}
+       <ShopByColour />
++      {/* Shop by fabric & craft (round 16, 2026-11-20): the makers' own words, live counts (ShopExtras.jsx). */}
++      <ShopByFabric views={views} />
+       <LastChance wrap="fs-sec" />
+       <CategoryTiles tree={tree} />
+       <TajLeatherRange />
+diff --git a/src/fashion/FashionProductPage.jsx b/src/fashion/FashionProductPage.jsx
+index 4e6eeb2..9bb15f8 100644
+--- a/src/fashion/FashionProductPage.jsx
++++ b/src/fashion/FashionProductPage.jsx
+@@ -227,7 +227,7 @@ export default function FashionProductPage() {
+ 
+         <aside className="fs-buybox" aria-label="Buy">
+           <p className="fs-buybox__price"><span className="fs-price__cur">₹</span>{money(st.price).replace(/^₹\s?/, '')}</p>
+-          <PdpDeliveryDate out={st.status === 'out' || !anyLive} productKey={`fashion:${view.id}`} productName={view.name} choice={st.status === 'out' ? (st.label || '') : ''} />
++          <PdpDeliveryDate out={st.status === 'out' || !anyLive} productKey={`fashion:${view.id}`} productName={view.name} choice={st.status === 'out' ? (st.label || '') : ''} askChoice={st.label || ''} />
+           <p className="fs-buybox__deliv"><b>FREE</b> Standard Delivery: 6–7 business days</p>
+           <p className="fs-buybox__note">Free on every order · Cash on Delivery available</p>
+           <p className={`fs-buybox__stock is-${stockClass}`}>{stockText}</p>

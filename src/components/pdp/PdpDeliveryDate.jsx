@@ -13,17 +13,20 @@ export function bulkText(name, href) {
   return `Hi SORA Lifestyle, I'd like to buy ${String(name || 'this product').trim()} in bulk (quantity: __). Could you share a bulk price and delivery time? ${href}`;
 }
 
-function AskWhatsApp({ productName }) {
+function AskWhatsApp({ productName, askChoice = '' }) {
   const care = useConsumerCare();
   const [href, setHref] = useState('');
   const [bulk, setBulk] = useState('');
   useEffect(() => {
     const page = window.location.href.split('#')[0];
-    setHref(waLink(care?.phone, window.location.pathname, productName, page));
+    // The size and colour chosen go with the question (round 16, 2026-11-20): "will M fit…?"
+    // (waLink keeps a title up to its first " - ", so the choice follows the name as waLink would cut it.)
+    const base = String(productName || '').split(/\s[|–—-]\s/)[0].trim();
+    setHref(waLink(care?.phone, window.location.pathname, askChoice && base ? `${base} (${askChoice})` : productName, page));
     // Bulk orders (2026-11-13: more features): weddings, gifting, shops — the same number, its own message.
     const n = waNumber(care?.phone);
     setBulk(n ? `https://wa.me/${n}?text=${encodeURIComponent(bulkText(productName, page))}` : '');
-  }, [care?.phone, productName]);
+  }, [care?.phone, productName, askChoice]);
   if (!href) return null;
   return (
     <>
@@ -61,12 +64,12 @@ function OfferCountdown() {
 // arrival dates while the item can be bought; "Notify me when it is back" while it
 // is out of stock (PdpEngage.jsx). Rendered after mount, so a server render or a
 // page left open past midnight never shows a stale date.
-export default function PdpDeliveryDate({ className = '', out = false, productKey = '', productName = '', choice = '' }) {
+export default function PdpDeliveryDate({ className = '', out = false, productKey = '', productName = '', choice = '', askChoice = '' }) {
   const [win, setWin] = useState(null);
   useEffect(() => { setWin(deliveryWindow(new Date())); }, []);
   // "Free Size · As shown" says nothing to a customer: only a real size or colour is named.
   const named = String(choice || '').split('·').map((x) => x.trim()).filter((x) => x && !/^(free size|one size|as shown)$/i.test(x)).join(' · ');
-  if (out) return <><PdpNotifyMe productKey={productKey} productName={productName} choice={named} /><AskWhatsApp productName={productName} /></>;
+  if (out) return <><PdpNotifyMe productKey={productKey} productName={productName} choice={named} /><AskWhatsApp productName={productName} askChoice={askChoice} /></>;
   if (!win) return null;
   return (
     <>
@@ -75,7 +78,7 @@ export default function PdpDeliveryDate({ className = '', out = false, productKe
       <Icon name="truck" size={16} />
       <span>FREE delivery <b>{win.label}</b><em>Estimated delivery date</em></span>
     </p>
-    <AskWhatsApp productName={productName} />
+    <AskWhatsApp productName={productName} askChoice={askChoice} />
     </>
   );
 }
