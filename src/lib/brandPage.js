@@ -46,9 +46,13 @@ export function wellnessBrandCards(products, isBrand) {
   });
 }
 
-/** Filter by category, then sort. Pure. */
-export function arrangeBrandCards(cards, { category = '', sort = 'featured' } = {}) {
-  const list = category ? cards.filter((c) => c.category === category) : [...cards];
+/** Words to look for in a brand's names (2026-11-20): lower-cased, at most 6, short ones dropped. Pure. */
+export const brandQueryWords = (q) => String(q || '').toLowerCase().replace(/[^a-z0-9\u0900-\u097f ]+/g, ' ').split(/\s+/).filter((w) => w.length >= 2).slice(0, 6);
+
+/** Filter by category and by words (every word in the name or category — "black biker"), then sort. Pure. */
+export function arrangeBrandCards(cards, { category = '', sort = 'featured', q = '' } = {}) {
+  const words = brandQueryWords(q);
+  const list = cards.filter((c) => (!category || c.category === category) && (!words.length || words.every((w) => `${c.name} ${c.category}`.toLowerCase().includes(w))));
   if (sort === 'low') list.sort((a, b) => a.price - b.price || a.order - b.order);
   else if (sort === 'high') list.sort((a, b) => b.price - a.price || a.order - b.order);
   else if (sort === 'new') list.sort((a, b) => b.at - a.at || a.order - b.order);

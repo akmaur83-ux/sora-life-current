@@ -15,16 +15,20 @@ export function isLeather(material, name = '') {
   const t = `${material || ''} ${material ? '' : name || ''}`.toLowerCase();
   return /\b(leather|suede|nubuck)\b/.test(t) && !/\b(faux|vegan|pu|pu-leather|artificial|synthetic|rexine)\b/.test(t);
 }
+/** Whether a product is a shawl, stole, dupatta or muffler, by its name (round 14, 2026-11-20). Pure. */
+export const isShawl = (name = '') => /\b(shawls?|stoles?|dupattas?|mufflers?|wraps?)\b/i.test(String(name));
 export const madeInIndia = (origin) => String(origin || '').trim().toUpperCase() === 'IN' || /^india$/i.test(String(origin || '').trim());
 
 export default function ProductOrigin({ origin, material, name }) {
   const india = madeInIndia(origin);
   const leather = isLeather(material, name);
-  if (!india && !leather) return null;
+  const shawl = !leather && isShawl(name);
+  if (!india && !leather && !shawl) return null;
   return (
     <p className="sora-origin">
       {india && <span className="sora-origin__in"><Icon name="mapPin" size={14} /> Made in India</span>}
       {leather && <Link to="/guides/leather-care" className="sora-origin__care">How to care for leather <Icon name="arrowRight" size={13} /></Link>}
+      {shawl && <Link to="/guides/shawl-care" className="sora-origin__care">How to care for it <Icon name="arrowRight" size={13} /></Link>}
     </p>
   );
 }

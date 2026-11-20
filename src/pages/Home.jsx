@@ -14,6 +14,7 @@ import HomeGroup from '../components/HomeGroup.jsx';
 import { NewArrivals } from '../components/NewArrivals.jsx';
 import PopularThisWeek from '../components/PopularThisWeek.jsx';
 import { EditStrips } from '../fashion/FashionEdit.jsx';
+import ShopByOccasion from '../components/ShopByOccasion.jsx';
 import { ShopByIngredient } from '../components/ShopExtras.jsx';
 import { LuxuryBeds, Bedsheets } from '../components/HomeCategoryRails.jsx';
 import RecentlyViewedHome from '../components/RecentlyViewedHome.jsx';
@@ -108,6 +109,8 @@ export default function Home() {
       {/* Shop by ingredient (round 9, 2026-11-16): ingredients named in 3+ in-stock products (ShopExtras.jsx). */}
       <ShopByIngredient products={products} />
       {/* Gift-ready categories across Fashion and Home & Living (GiftShop.jsx). */}
+      {/* Shop by occasion (round 14, 2026-11-20): ways in by what the shopper is shopping for (ShopByOccasion.jsx). */}
+      <ShopByOccasion />
       <GiftShop />
       {/* The biggest verified discounts in stock (HomeExtras.jsx), where New Arrivals was. */}
       <TopDeals />

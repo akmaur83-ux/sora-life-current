@@ -1,0 +1,238 @@
+diff --git a/src/App.jsx b/src/App.jsx
+index 0574ed6..003d647 100644
+--- a/src/App.jsx
++++ b/src/App.jsx
+@@ -30,6 +30,7 @@ import GiftReceipt from './pages/GiftReceipt.jsx';
+ import Sell from './pages/Sell.jsx';
+ import LeatherCare from './pages/LeatherCare.jsx';
+ import Gifts from './pages/Gifts.jsx';
++import { ShawlCare, GuidesHub } from './pages/CareGuides.jsx';
+ import CreatorPortal from './pages/CreatorPortal.jsx';
+ import CreatorAttribution from './components/CreatorAttribution.jsx';
+ import NotFound from './pages/NotFound.jsx';
+@@ -221,6 +222,8 @@ export default function App() {
+       <Route path="/gift-receipt/:orderNumber" element={<GiftReceipt />} />
+       <Route path="/sell" element={<Sell />} />
+       <Route path="/guides/leather-care" element={<LeatherCare />} />
++      <Route path="/guides/shawl-care" element={<ShawlCare />} />
++      <Route path="/guides" element={<GuidesHub />} />
+       <Route path="/gifts" element={<Gifts />} />
+       {/* Creator Program portal. Standalone shell, own chrome. */}
+       <Route path="/creator/:tab?" element={<CreatorPortal />} />
+diff --git a/src/components/Footer.jsx b/src/components/Footer.jsx
+index 040f1ad..79664a1 100644
+--- a/src/components/Footer.jsx
++++ b/src/components/Footer.jsx
+@@ -75,7 +75,7 @@ export default function Footer() {
+             <Link to="/gifts">Gift finder</Link>
+             <Link to="/sell">Sell on SORA</Link>
+             <Link to="/sell#bulk">Bulk &amp; corporate gifts</Link>
+-            <Link to="/guides/leather-care">Leather care guide</Link>
++            <Link to="/guides">Care guides</Link>
+             <Link to="/fashion/winter">The Winter edit</Link>
+             <Link to="/fashion/leather">Everything leather</Link>
+             {categories.slice(0, 3).map((c) => (
+diff --git a/src/components/ProductOrigin.jsx b/src/components/ProductOrigin.jsx
+index d75edc6..f7bc659 100644
+--- a/src/components/ProductOrigin.jsx
++++ b/src/components/ProductOrigin.jsx
+@@ -15,16 +15,20 @@ export function isLeather(material, name = '') {
+   const t = `${material || ''} ${material ? '' : name || ''}`.toLowerCase();
+   return /\b(leather|suede|nubuck)\b/.test(t) && !/\b(faux|vegan|pu|pu-leather|artificial|synthetic|rexine)\b/.test(t);
+ }
++/** Whether a product is a shawl, stole, dupatta or muffler, by its name (round 14, 2026-11-20). Pure. */
++export const isShawl = (name = '') => /\b(shawls?|stoles?|dupattas?|mufflers?|wraps?)\b/i.test(String(name));
+ export const madeInIndia = (origin) => String(origin || '').trim().toUpperCase() === 'IN' || /^india$/i.test(String(origin || '').trim());
+ 
+ export default function ProductOrigin({ origin, material, name }) {
+   const india = madeInIndia(origin);
+   const leather = isLeather(material, name);
+-  if (!india && !leather) return null;
++  const shawl = !leather && isShawl(name);
++  if (!india && !leather && !shawl) return null;
+   return (
+     <p className="sora-origin">
+       {india && <span className="sora-origin__in"><Icon name="mapPin" size={14} /> Made in India</span>}
+       {leather && <Link to="/guides/leather-care" className="sora-origin__care">How to care for leather <Icon name="arrowRight" size={13} /></Link>}
++      {shawl && <Link to="/guides/shawl-care" className="sora-origin__care">How to care for it <Icon name="arrowRight" size={13} /></Link>}
+     </p>
+   );
+ }
+diff --git a/src/fashion/FashionEdit.jsx b/src/fashion/FashionEdit.jsx
+index a85bcae..a0e3b65 100644
+--- a/src/fashion/FashionEdit.jsx
++++ b/src/fashion/FashionEdit.jsx
+@@ -1,4 +1,5 @@
+-import { Link } from 'react-router-dom';
++import { useEffect } from 'react';
++import { Link, useLocation } from 'react-router-dom';
+ import Icon from '../components/Icon.jsx';
+ import { money } from '../lib/format.js';
+ import { FASHION_EDITS, useFashionEdit } from '../lib/fashionEdits.js';
+@@ -10,6 +11,13 @@ import SkeletonGrid from '../components/Skeleton.jsx';
+ export default function FashionEdit({ id }) {
+   const edit = FASHION_EDITS[id];
+   const sections = useFashionEdit(id);
++  const { hash } = useLocation();
++  // A link to one section (e.g. /fashion/leather#leather-bags) lands on it once the sections are in.
++  useEffect(() => {
++    if (!sections || !hash) return;
++    const el = document.getElementById(decodeURIComponent(hash.slice(1)));
++    if (el) el.scrollIntoView({ block: 'start' });
++  }, [sections, hash]);
+   usePageMeta({ title: edit ? edit.title : 'Fashion', description: edit?.meta, path: edit?.path });
+   if (!edit) return null;
+   return (
+diff --git a/src/fashion/FashionHome.jsx b/src/fashion/FashionHome.jsx
+index 0e8f2ba..dc22f56 100644
+--- a/src/fashion/FashionHome.jsx
++++ b/src/fashion/FashionHome.jsx
+@@ -10,6 +10,7 @@ import RecentlyViewedHome from '../components/RecentlyViewedHome.jsx';
+ import BudgetChips from '../components/BudgetChips.jsx';
+ import { WeddingStrip } from './WeddingEdit.jsx';
+ import { EditStrips } from './FashionEdit.jsx';
++import ShopByOccasion from '../components/ShopByOccasion.jsx';
+ import { ShopByColour, LastChance } from '../components/ShopExtras.jsx';
+ import OfferBanner from '../components/OfferBanner.jsx';
+ import { BagReminder } from '../components/HomeExtras.jsx';
+@@ -172,6 +173,8 @@ export default function FashionHome() {
+       <WeddingStrip />
+       {/* The Winter and Leather edits (round 12, 2026-11-20). */}
+       <EditStrips />
++      {/* Shop by occasion (round 14, 2026-11-20). */}
++      <ShopByOccasion className="fs-sec" />
+       {/* Colour swatches and the pieces almost gone (ShopExtras.jsx, 2026-11-13). */}
+       <ShopByColour />
+       <LastChance wrap="fs-sec" />
+diff --git a/src/lib/brandPage.js b/src/lib/brandPage.js
+index dcf4f6c..24f6e91 100644
+--- a/src/lib/brandPage.js
++++ b/src/lib/brandPage.js
+@@ -46,9 +46,13 @@ export function wellnessBrandCards(products, isBrand) {
+   });
+ }
+ 
+-/** Filter by category, then sort. Pure. */
+-export function arrangeBrandCards(cards, { category = '', sort = 'featured' } = {}) {
+-  const list = category ? cards.filter((c) => c.category === category) : [...cards];
++/** Words to look for in a brand's names (2026-11-20): lower-cased, at most 6, short ones dropped. Pure. */
++export const brandQueryWords = (q) => String(q || '').toLowerCase().replace(/[^a-z0-9\u0900-\u097f ]+/g, ' ').split(/\s+/).filter((w) => w.length >= 2).slice(0, 6);
++
++/** Filter by category and by words (every word in the name or category — "black biker"), then sort. Pure. */
++export function arrangeBrandCards(cards, { category = '', sort = 'featured', q = '' } = {}) {
++  const words = brandQueryWords(q);
++  const list = cards.filter((c) => (!category || c.category === category) && (!words.length || words.every((w) => `${c.name} ${c.category}`.toLowerCase().includes(w))));
+   if (sort === 'low') list.sort((a, b) => a.price - b.price || a.order - b.order);
+   else if (sort === 'high') list.sort((a, b) => b.price - a.price || a.order - b.order);
+   else if (sort === 'new') list.sort((a, b) => b.at - a.at || a.order - b.order);
+diff --git a/src/pages/BrandPage.jsx b/src/pages/BrandPage.jsx
+index 6039605..c3b73e8 100644
+--- a/src/pages/BrandPage.jsx
++++ b/src/pages/BrandPage.jsx
+@@ -29,8 +29,9 @@ export default function BrandPage() {
+   const cards = brand?.catalogueBrand ? fromCatalogue : wellness;
+   const category = params.get('cat') || '';
+   const sort = BRAND_SORTS.some((s) => s.id === params.get('sort')) ? params.get('sort') : 'featured';
+-  const shown = cards ? arrangeBrandCards(cards, { category, sort }) : [];
+-  const paging = useShowMore(shown.length, `${id}|${category}|${sort}`);
++  const q = (params.get('q') || '').slice(0, 60);
++  const shown = cards ? arrangeBrandCards(cards, { category, sort, q }) : [];
++  const paging = useShowMore(shown.length, `${id}|${category}|${sort}|${q}`);
+   usePageMeta({ title: brand ? brand.name : 'Brand', description: brand ? `${brand.name} at SORA LIFESTYLE. ${brand.text}` : '', path: `/brands/${id}` }, [id]);
+   if (!brand) return <NotFound />;
+   const cats = cards ? brandCategories(cards) : [];
+@@ -56,6 +57,14 @@ export default function BrandPage() {
+               <button key={c.name} type="button" aria-pressed={category === c.name} className={`hx-offers__chip${category === c.name ? ' is-on' : ''}`} onClick={() => set('cat', c.name)}>{c.name} <em>{c.count}</em></button>
+             ))}
+           </div>
++          {/* Search this brand (round 14, 2026-11-20): words in the names, with the category and sort. */}
++          {cards && cards.length > 12 && (
++            <label className="sora-brand__find">
++              <Icon name="search" size={16} />
++              <span className="sr-only">Search {brand.name}</span>
++              <input type="search" value={q} onChange={(e) => set('q', e.target.value)} placeholder={`Search ${brand.name}`} maxLength={60} />
++            </label>
++          )}
+           <label className="sora-brand__sort">
+             <span>Sort</span>
+             <select value={sort} onChange={(e) => set('sort', e.target.value)}>
+@@ -64,6 +73,7 @@ export default function BrandPage() {
+           </label>
+         </div>
+         {cards === null ? <SkeletonGrid label={`Loading ${brand.name}…`} />
++          : shown.length === 0 && q ? <p className="hx-offers__empty">Nothing of {brand.name}’s matches “{q}”. <button type="button" className="sora-brand__clear" onClick={() => set('q', '')}>Clear the search</button></p>
+           : shown.length === 0 ? <p className="hx-offers__empty">Nothing of {brand.name}’s is in stock right now. New pieces appear the moment they go live.</p>
+             : (
+               <>
+diff --git a/src/pages/Home.jsx b/src/pages/Home.jsx
+index 8f7738d..3bb19c3 100644
+--- a/src/pages/Home.jsx
++++ b/src/pages/Home.jsx
+@@ -14,6 +14,7 @@ import HomeGroup from '../components/HomeGroup.jsx';
+ import { NewArrivals } from '../components/NewArrivals.jsx';
+ import PopularThisWeek from '../components/PopularThisWeek.jsx';
+ import { EditStrips } from '../fashion/FashionEdit.jsx';
++import ShopByOccasion from '../components/ShopByOccasion.jsx';
+ import { ShopByIngredient } from '../components/ShopExtras.jsx';
+ import { LuxuryBeds, Bedsheets } from '../components/HomeCategoryRails.jsx';
+ import RecentlyViewedHome from '../components/RecentlyViewedHome.jsx';
+@@ -108,6 +109,8 @@ export default function Home() {
+       {/* Shop by ingredient (round 9, 2026-11-16): ingredients named in 3+ in-stock products (ShopExtras.jsx). */}
+       <ShopByIngredient products={products} />
+       {/* Gift-ready categories across Fashion and Home & Living (GiftShop.jsx). */}
++      {/* Shop by occasion (round 14, 2026-11-20): ways in by what the shopper is shopping for (ShopByOccasion.jsx). */}
++      <ShopByOccasion />
+       <GiftShop />
+       {/* The biggest verified discounts in stock (HomeExtras.jsx), where New Arrivals was. */}
+       <TopDeals />
+diff --git a/src/pages/LeatherCare.jsx b/src/pages/LeatherCare.jsx
+index 9535e61..9deaafe 100644
+--- a/src/pages/LeatherCare.jsx
++++ b/src/pages/LeatherCare.jsx
+@@ -48,7 +48,7 @@ export default function LeatherCare() {
+   return (
+     <div className="sora-guide">
+       <div className="container">
+-        <nav className="hx-offers__crumbs" aria-label="Breadcrumb"><Link to="/">Home</Link> <Icon name="chevronRight" size={12} /> <span>Leather care</span></nav>
++        <nav className="hx-offers__crumbs" aria-label="Breadcrumb"><Link to="/">Home</Link> <Icon name="chevronRight" size={12} /> <Link to="/guides">Care guides</Link> <Icon name="chevronRight" size={12} /> <span>Leather</span></nav>
+         <header className="sora-guide__head">
+           <p className="sora-sell__eyebrow">Care guide</p>
+           <h1 className="serif">How to care for leather</h1>
+diff --git a/src/styles/sora-ds.css b/src/styles/sora-ds.css
+index adc60e5..86551ec 100644
+--- a/src/styles/sora-ds.css
++++ b/src/styles/sora-ds.css
+@@ -417,4 +417,30 @@ body .fs .hx-ans .hx-ans__cta { background: #D9B26A; color: #121A16; }
+ .sora-gifts__more { margin: 26px 0 0; font-size: 14.5px; color: #3d4a43; }
+ .sora-gifts__more a { font-weight: 600; color: #2C5341; }
+ .sora-homeedits { padding: 8px 0 20px; }
+-.sora-homeedits .sora-editstrips { margin: 0; }
+\ No newline at end of file
++.sora-homeedits .sora-editstrips { margin: 0; }
++/* Search inside a brand's page (round 14, 2026-11-20). */
++.sora-brand__find { display: inline-flex; align-items: center; gap: 8px; min-width: 0; flex: 1 1 220px; max-width: 340px; padding: 0 12px; height: 40px; background: #fff; border: 1px solid var(--sora-line, #E4E1D8); color: #5c6a62; }
++.sora-brand__find input { flex: 1; min-width: 0; height: 100%; border: 0; outline: 0; background: none; font: inherit; font-size: 14.5px; color: #1E3A2F; }
++.sora-brand__find:focus-within { border-color: #2C5341; }
++.sora-brand__clear { margin-left: 6px; padding: 0; border: 0; background: none; font: inherit; font-weight: 600; color: #2C5341; text-decoration: underline; cursor: pointer; }
++@media (max-width: 600px) { .sora-brand__find { max-width: none; flex-basis: 100%; } }.sora-brand__bar { flex-wrap: wrap; }
++/* Shop by occasion (round 14, 2026-11-20): six tiles, a row on a wide screen, 3 + 3 on a phone. */
++.sora-occ { padding: 28px 0 12px; }
++.sora-occ__grid { list-style: none; margin: 14px 0 0; padding: 0; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 14px; }
++.sora-occ__tile { display: block; color: var(--sora-ink, #1E3A2F); text-decoration: none; }
++.sora-occ__img { display: block; aspect-ratio: 4 / 5; overflow: hidden; background: #F3F1EA; }
++.sora-occ__img img { width: 100%; height: 100%; object-fit: cover; object-position: center 20%; transition: transform .35s ease; }
++.sora-occ__tile:hover .sora-occ__img img { transform: scale(1.04); }
++.sora-occ__body { display: flex; flex-direction: column; gap: 2px; padding: 8px 2px 0; }
++.sora-occ__body b { font: 500 17px/1.25 var(--slv2-disp, Georgia, serif); }
++.sora-occ__body em { font-style: normal; font-size: 12.5px; color: #5c6a62; }
++@media (max-width: 900px) { .sora-occ__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 10px; } }
++@media (max-width: 600px) { .sora-occ__body b { font-size: 14px; } .sora-occ__body em { font-size: 11.5px; } }
++@media (prefers-reduced-motion: reduce) { .sora-occ__img img { transition: none; } .sora-occ__tile:hover .sora-occ__img img { transform: none; } }
++/* The care guides hub (round 14, 2026-11-20). */
++.sora-guides { list-style: none; margin: 20px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
++.sora-guides a { display: flex; flex-direction: column; gap: 8px; height: 100%; padding: 20px; background: #FBF8F1; border: 1px solid rgba(30, 58, 47, .12); color: #3d4a43; text-decoration: none; }
++.sora-guides a:hover { border-color: #2C5341; }
++.sora-guides b { font-size: 22px; font-weight: 500; color: #1E3A2F; }
++.sora-guides span { font-size: 14.5px; line-height: 1.55; }
++.sora-guides i { margin-top: auto; display: inline-flex; align-items: center; gap: 4px; font-style: normal; font-weight: 600; color: #2C5341; }
+\ No newline at end of file

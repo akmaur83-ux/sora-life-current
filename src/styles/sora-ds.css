@@ -418,3 +418,29 @@ body .fs .hx-ans .hx-ans__cta { background: #D9B26A; color: #121A16; }
 .sora-gifts__more a { font-weight: 600; color: #2C5341; }
 .sora-homeedits { padding: 8px 0 20px; }
 .sora-homeedits .sora-editstrips { margin: 0; }
+/* Search inside a brand's page (round 14, 2026-11-20). */
+.sora-brand__find { display: inline-flex; align-items: center; gap: 8px; min-width: 0; flex: 1 1 220px; max-width: 340px; padding: 0 12px; height: 40px; background: #fff; border: 1px solid var(--sora-line, #E4E1D8); color: #5c6a62; }
+.sora-brand__find input { flex: 1; min-width: 0; height: 100%; border: 0; outline: 0; background: none; font: inherit; font-size: 14.5px; color: #1E3A2F; }
+.sora-brand__find:focus-within { border-color: #2C5341; }
+.sora-brand__clear { margin-left: 6px; padding: 0; border: 0; background: none; font: inherit; font-weight: 600; color: #2C5341; text-decoration: underline; cursor: pointer; }
+@media (max-width: 600px) { .sora-brand__find { max-width: none; flex-basis: 100%; } }.sora-brand__bar { flex-wrap: wrap; }
+/* Shop by occasion (round 14, 2026-11-20): six tiles, a row on a wide screen, 3 + 3 on a phone. */
+.sora-occ { padding: 28px 0 12px; }
+.sora-occ__grid { list-style: none; margin: 14px 0 0; padding: 0; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 14px; }
+.sora-occ__tile { display: block; color: var(--sora-ink, #1E3A2F); text-decoration: none; }
+.sora-occ__img { display: block; aspect-ratio: 4 / 5; overflow: hidden; background: #F3F1EA; }
+.sora-occ__img img { width: 100%; height: 100%; object-fit: cover; object-position: center 20%; transition: transform .35s ease; }
+.sora-occ__tile:hover .sora-occ__img img { transform: scale(1.04); }
+.sora-occ__body { display: flex; flex-direction: column; gap: 2px; padding: 8px 2px 0; }
+.sora-occ__body b { font: 500 17px/1.25 var(--slv2-disp, Georgia, serif); }
+.sora-occ__body em { font-style: normal; font-size: 12.5px; color: #5c6a62; }
+@media (max-width: 900px) { .sora-occ__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 10px; } }
+@media (max-width: 600px) { .sora-occ__body b { font-size: 14px; } .sora-occ__body em { font-size: 11.5px; } }
+@media (prefers-reduced-motion: reduce) { .sora-occ__img img { transition: none; } .sora-occ__tile:hover .sora-occ__img img { transform: none; } }
+/* The care guides hub (round 14, 2026-11-20). */
+.sora-guides { list-style: none; margin: 20px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.sora-guides a { display: flex; flex-direction: column; gap: 8px; height: 100%; padding: 20px; background: #FBF8F1; border: 1px solid rgba(30, 58, 47, .12); color: #3d4a43; text-decoration: none; }
+.sora-guides a:hover { border-color: #2C5341; }
+.sora-guides b { font-size: 22px; font-weight: 500; color: #1E3A2F; }
+.sora-guides span { font-size: 14.5px; line-height: 1.55; }
+.sora-guides i { margin-top: auto; display: inline-flex; align-items: center; gap: 4px; font-style: normal; font-weight: 600; color: #2C5341; }

@@ -48,7 +48,7 @@ export default function LeatherCare() {
   return (
     <div className="sora-guide">
       <div className="container">
-        <nav className="hx-offers__crumbs" aria-label="Breadcrumb"><Link to="/">Home</Link> <Icon name="chevronRight" size={12} /> <span>Leather care</span></nav>
+        <nav className="hx-offers__crumbs" aria-label="Breadcrumb"><Link to="/">Home</Link> <Icon name="chevronRight" size={12} /> <Link to="/guides">Care guides</Link> <Icon name="chevronRight" size={12} /> <span>Leather</span></nav>
         <header className="sora-guide__head">
           <p className="sora-sell__eyebrow">Care guide</p>
           <h1 className="serif">How to care for leather</h1>

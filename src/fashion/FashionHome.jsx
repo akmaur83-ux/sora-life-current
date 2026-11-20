@@ -10,6 +10,7 @@ import RecentlyViewedHome from '../components/RecentlyViewedHome.jsx';
 import BudgetChips from '../components/BudgetChips.jsx';
 import { WeddingStrip } from './WeddingEdit.jsx';
 import { EditStrips } from './FashionEdit.jsx';
+import ShopByOccasion from '../components/ShopByOccasion.jsx';
 import { ShopByColour, LastChance } from '../components/ShopExtras.jsx';
 import OfferBanner from '../components/OfferBanner.jsx';
 import { BagReminder } from '../components/HomeExtras.jsx';
@@ -172,6 +173,8 @@ export default function FashionHome() {
       <WeddingStrip />
       {/* The Winter and Leather edits (round 12, 2026-11-20). */}
       <EditStrips />
+      {/* Shop by occasion (round 14, 2026-11-20). */}
+      <ShopByOccasion className="fs-sec" />
       {/* Colour swatches and the pieces almost gone (ShopExtras.jsx, 2026-11-13). */}
       <ShopByColour />
       <LastChance wrap="fs-sec" />

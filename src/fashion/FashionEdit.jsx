@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom';
+import { useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import Icon from '../components/Icon.jsx';
 import { money } from '../lib/format.js';
 import { FASHION_EDITS, useFashionEdit } from '../lib/fashionEdits.js';
@@ -10,6 +11,13 @@ import SkeletonGrid from '../components/Skeleton.jsx';
 export default function FashionEdit({ id }) {
   const edit = FASHION_EDITS[id];
   const sections = useFashionEdit(id);
+  const { hash } = useLocation();
+  // A link to one section (e.g. /fashion/leather#leather-bags) lands on it once the sections are in.
+  useEffect(() => {
+    if (!sections || !hash) return;
+    const el = document.getElementById(decodeURIComponent(hash.slice(1)));
+    if (el) el.scrollIntoView({ block: 'start' });
+  }, [sections, hash]);
   usePageMeta({ title: edit ? edit.title : 'Fashion', description: edit?.meta, path: edit?.path });
   if (!edit) return null;
   return (

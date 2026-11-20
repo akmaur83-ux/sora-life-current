@@ -29,8 +29,9 @@ export default function BrandPage() {
   const cards = brand?.catalogueBrand ? fromCatalogue : wellness;
   const category = params.get('cat') || '';
   const sort = BRAND_SORTS.some((s) => s.id === params.get('sort')) ? params.get('sort') : 'featured';
-  const shown = cards ? arrangeBrandCards(cards, { category, sort }) : [];
-  const paging = useShowMore(shown.length, `${id}|${category}|${sort}`);
+  const q = (params.get('q') || '').slice(0, 60);
+  const shown = cards ? arrangeBrandCards(cards, { category, sort, q }) : [];
+  const paging = useShowMore(shown.length, `${id}|${category}|${sort}|${q}`);
   usePageMeta({ title: brand ? brand.name : 'Brand', description: brand ? `${brand.name} at SORA LIFESTYLE. ${brand.text}` : '', path: `/brands/${id}` }, [id]);
   if (!brand) return <NotFound />;
   const cats = cards ? brandCategories(cards) : [];
@@ -56,6 +57,14 @@ export default function BrandPage() {
               <button key={c.name} type="button" aria-pressed={category === c.name} className={`hx-offers__chip${category === c.name ? ' is-on' : ''}`} onClick={() => set('cat', c.name)}>{c.name} <em>{c.count}</em></button>
             ))}
           </div>
+          {/* Search this brand (round 14, 2026-11-20): words in the names, with the category and sort. */}
+          {cards && cards.length > 12 && (
+            <label className="sora-brand__find">
+              <Icon name="search" size={16} />
+              <span className="sr-only">Search {brand.name}</span>
+              <input type="search" value={q} onChange={(e) => set('q', e.target.value)} placeholder={`Search ${brand.name}`} maxLength={60} />
+            </label>
+          )}
           <label className="sora-brand__sort">
             <span>Sort</span>
             <select value={sort} onChange={(e) => set('sort', e.target.value)}>
@@ -64,6 +73,7 @@ export default function BrandPage() {
           </label>
         </div>
         {cards === null ? <SkeletonGrid label={`Loading ${brand.name}…`} />
+          : shown.length === 0 && q ? <p className="hx-offers__empty">Nothing of {brand.name}’s matches “{q}”. <button type="button" className="sora-brand__clear" onClick={() => set('q', '')}>Clear the search</button></p>
           : shown.length === 0 ? <p className="hx-offers__empty">Nothing of {brand.name}’s is in stock right now. New pieces appear the moment they go live.</p>
             : (
               <>

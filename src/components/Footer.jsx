@@ -75,7 +75,7 @@ export default function Footer() {
             <Link to="/gifts">Gift finder</Link>
             <Link to="/sell">Sell on SORA</Link>
             <Link to="/sell#bulk">Bulk &amp; corporate gifts</Link>
-            <Link to="/guides/leather-care">Leather care guide</Link>
+            <Link to="/guides">Care guides</Link>
             <Link to="/fashion/winter">The Winter edit</Link>
             <Link to="/fashion/leather">Everything leather</Link>
             {categories.slice(0, 3).map((c) => (
