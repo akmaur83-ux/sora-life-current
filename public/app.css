@@ -10123,6 +10123,122 @@ body .fs .hx-ans .hx-ans__cta { background: #D9B26A; color: #121A16; }
 /* Price dropped (round 20, 2026-11-20): only from the price history. */
 .sora-drop { margin: 2px 0 0; font-size: 12px; font-weight: 700; color: #1F7A45; }
 
+/* ============================================================
+   Winter deals (owner, 2026-11-20): the seasonal band at the top of the homepage.
+   ============================================================ */
+.sora-winter {
+  --w-night: #0E2247; --w-blue: #1B3F7C; --w-tile: rgba(255, 255, 255, .09); --w-line: rgba(255, 255, 255, .18);
+  --w-cream: #FBF3E4; --w-gold: #F2C14E; --w-ink: #0E2247;
+  position: relative; overflow: hidden; margin: 12px 0 8px; color: var(--w-cream);
+  background:
+    radial-gradient(120% 60% at 50% 0%, #2A5AA6 0%, rgba(42, 90, 166, 0) 60%),
+    linear-gradient(180deg, var(--w-blue) 0%, var(--w-night) 100%);
+  /* A scalloped hem, like the edge of a knit. */
+  -webkit-mask: radial-gradient(9px at 50% 100%, #0000 98%, #000) 50% / 22px 100% repeat-x;
+          mask: radial-gradient(9px at 50% 100%, #0000 98%, #000) 50% / 22px 100% repeat-x;
+  padding-bottom: 12px;
+}
+.sora-winter__in { position: relative; z-index: 1; max-width: 1120px; margin: 0 auto; padding: 22px 16px 18px; }
+.sora-winter__snow { position: absolute; inset: 0; pointer-events: none; }
+.sora-winter__snow i {
+  position: absolute; top: -12px; left: var(--x); width: var(--s); height: var(--s); border-radius: 50%;
+  background: #fff; opacity: .75; filter: blur(.4px);
+  animation: sw-fall var(--d) linear var(--delay) infinite;
+}
+@keyframes sw-fall {
+  0% { transform: translate3d(0, 0, 0); opacity: 0; }
+  10% { opacity: .85; }
+  100% { transform: translate3d(var(--drift), 760px, 0); opacity: .2; }
+}
+.sora-winter__head { display: flex; align-items: center; justify-content: center; gap: 12px; }
+.sora-winter__star { color: #D9E6FF; opacity: .9; animation: sw-spin 12s linear infinite; flex: none; }
+@keyframes sw-spin { to { transform: rotate(360deg); } }
+.sora-winter__title {
+  margin: 0; display: flex; gap: .32em; font-family: 'Playfair Display', Georgia, serif; font-style: italic; font-weight: 700;
+  font-size: clamp(38px, 11vw, 64px); line-height: 1; letter-spacing: .01em; color: var(--w-cream);
+  text-shadow: 0 2px 0 #D8C7A6, 0 4px 0 #B9A27A, 0 10px 18px rgba(0, 0, 0, .35);
+}
+.sora-winter__word { display: inline-flex; }
+.sora-winter__word > span { display: inline-block; animation: sw-bob 3.2s ease-in-out infinite; animation-delay: calc(var(--i) * .12s); }
+@keyframes sw-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+.sora-winter__sub { margin: 8px auto 16px; max-width: 34em; text-align: center; font-size: 13px; line-height: 1.4; color: #D3DDF0; }
+
+.sora-winter__grid { display: grid; grid-template-columns: 1fr 1fr 1fr; grid-auto-rows: minmax(150px, auto); gap: 10px; }
+.sora-winter__grid--nohero { grid-template-columns: 1fr 1fr; }
+.sora-winter__hero, .sora-winter__tile {
+  position: relative; display: flex; flex-direction: column; align-items: center; text-align: center; overflow: hidden;
+  border-radius: 16px; background: var(--w-tile); border: 1px solid var(--w-line); color: var(--w-cream); text-decoration: none;
+  -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px);
+  animation: sw-rise .7s cubic-bezier(.2, .8, .2, 1) both; animation-delay: calc(var(--n) * .09s + .15s);
+  transition: transform .25s ease, background-color .25s ease;
+}
+.sora-winter__hero:hover, .sora-winter__tile:hover { transform: translateY(-3px); background: rgba(255, 255, 255, .14); }
+.sora-winter__hero:focus-visible, .sora-winter__tile:focus-visible, .sora-winter__all:focus-visible { outline: 2px solid var(--w-gold); outline-offset: 2px; }
+@keyframes sw-rise { from { opacity: 0; transform: translateY(18px) scale(.97); } to { opacity: 1; transform: none; } }
+
+.sora-winter__hero { grid-row: span 2; padding: 14px 8px 10px; gap: 4px; }
+.sora-winter__eyebrow { font-size: 12px; font-weight: 600; letter-spacing: .04em; color: #D3DDF0; }
+.sora-winter__mrp { margin-top: 6px; padding: 2px 8px; border-radius: 6px; background: var(--w-night); color: #fff; font-size: 15px; font-weight: 700; }
+.sora-winter__price {
+  padding: 4px 12px; border-radius: 10px; background: var(--w-gold); color: var(--w-ink);
+  font-size: clamp(20px, 6vw, 30px); line-height: 1.15; font-weight: 800; animation: sw-pop 2.8s ease-in-out 1.2s infinite;
+}
+@keyframes sw-pop { 0%, 86%, 100% { transform: scale(1); } 92% { transform: scale(1.08); } }
+.sora-winter__name { font-size: 13px; font-weight: 600; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; padding: 0 2px; }
+.sora-winter__hero img { margin-top: auto; width: 100%; max-width: 150px; aspect-ratio: 1; object-fit: cover; border-radius: 12px; box-shadow: 0 8px 18px rgba(0, 0, 0, .3); }
+.sora-winter__save { position: absolute; bottom: 16px; right: 14px; box-shadow: 0 2px 6px rgba(0, 0, 0, .3); font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 999px; background: #fff; color: var(--w-ink); }
+
+.sora-winter__tile { padding: 0 6px 8px; gap: 6px; }
+.sora-winter__badge {
+  position: relative; overflow: hidden; display: inline-flex; align-items: stretch; margin-top: 10px; border-radius: 8px; background: var(--w-gold); color: var(--w-ink);
+  font-size: 11px; line-height: 1.05; box-shadow: 0 3px 0 rgba(0, 0, 0, .18);
+}
+.sora-winter__badge > span { display: flex; align-items: center; padding: 4px 6px; background: var(--w-night); color: #fff; font-weight: 600; }
+.sora-winter__badge b { display: flex; flex-direction: column; align-items: flex-start; padding: 3px 7px; font-size: 15px; font-weight: 800; }
+.sora-winter__badge small { font-size: 10px; font-weight: 800; }
+.sora-winter__badge::after {
+  content: ''; position: absolute; inset: 0; transform: translateX(-120%);
+  background: linear-gradient(105deg, transparent 30%, rgba(255, 255, 255, .55) 50%, transparent 70%);
+  animation: sw-shine 4s ease-in-out infinite; animation-delay: calc(var(--n) * .5s + 1s);
+}
+@keyframes sw-shine { 0%, 70% { transform: translateX(-120%); } 100% { transform: translateX(120%); } }
+.sora-winter__tname { font-family: 'Playfair Display', Georgia, serif; font-size: 15px; font-weight: 600; line-height: 1.2; }
+.sora-winter__pile { position: relative; margin-top: auto; height: 64px; width: 100%; }
+.sora-winter__pile img {
+  position: absolute; bottom: 0; left: 50%; width: 56px; height: 56px; object-fit: cover; border-radius: 10px; border: 2px solid #fff; background: #fff;
+  transform: translateX(calc(-50% + (var(--k) - 1) * 26px)) rotate(calc((var(--k) - 1) * 7deg)); box-shadow: 0 6px 12px rgba(0, 0, 0, .3);
+}
+.sora-winter__pile img:nth-child(2) { z-index: 1; bottom: 4px; }
+.sora-winter__tile:hover .sora-winter__pile img { transform: translateX(calc(-50% + (var(--k) - 1) * 30px)) rotate(calc((var(--k) - 1) * 10deg)); transition: transform .3s ease; }
+
+.sora-winter__all {
+  margin-top: 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 16px; border-radius: 14px;
+  background: #E7EEFB; color: var(--w-ink); text-decoration: none; font-size: 14px;
+}
+.sora-winter__all b { font-family: 'Playfair Display', Georgia, serif; font-size: 16px; }
+.sora-winter__all > span:last-child { font-size: 26px; line-height: 1; transition: transform .2s ease; }
+.sora-winter__all:hover > span:last-child { transform: translateX(4px); }
+
+@media (min-width: 760px) {
+  .sora-winter__in { padding: 30px 24px 24px; }
+  .sora-winter__grid { grid-template-columns: 1.15fr 1fr 1fr 1fr 1fr; grid-auto-rows: minmax(250px, auto); gap: 14px; }
+  .sora-winter__grid--nohero { grid-template-columns: repeat(4, 1fr); }
+  .sora-winter__hero { grid-row: auto; }
+  .sora-winter__pile { height: 160px; }
+  .sora-winter__pile img { width: 118px; height: 118px; border-radius: 14px; transform: translateX(calc(-50% + (var(--k) - 1) * 34px)) rotate(calc((var(--k) - 1) * 7deg)); }
+  .sora-winter__pile img:nth-child(2) { bottom: 10px; }
+  .sora-winter__tile:hover .sora-winter__pile img { transform: translateX(calc(-50% + (var(--k) - 1) * 42px)) rotate(calc((var(--k) - 1) * 10deg)); }
+  .sora-winter__badge { margin-top: 16px; }
+  .sora-winter__hero img { max-width: 170px; }
+  .sora-winter__badge { font-size: 12px; } .sora-winter__badge b { font-size: 18px; }
+  .sora-winter__tname { font-size: 18px; }
+  .sora-winter__sub { font-size: 14px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sora-winter__snow { display: none; }
+  .sora-winter *, .sora-winter *::after { animation: none !important; transition: none !important; }
+}
+
 /* ═══ src/styles/storefront-sections.css ═══ */
 /* ============================================================
    Storefront sections an admin edits (Storefronts in the admin; storefrontContent.js).
