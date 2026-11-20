@@ -66,7 +66,7 @@ export default function FashionProductCard({ view, layout = 'grid', mediaLoading
         <Link to={href} className="fs-card__img" aria-label={view.name}>
           {view.image ? <img src={view.image} alt="" loading={mediaLoading} decoding="async" width="600" height="600" /> : <span className="fs-card__noimg" aria-hidden="true">{view.name.slice(0, 1)}</span>}
           {/* The second picture, shown on hover with a mouse (2026-11-13 redesign: product cards). */}
-          {view.image && view.images?.[1] && view.images[1] !== view.image && <img className="fs-card__alt" src={view.images[1]} alt="" loading="lazy" decoding="async" width="600" height="600" />}
+          {view.image && view.images?.[1] && view.images[1] !== view.image && <img className="fs-card__alt" src={view.images[1]} alt="" loading="lazy" decoding="async" width="600" height="600" onError={(e) => { e.currentTarget.remove(); }} />}
         </Link>
         {out ? <span className="fs-badge fs-badge--out">Sold out</span>
           : view.hasDiscount ? <span className="fs-badge">{view.discountPct}% OFF</span>

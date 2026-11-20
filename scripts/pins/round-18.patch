@@ -1,0 +1,104 @@
+diff --git a/src/admin/pages/Insights.jsx b/src/admin/pages/Insights.jsx
+index b23f7ff..162e7b0 100644
+--- a/src/admin/pages/Insights.jsx
++++ b/src/admin/pages/Insights.jsx
+@@ -106,6 +106,26 @@ export const stockCsv = (w) => toCsv([...(w?.out || []).map((r) => ({ ...r, stat
+   ['State', (r) => r.state], ['Product', (r) => r.name], ['Store', (r) => r.store], ['Brand', (r) => r.brand], ['Left', (r) => r.stock],
+ ]);
+ 
++/**
++ * Photo check (round 18, 2026-11-20): partners' pictures live on their own servers and
++ * can disappear. Loads each live product's main picture the way a shopper's browser
++ * would (an <img>, so any site's pictures can be checked) and lists the ones that do
++ * not load. `load(url)` resolves true/false; at most `parallel` at a time.
++ */
++export async function checkPhotos(rows, load, parallel = 12, onProgress = () => {}) {
++  const list = (Array.isArray(rows) ? rows : []).filter((r) => Array.isArray(r.images) && r.images[0]);
++  const bad = []; let done = 0; const q = [...list];
++  await Promise.all(Array.from({ length: parallel }, async () => {
++    while (q.length) {
++      const r = q.shift();
++      if (!(await load(r.images[0]))) bad.push({ name: r.name, store: r.store, brand: r.brand || '', slug: r.slug, url: r.images[0] });
++      done += 1; onProgress(done, list.length);
++    }
++  }));
++  return bad.sort((a, b) => a.name.localeCompare(b.name));
++}
++const loadImage = (url) => new Promise((res) => { const i = new Image(); const t = setTimeout(() => res(false), 15000); i.onload = () => { clearTimeout(t); res(i.naturalWidth > 0); }; i.onerror = () => { clearTimeout(t); res(false); }; i.src = url; });
++
+ const STORE = { wellness: 'Wellness', fashion: 'Fashion', homeliving: 'Home & Living', grocery: 'Grocery' };
+ const box = { border: '1px solid #E4E8E1', background: '#fff', padding: 14 };
+ 
+@@ -128,6 +148,13 @@ export default function Insights() {
+   const [brands, setBrands] = useState(null);
+   const [stock, setStock] = useState(null);
+   const [viewed, setViewed] = useState(null);
++  const [photos, setPhotos] = useState({ state: 'idle', done: 0, total: 0, bad: [] });
++  const runPhotoCheck = async () => {
++    setPhotos({ state: 'running', done: 0, total: 0, bad: [] });
++    const { data } = await supabase.from('catalogue_products').select('name, store, brand, slug, images').eq('is_active', true).limit(5000);
++    const bad = await checkPhotos(data || [], loadImage, 12, (done, total) => setPhotos((p) => ({ ...p, done, total })));
++    setPhotos({ state: 'done', done: (data || []).length, total: (data || []).length, bad });
++  };
+   const [error, setError] = useState('');
+   useEffect(() => {
+     let live = true;
+@@ -222,6 +249,18 @@ export default function Insights() {
+             <button type="button" className="btn btn-sm btn-ghost" onClick={() => downloadCsv('sora-stock-watch.csv', stockCsv(stock))}>Download stock CSV</button>
+           </section>
+         )}
++        <section style={box}>
++          <h2 style={{ margin: '0 0 4px', fontSize: 16 }}>Photo check</h2>
++          <p className="adm-hint" style={{ margin: '0 0 10px' }}>Partners’ pictures live on their own servers and can disappear. This loads every live product’s main picture and lists any that do not open.</p>
++          {photos.state === 'idle' && <button type="button" className="btn btn-sm" onClick={runPhotoCheck}>Check product photos</button>}
++          {photos.state === 'running' && <p>Checking… {photos.done} of {photos.total || '…'}</p>}
++          {photos.state === 'done' && (photos.bad.length === 0 ? <p>All {photos.total} main pictures open. <button type="button" className="btn btn-sm btn-ghost" onClick={runPhotoCheck}>Check again</button></p> : (
++            <>
++              <p><b>{photos.bad.length}</b> of {photos.total} do not open — replace their pictures in the store catalogue:</p>
++              <ol style={{ margin: 0, paddingLeft: 20, display: 'grid', gap: 6 }}>{photos.bad.slice(0, 50).map((r) => <li key={`${r.store}/${r.slug}`}><a href={productHref(r.store, r.slug)} target="_blank" rel="noopener noreferrer"><b>{r.name}</b></a> <span style={{ color: '#5F6D64' }}>· {STORE[r.store] || r.store}{r.brand ? ` · ${r.brand}` : ''}</span></li>)}</ol>
++            </>
++          ))}
++        </section>
+         <List title={`Out of stock${stock ? ` (${stock.out.length})` : ''}`} hint="Live products with none left: restock them, or hide them from the shop." rows={stock?.out ?? null} empty="Nothing is out of stock."
+           render={(r, i) => <li key={`${r.store}|${r.name}|${i}`}><b>{r.name}</b> <span style={{ color: '#5F6D64' }}>· {STORE[r.store] || r.store}{r.brand ? ` · ${r.brand}` : ''}</span></li>} />
+         <List title={`Running low${stock ? ` (${stock.low.length})` : ''}`} hint="Live products with 1–3 left, fewest first." rows={stock?.low ?? null} empty="Nothing is running low."
+diff --git a/src/fashion/FashionProductCard.jsx b/src/fashion/FashionProductCard.jsx
+index fa97003..81fb544 100644
+--- a/src/fashion/FashionProductCard.jsx
++++ b/src/fashion/FashionProductCard.jsx
+@@ -66,7 +66,7 @@ export default function FashionProductCard({ view, layout = 'grid', mediaLoading
+         <Link to={href} className="fs-card__img" aria-label={view.name}>
+           {view.image ? <img src={view.image} alt="" loading={mediaLoading} decoding="async" width="600" height="600" /> : <span className="fs-card__noimg" aria-hidden="true">{view.name.slice(0, 1)}</span>}
+           {/* The second picture, shown on hover with a mouse (2026-11-13 redesign: product cards). */}
+-          {view.image && view.images?.[1] && view.images[1] !== view.image && <img className="fs-card__alt" src={view.images[1]} alt="" loading="lazy" decoding="async" width="600" height="600" />}
++          {view.image && view.images?.[1] && view.images[1] !== view.image && <img className="fs-card__alt" src={view.images[1]} alt="" loading="lazy" decoding="async" width="600" height="600" onError={(e) => { e.currentTarget.remove(); }} />}
+         </Link>
+         {out ? <span className="fs-badge fs-badge--out">Sold out</span>
+           : view.hasDiscount ? <span className="fs-badge">{view.discountPct}% OFF</span>
+diff --git a/src/homeliving/HomeLivingProductCard.jsx b/src/homeliving/HomeLivingProductCard.jsx
+index 2717fcd..24d8701 100644
+--- a/src/homeliving/HomeLivingProductCard.jsx
++++ b/src/homeliving/HomeLivingProductCard.jsx
+@@ -29,7 +29,7 @@ export default function HomeLivingProductCard({ product, layout = 'grid', mediaL
+       <div className="hl-card__media">
+         <Link to={href} className="hl-card__img" aria-label={product.name}>
+           {image
+-            ? <><img src={image} alt="" loading={mediaLoading} decoding="async" width="400" height="400" />{product.images?.[1] && product.images[1] !== image && <img className="hl-card__alt" src={product.images[1]} alt="" loading="lazy" decoding="async" width="400" height="400" />}</>
++            ? <><img src={image} alt="" loading={mediaLoading} decoding="async" width="400" height="400" />{product.images?.[1] && product.images[1] !== image && <img className="hl-card__alt" src={product.images[1]} alt="" loading="lazy" decoding="async" width="400" height="400" onError={(e) => { e.currentTarget.remove(); }} />}</>
+             : <span className="hl-card__noimg" aria-hidden="true">{product.name.slice(0, 1)}</span>}
+         </Link>
+         <button type="button" className={`hl-card__heart${saved ? ' is-on' : ''}`} aria-label={saved ? `Remove ${product.name} from wishlist` : `Save ${product.name} to wishlist`} aria-pressed={saved} onClick={() => wish.toggle(product.id)}><Icon name="heart" size={16} fill={saved ? 'currentColor' : 'none'} /></button>
+diff --git a/src/styles/sora-ds.css b/src/styles/sora-ds.css
+index c3c521f..e5cdc8a 100644
+--- a/src/styles/sora-ds.css
++++ b/src/styles/sora-ds.css
+@@ -457,4 +457,6 @@ body .fs .hx-ans .hx-ans__cta { background: #D9B26A; color: #121A16; }
+ .sora-bedstrip { margin: 8px 0 18px; background: linear-gradient(100deg, #2B2A44, #4A4675 55%, #7C6F9E); }
+ .sora-bedstrip em { color: #E3DDF5; }
+ /* A link styled as a Fashion button keeps its light text: `.fs a { color: inherit }` outranked `.fs-btn` (2026-11-20). */
+-.fs a.fs-btn { color: var(--slv2-ivory); }
+\ No newline at end of file
++.fs a.fs-btn { color: var(--slv2-ivory); }
++/* Disabled buy buttons still readable (round 18 audit, 2026-11-20): #8A8F8F on #F0F2F2 was 2.9:1. */
++.fs .fs-pdp--mk .fs-btn--add:disabled, .fs .fs-pdp--mk .fs-btn--buy:disabled, .fs .fs-pdp__bar .fs-btn--add:disabled, .fs .fs-pdp__bar .fs-btn--buy:disabled { color: #666B6B; }
+\ No newline at end of file
