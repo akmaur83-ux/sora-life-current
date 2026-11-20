@@ -182,5 +182,18 @@ test('bug audit 2026-11-21: dark-green link buttons keep light text', () => {
   assert.match(css, /\.state a\.btn, \.state a\.btn:hover, \.state a\.btn:focus-visible \{ color: var\(--btn-fg, #fff\); \}/);
   assert.match(css, /\.hl a\.hl-btn, \.hl a\.hl-btn:hover \{ color: var\(--slv2-ivory, #FBF8F1\); \}/);
 });
+test('speed: the band reads the small deal view, draws before its data, and fetches once per visit', () => {
+  const r = w.dealRowToRow({ slug: 's', name: 'N', mrp: 100, sale_price: 50, sort_order: 3, image: 'https://i', category_slug: 'stoles' });
+  assert.deepEqual(r, { slug: 's', name: 'N', mrp: 100, sale_price: 50, sort_order: 3, images: ['https://i'], stock: 1, is_demo: false, category: { slug: 'stoles' } });
+  assert.equal(w.winterDeals([r, { ...r, slug: 't' }, { ...r, slug: 'u', category: { slug: 'mufflers-caps' } }]), null, 'still needs three tiles');
+  const lib = read('src/lib/winterDeals.js');
+  assert.match(lib, /client\.from\('catalogue_deal_rows'\)/);
+  assert.match(lib, /const DEALS_TTL_MS = 5 \* 60 \* 1000;/);
+  const c = read('src/components/WinterDeals.jsx');
+  assert.match(c, /if \(deals === null\) return null;/);
+  assert.match(c, /sora-winter__ghost/);
+  assert.match(read('supabase/migrations/0049_catalogue_deal_rows.sql'), /with \(security_invoker = true\)/);
+  assert.doesNotMatch(read('supabase/migrations/0049_catalogue_deal_rows.sql'), /security definer/i);
+});
 if (failed) { console.log(`\n${failed} failed`); process.exit(1); }
 console.log('\nall passed');

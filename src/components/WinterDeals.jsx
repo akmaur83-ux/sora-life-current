@@ -174,9 +174,13 @@ function useAwake() {
 export default function WinterDeals() {
   const deals = useWinterDeals();
   const [ref, awake] = useAwake();
-  if (!deals) return null;
-  const { tiles } = deals;
-  const heroes = deals.heroes?.length ? deals.heroes : deals.hero ? [deals.hero] : [];
+  // While the deals load (undefined) the band is drawn at once — heading, snow, tiles as
+  // placeholders — so the page's largest paint does not wait on the catalogue (2026-11-21:
+  // it waited 8.6 s on a slow phone). Out of season or nothing to show (null): no band.
+  if (deals === null) return null;
+  const loading = deals === undefined;
+  const tiles = loading ? [] : deals.tiles;
+  const heroes = loading ? [] : deals.heroes?.length ? deals.heroes : deals.hero ? [deals.hero] : [];
   return (
     <section ref={ref} className={`sora-winter${awake ? '' : ' is-asleep'}`} aria-label="Winter deals">
       <Snow flakes={FAR_FLAKES} className="sora-winter__snow--far" />
@@ -195,7 +199,8 @@ export default function WinterDeals() {
           <Title />
         </div>
         <p className="sora-winter__sub">Jackets, shawls and mufflers in stock, with the discount shown on every piece</p>
-        <div className={`sora-winter__grid${heroes.length ? '' : ' sora-winter__grid--nohero'}`}>
+        <div className={`sora-winter__grid${heroes.length || loading ? '' : ' sora-winter__grid--nohero'}`} aria-busy={loading || undefined}>
+          {loading && [0, 1, 2, 3, 4].map((k) => <span key={k} className={`sora-winter__ghost${k === 0 ? ' sora-winter__ghost--hero' : ''}`} aria-hidden="true" />)}
           {heroes.length > 0 && <HeroDeal heroes={heroes} />}
           {tiles.map((t, n) => (
             <Link key={t.id} to={t.href} className="sora-winter__tile" style={{ '--n': n + 1 }}>

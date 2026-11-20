@@ -1,0 +1,104 @@
+diff --git a/src/components/WinterDeals.jsx b/src/components/WinterDeals.jsx
+index c61a39f..ca602d7 100644
+--- a/src/components/WinterDeals.jsx
++++ b/src/components/WinterDeals.jsx
+@@ -174,9 +174,13 @@ function useAwake() {
+ export default function WinterDeals() {
+   const deals = useWinterDeals();
+   const [ref, awake] = useAwake();
+-  if (!deals) return null;
+-  const { tiles } = deals;
+-  const heroes = deals.heroes?.length ? deals.heroes : deals.hero ? [deals.hero] : [];
++  // While the deals load (undefined) the band is drawn at once — heading, snow, tiles as
++  // placeholders — so the page's largest paint does not wait on the catalogue (2026-11-21:
++  // it waited 8.6 s on a slow phone). Out of season or nothing to show (null): no band.
++  if (deals === null) return null;
++  const loading = deals === undefined;
++  const tiles = loading ? [] : deals.tiles;
++  const heroes = loading ? [] : deals.heroes?.length ? deals.heroes : deals.hero ? [deals.hero] : [];
+   return (
+     <section ref={ref} className={`sora-winter${awake ? '' : ' is-asleep'}`} aria-label="Winter deals">
+       <Snow flakes={FAR_FLAKES} className="sora-winter__snow--far" />
+@@ -195,7 +199,8 @@ export default function WinterDeals() {
+           <Title />
+         </div>
+         <p className="sora-winter__sub">Jackets, shawls and mufflers in stock, with the discount shown on every piece</p>
+-        <div className={`sora-winter__grid${heroes.length ? '' : ' sora-winter__grid--nohero'}`}>
++        <div className={`sora-winter__grid${heroes.length || loading ? '' : ' sora-winter__grid--nohero'}`} aria-busy={loading || undefined}>
++          {loading && [0, 1, 2, 3, 4].map((k) => <span key={k} className={`sora-winter__ghost${k === 0 ? ' sora-winter__ghost--hero' : ''}`} aria-hidden="true" />)}
+           {heroes.length > 0 && <HeroDeal heroes={heroes} />}
+           {tiles.map((t, n) => (
+             <Link key={t.id} to={t.href} className="sora-winter__tile" style={{ '--n': n + 1 }}>
+diff --git a/src/lib/winterDeals.js b/src/lib/winterDeals.js
+index 71698a5..1f25f33 100644
+--- a/src/lib/winterDeals.js
++++ b/src/lib/winterDeals.js
+@@ -66,8 +66,24 @@ export function winterDeals(rows) {
+   return { tiles, hero: heroes[0] || null, heroes };
+ }
+ 
++/**
++ * The band's rows (2026-11-21, speed): from catalogue_deal_rows (0049) — one small row per
++ * live product, first picture only, in stock already decided — shaped like the full rows
++ * winterDeals() reads. 34 KB instead of 113 KB; the full query stays as the fallback.
++ */
++export const dealRowToRow = (r) => ({
++  slug: r.slug, name: r.name, mrp: r.mrp, sale_price: r.sale_price, sort_order: r.sort_order,
++  images: r.image ? [r.image] : [], stock: 1, is_demo: false, category: { slug: r.category_slug },
++});
+ export async function fetchWinterRows(client = supabase) {
+   if (!client) return [];
++  try {
++    const { data, error } = await client.from('catalogue_deal_rows')
++      .select('slug, name, mrp, sale_price, sort_order, image, category_slug')
++      .eq('store', 'fashion').eq('in_stock', true).in('category_slug', ALL_SLUGS)
++      .order('sort_order', { ascending: true }).limit(1200);
++    if (!error && Array.isArray(data)) return data.map(dealRowToRow);
++  } catch { /* fall back to the full rows */ }
+   const { data, error } = await client.from('catalogue_products')
+     .select('id, name, slug, mrp, sale_price, images, stock, is_demo, sort_order, category:catalogue_categories!inner(slug), variants:catalogue_variants(stock, is_active)')
+     .eq('store', 'fashion').eq('is_active', true).in('category.slug', ALL_SLUGS)
+@@ -76,13 +92,27 @@ export async function fetchWinterRows(client = supabase) {
+ }
+ 
+ /** The band's data: undefined while loading, null when it should not show. */
++// Fetched once per visit (2026-11-21, speed): back to the homepage draws the band at once.
++let dealsCache = null;            // { at, value }
++let dealsPending = null;
++const DEALS_TTL_MS = 5 * 60 * 1000;
++function loadDeals() {
++  if (dealsCache && Date.now() - dealsCache.at < DEALS_TTL_MS) return Promise.resolve(dealsCache.value);
++  if (!dealsPending) {
++    dealsPending = fetchWinterRows().then((r) => { const value = winterDeals(r); dealsCache = { at: Date.now(), value }; return value; })
++      .finally(() => { dealsPending = null; });
++  }
++  return dealsPending;
++}
++
+ export function useWinterDeals(now = Date.now()) {
+   const season = isWinterSeason(now);
+-  const [deals, setDeals] = useState(season ? undefined : null);
++  const fresh = dealsCache && Date.now() - dealsCache.at < DEALS_TTL_MS ? dealsCache.value : undefined;
++  const [deals, setDeals] = useState(season ? fresh : null);
+   useEffect(() => {
+     if (!season) return undefined;
+     let live = true;
+-    fetchWinterRows().then((r) => { if (live) setDeals(winterDeals(r)); }, () => { if (live) setDeals(null); });
++    loadDeals().then((v) => { if (live) setDeals(v); }, () => { if (live) setDeals(null); });
+     return () => { live = false; };
+   }, [season]);
+   return deals;
+diff --git a/src/styles/sora-ds.css b/src/styles/sora-ds.css
+index f4d5f2e..d03b4f3 100644
+--- a/src/styles/sora-ds.css
++++ b/src/styles/sora-ds.css
+@@ -951,3 +951,8 @@ html.sora-wintertop .v2-hdr::after, html.sora-wintertop .sora-stickycats::after
+ @media (min-width: 760px) { .gs-catgrid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; } }
+ .gs-cat__empty { display: grid; justify-items: start; gap: 12px; text-align: left; }
+ .gs-cat__empty p { margin: 0; }
++/* The band's placeholders while its deals load (2026-11-21, speed). */
++.sora-winter__ghost { display: block; min-height: 150px; border-radius: 16px; background: rgba(255, 255, 255, .08); border: 1px solid rgba(255, 255, 255, .12); }
++.sora-winter__ghost--hero { grid-row: span 2; }
++@media (min-width: 760px) { .sora-winter__ghost { min-height: 250px; } .sora-winter__ghost--hero { grid-row: auto; } }
++.fs .sora-winter__ghost { border-radius: 0 !important; }
+\ No newline at end of file

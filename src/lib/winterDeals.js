@@ -66,8 +66,24 @@ export function winterDeals(rows) {
   return { tiles, hero: heroes[0] || null, heroes };
 }
 
+/**
+ * The band's rows (2026-11-21, speed): from catalogue_deal_rows (0049) — one small row per
+ * live product, first picture only, in stock already decided — shaped like the full rows
+ * winterDeals() reads. 34 KB instead of 113 KB; the full query stays as the fallback.
+ */
+export const dealRowToRow = (r) => ({
+  slug: r.slug, name: r.name, mrp: r.mrp, sale_price: r.sale_price, sort_order: r.sort_order,
+  images: r.image ? [r.image] : [], stock: 1, is_demo: false, category: { slug: r.category_slug },
+});
 export async function fetchWinterRows(client = supabase) {
   if (!client) return [];
+  try {
+    const { data, error } = await client.from('catalogue_deal_rows')
+      .select('slug, name, mrp, sale_price, sort_order, image, category_slug')
+      .eq('store', 'fashion').eq('in_stock', true).in('category_slug', ALL_SLUGS)
+      .order('sort_order', { ascending: true }).limit(1200);
+    if (!error && Array.isArray(data)) return data.map(dealRowToRow);
+  } catch { /* fall back to the full rows */ }
   const { data, error } = await client.from('catalogue_products')
     .select('id, name, slug, mrp, sale_price, images, stock, is_demo, sort_order, category:catalogue_categories!inner(slug), variants:catalogue_variants(stock, is_active)')
     .eq('store', 'fashion').eq('is_active', true).in('category.slug', ALL_SLUGS)
@@ -76,13 +92,27 @@ export async function fetchWinterRows(client = supabase) {
 }
 
 /** The band's data: undefined while loading, null when it should not show. */
+// Fetched once per visit (2026-11-21, speed): back to the homepage draws the band at once.
+let dealsCache = null;            // { at, value }
+let dealsPending = null;
+const DEALS_TTL_MS = 5 * 60 * 1000;
+function loadDeals() {
+  if (dealsCache && Date.now() - dealsCache.at < DEALS_TTL_MS) return Promise.resolve(dealsCache.value);
+  if (!dealsPending) {
+    dealsPending = fetchWinterRows().then((r) => { const value = winterDeals(r); dealsCache = { at: Date.now(), value }; return value; })
+      .finally(() => { dealsPending = null; });
+  }
+  return dealsPending;
+}
+
 export function useWinterDeals(now = Date.now()) {
   const season = isWinterSeason(now);
-  const [deals, setDeals] = useState(season ? undefined : null);
+  const fresh = dealsCache && Date.now() - dealsCache.at < DEALS_TTL_MS ? dealsCache.value : undefined;
+  const [deals, setDeals] = useState(season ? fresh : null);
   useEffect(() => {
     if (!season) return undefined;
     let live = true;
-    fetchWinterRows().then((r) => { if (live) setDeals(winterDeals(r)); }, () => { if (live) setDeals(null); });
+    loadDeals().then((v) => { if (live) setDeals(v); }, () => { if (live) setDeals(null); });
     return () => { live = false; };
   }, [season]);
   return deals;

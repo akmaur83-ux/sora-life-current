@@ -951,3 +951,8 @@ html.sora-wintertop .v2-hdr::after, html.sora-wintertop .sora-stickycats::after 
 @media (min-width: 760px) { .gs-catgrid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; } }
 .gs-cat__empty { display: grid; justify-items: start; gap: 12px; text-align: left; }
 .gs-cat__empty p { margin: 0; }
+/* The band's placeholders while its deals load (2026-11-21, speed). */
+.sora-winter__ghost { display: block; min-height: 150px; border-radius: 16px; background: rgba(255, 255, 255, .08); border: 1px solid rgba(255, 255, 255, .12); }
+.sora-winter__ghost--hero { grid-row: span 2; }
+@media (min-width: 760px) { .sora-winter__ghost { min-height: 250px; } .sora-winter__ghost--hero { grid-row: auto; } }
+.fs .sora-winter__ghost { border-radius: 0 !important; }
