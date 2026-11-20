@@ -10069,6 +10069,15 @@ body .fs .hx-ans .hx-ans__cta { background: #D9B26A; color: #121A16; }
 .sora-mega__label { display: block; margin: 0 0 8px; font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #8A5A12; }
 /* New enquiries beside Admin → Enquiries (round 12, 2026-11-20). */
 .adm__navcount { display: inline-block; min-width: 20px; margin-left: 8px; padding: 1px 6px; font-size: 11px; font-weight: 700; line-height: 16px; text-align: center; color: #fff; background: #B4532A; border-radius: 10px; }
+/* Gift finder (round 13, 2026-11-20). */
+.sora-gifts__pick { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; }
+.sora-gifts__pick .hx-offers__chip em { margin-left: 6px; font-style: normal; font-size: 12px; opacity: .7; }
+.sora-gifts__pick .hx-offers__chip:disabled { opacity: .45; cursor: not-allowed; }
+.sora-gifts__count { margin: 6px 0 12px; font-size: 13.5px; color: #5c6a62; }
+.sora-gifts__more { margin: 26px 0 0; font-size: 14.5px; color: #3d4a43; }
+.sora-gifts__more a { font-weight: 600; color: #2C5341; }
+.sora-homeedits { padding: 8px 0 20px; }
+.sora-homeedits .sora-editstrips { margin: 0; }
 
 /* ═══ src/styles/storefront-sections.css ═══ */
 /* ============================================================

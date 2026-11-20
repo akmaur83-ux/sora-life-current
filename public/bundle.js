@@ -8236,16 +8236,16 @@ function applyCatalog(rawList, source = 'supabase') {
 function getByCategory(slug) {
   return products.filter(p => (p.categories || [p.category]).includes(slug));
 }
-function inStock$2(list) {
+function inStock$3(list) {
   return list.filter(p => p.stock > 0);
 }
 function getBestsellers(n = 12) {
-  const flagged = inStock$2(products).filter(p => p.isBestseller);
+  const flagged = inStock$3(products).filter(p => p.isBestseller);
   if (flagged.length >= n) return flagged.slice(0, n);
   const picks = [...flagged];
   const used = new Set(picks.map(p => p.id));
   const byCat = {};
-  inStock$2(products).forEach(p => {
+  inStock$3(products).forEach(p => {
     (byCat[p.category] ||= []).push(p);
   });
   for (const cat of Object.keys(byCat)) {
@@ -8255,7 +8255,7 @@ function getBestsellers(n = 12) {
       used.add(first.id);
     }
   }
-  for (const p of inStock$2(products)) {
+  for (const p of inStock$3(products)) {
     if (picks.length >= n) break;
     if (!used.has(p.id)) {
       picks.push(p);
@@ -35715,6 +35715,9 @@ function Footer() {
             to: "/hamper",
             children: "Build a hamper"
           }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+            to: "/gifts",
+            children: "Gift finder"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
             to: "/sell",
             children: "Sell on SORA"
           }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
@@ -36882,12 +36885,13 @@ const HERO_SLIDES$1 = [{
   alt: 'Biosash sea buckthorn juices, Berry Veda and Mom’s Trust care products with berries and marigolds'
 }, {
   // Home & Living for the festive season (owner, 2026-11-08): the Biosash lineup slide gave way.
+  // Diwali has passed (2026-11-20): the season's words, and the whole store, not one category.
   key: 'homeliving',
   eyebrow: ['Home & Living'],
-  title: ['Dress your home', 'for Diwali.'],
+  title: ['Dress your home', 'for the season.'],
   cta: {
-    label: 'Shop bedsheets',
-    to: '/homeliving/category/bedsheets'
+    label: 'Shop Home & Living',
+    to: '/homeliving'
   },
   image: '/img/home-hero-diwali.webp',
   phone: '/img/home-hero-diwali-800.webp',
@@ -37519,11 +37523,12 @@ function JewelleryBanner({
 
 /** The festive promo's built-in content; its copy's built-in place is the centre. */
 const FESTIVE_SECTION = Object.freeze({
+  // Its button opens the gift finder (round 13, 2026-11-20) rather than the whole wellness shop.
   hidden: false,
   title: 'Festive gifting',
   text: 'Wellness, beauty and home picks to give this season',
   cta: 'Shop gifts',
-  link: '/shop',
+  link: '/gifts',
   picture: {
     phone: '/img/home-promo-festive-800.webp',
     desktop: '/img/home-promo-festive.webp'
@@ -42373,6 +42378,646 @@ function PopularThisWeek({
   });
 }
 
+// ============================================================
+// The Wedding & Festive edit (2026-11-13: new features) — one page, /fashion/wedding,
+// putting together what the Fashion store already has for a wedding: the outfits,
+// the dupattas and shawls, the bags, the men's jackets, and gifts. Each section is
+// its categories' live, in-stock pieces (eight shown), opening the first category
+// for the rest. A section with nothing in stock is left out. Prices are the products'.
+// ============================================================
+const WEDDING_SECTIONS = Object.freeze([{
+  id: 'outfits',
+  title: 'Suits & sarees',
+  note: 'Banarasi silk and cotton suit sets, sarees',
+  slugs: ['suits-dress-materials', 'sarees']
+}, {
+  id: 'drape',
+  title: 'Dupattas, shawls & stoles',
+  note: 'Phulkari, Kullu and embroidered pieces',
+  slugs: ['dupattas-phulkari', 'womens-shawls', 'stoles']
+}, {
+  id: 'bags',
+  title: 'Clutches & handbags',
+  note: 'To carry through the functions',
+  slugs: ['clutches', 'handbags', 'pouches']
+}, {
+  id: 'him',
+  title: 'For him',
+  note: 'Leather jackets and shawls for the winter weddings',
+  slugs: ['mens-leather-jackets', 'mens-shawls']
+}, {
+  id: 'gifts',
+  title: 'Wedding gifting',
+  note: 'Gift-boxed shawls and leather sets',
+  slugs: ['shawl-gift-sets', 'leather-gift-sets']
+}]);
+const WEDDING_PER_SECTION = 8;
+const inStock$2 = r => {
+  const vs = (Array.isArray(r.variants) ? r.variants : []).filter(v => v && v.is_active !== false);
+  return vs.length ? vs.some(v => Number(v.stock) > 0) : Number(r.stock) > 0;
+};
+
+/** Rows → sections of cards; categories inside a section take turns. `sections` defaults to the wedding edit's (the Winter and Leather edits pass theirs, 2026-11-20). Pure. */
+function weddingSections(rows, per = WEDDING_PER_SECTION, sections = WEDDING_SECTIONS) {
+  const bySlug = new Map();
+  for (const r of Array.isArray(rows) ? rows : []) {
+    const slug = r?.category?.slug;
+    const image = Array.isArray(r?.images) ? r.images.find(Boolean) : null;
+    const price = cataloguePrice(r || {});
+    if (!slug || !r.slug || !image || !(price > 0) || r.is_demo || !inStock$2(r)) continue;
+    if (!bySlug.has(slug)) bySlug.set(slug, []);
+    bySlug.get(slug).push({
+      key: `fashion-${r.id}`,
+      name: String(r.name || '').trim(),
+      href: `/fashion/p/${r.slug}`,
+      image,
+      price
+    });
+  }
+  return sections.map(s => {
+    const lanes = s.slugs.map(slug => bySlug.get(slug) || []);
+    const items = [];
+    for (let i = 0; items.length < per && lanes.some(l => l.length > i); i += 1) for (const l of lanes) if (l[i] && items.length < per) items.push(l[i]);
+    return {
+      ...s,
+      href: `/fashion/c/${s.slugs[0]}`,
+      items
+    };
+  }).filter(s => s.items.length);
+}
+async function fetchWeddingRows(client = supabase) {
+  const slugs = WEDDING_SECTIONS.flatMap(s => s.slugs);
+  const {
+    data,
+    error
+  } = await client.from('catalogue_products').select('id, name, slug, mrp, sale_price, images, stock, is_demo, sort_order, category:catalogue_categories!inner(slug), variants:catalogue_variants(stock, is_active)').eq('store', 'fashion').eq('is_active', true).in('category.slug', slugs).order('sort_order', {
+    ascending: true
+  }).limit(600);
+  return error || !Array.isArray(data) ? [] : data;
+}
+function useWeddingEdit() {
+  const [rows, setRows] = reactExports.useState(null);
+  reactExports.useEffect(() => {
+    let live = true;
+    fetchWeddingRows().then(r => {
+      if (live) setRows(r);
+    }, () => {
+      if (live) setRows([]);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+  return reactExports.useMemo(() => rows ? weddingSections(rows) : null, [rows]);
+}
+
+// ============================================================
+// More Fashion edits (owner, 2026-11-20: round 12), built the way the Wedding edit is
+// (weddingEdit.js): each section is its categories' live, in-stock pieces, the
+// categories taking turns, eight shown, "View all" opening the first category. A
+// section with nothing in stock is left out; an edit with nothing at all says so.
+//   * /fashion/winter  — jackets and coats for him and her, shawls and stoles,
+//     mufflers and caps, winter gifting;
+//   * /fashion/leather — every leather maker on SORA in one place: jackets, coats,
+//     bags, wallets and small leather, belts, gift sets — with the care guide.
+// ============================================================
+const FASHION_EDITS = Object.freeze({
+  winter: {
+    path: '/fashion/winter',
+    eyebrow: 'Winter is here',
+    title: 'The Winter edit',
+    lede: 'Leather jackets and coats, shawls, stoles, mufflers and caps — everything warm in the Fashion store, in one place.',
+    meta: 'Leather jackets and coats for men and women, shawls, stoles, mufflers and caps, and winter gift sets at SORA LIFESTYLE.',
+    sections: [{
+      id: 'him',
+      title: 'Jackets & coats for him',
+      note: 'Bikers, bombers and long leather coats',
+      slugs: ['mens-leather-jackets', 'mens-leather-coats']
+    }, {
+      id: 'her',
+      title: 'Jackets & coats for her',
+      note: 'Leather jackets and coats for women',
+      slugs: ['womens-leather-jackets', 'womens-leather-coats']
+    }, {
+      id: 'shawls',
+      title: 'Shawls & stoles',
+      note: 'Kullu weaves, woven and embroidered pieces',
+      slugs: ['womens-shawls', 'mens-shawls', 'stoles']
+    }, {
+      id: 'caps',
+      title: 'Mufflers & caps',
+      note: 'For the cold mornings',
+      slugs: ['mufflers-caps']
+    }, {
+      id: 'gifts',
+      title: 'Winter gifting',
+      note: 'Shawls in gift boxes',
+      slugs: ['shawl-gift-sets']
+    }]
+  },
+  leather: {
+    path: '/fashion/leather',
+    eyebrow: 'The leather store',
+    title: 'Everything leather',
+    lede: 'Jackets, coats, bags, wallets and belts from the leather makers on SORA — Taj Leather, Diamond Leather and Leather Factory.',
+    meta: 'Leather jackets, coats, bags, wallets, belts and gift sets from Taj Leather, Diamond Leather and Leather Factory at SORA LIFESTYLE.',
+    care: true,
+    sections: [{
+      id: 'jackets',
+      title: 'Leather jackets',
+      note: 'For men and women',
+      slugs: ['mens-leather-jackets', 'womens-leather-jackets']
+    }, {
+      id: 'coats',
+      title: 'Leather coats',
+      note: 'Long and three-quarter coats',
+      slugs: ['mens-leather-coats', 'womens-leather-coats']
+    }, {
+      id: 'bags',
+      title: 'Bags',
+      note: 'Handbags, slings, laptop and travel bags, clutches',
+      slugs: ['handbags', 'sling-bags', 'laptop-travel-bags', 'clutches', 'pouches']
+    }, {
+      id: 'small',
+      title: 'Wallets & small leather',
+      note: 'Wallets, card and passport holders, keychains',
+      slugs: ['mens-wallets', 'card-holders', 'passport-holders', 'keychains']
+    }, {
+      id: 'belts',
+      title: 'Belts',
+      note: 'Leather belts',
+      slugs: ['belts']
+    }, {
+      id: 'gifts',
+      title: 'Leather gift sets',
+      note: 'Boxed and ready to give',
+      slugs: ['leather-gift-sets']
+    }]
+  }
+});
+
+/** Rows → the edit's sections (the Wedding edit's rule, with this edit's sections). Pure. */
+function editSections(rows, edit, per = 8) {
+  return weddingSections(rows, per, edit.sections);
+}
+async function fetchEditRows(edit, client = supabase) {
+  const slugs = edit.sections.flatMap(s => s.slugs);
+  const {
+    data,
+    error
+  } = await client.from('catalogue_products').select('id, name, slug, mrp, sale_price, images, stock, is_demo, sort_order, category:catalogue_categories!inner(slug), variants:catalogue_variants(stock, is_active)').eq('store', 'fashion').eq('is_active', true).in('category.slug', slugs).order('sort_order', {
+    ascending: true
+  }).limit(1200);
+  return error || !Array.isArray(data) ? [] : data;
+}
+function useFashionEdit(id) {
+  const edit = FASHION_EDITS[id];
+  const [rows, setRows] = reactExports.useState(null);
+  reactExports.useEffect(() => {
+    let live = true;
+    setRows(null);
+    if (!edit) {
+      setRows([]);
+      return undefined;
+    }
+    fetchEditRows(edit).then(r => {
+      if (live) setRows(r);
+    }, () => {
+      if (live) setRows([]);
+    });
+    return () => {
+      live = false;
+    };
+  }, [edit]);
+  return reactExports.useMemo(() => rows && edit ? editSections(rows, edit) : null, [rows, edit]);
+}
+
+// ============================================================
+// Page titles, descriptions and product data for search engines (owner,
+// 2026-11-08: more features). Every page used to carry the same title and
+// description. A page calls usePageMeta with what it shows; leaving the page puts
+// the site's own back. On a product page the Product data (name, picture, brand,
+// price in INR, in stock or not) goes in as JSON-LD, which is what Google reads for
+// price and availability in results. Nothing here invents a rating or a review.
+// ============================================================
+const SITE = 'SORA LIFESTYLE';
+const ORIGIN$1 = 'https://www.soralifestyle.in';
+const INDEX_TITLE = 'Sora Lifestyle — Modern Wellness, Beauty & Everyday Care'; // index.html's
+/** The site's own title, with the admin's site name (as App.jsx sets it on start). */
+const siteHomeTitle = () => branding?.siteName ? titleWithSiteName(INDEX_TITLE, branding.siteName) : INDEX_TITLE;
+const INDEX_DESCRIPTION = 'Sora Lifestyle — premium health, wellness, beauty and personal-care essentials for modern living.';
+let base = null;
+const metaEl = (attr, key) => {
+  let el = document.head.querySelector(`meta[${attr}="${key}"]`);
+  if (!el) {
+    el = document.createElement('meta');
+    el.setAttribute(attr, key);
+    el.dataset.pm = '1';
+    document.head.appendChild(el);
+  }
+  return el;
+};
+const absolute = u => !u ? '' : /^https?:\/\//.test(u) ? u : `${ORIGIN$1}${u.startsWith('/') ? '' : '/'}${u}`;
+/**
+ * Keep the page's title while it is open: the site name arriving after start-up
+ * (App.jsx) rewrites document.title, which would otherwise undo a page's own.
+ * Returns the function that stops holding it.
+ */
+function holdTitle(full) {
+  if (typeof document === 'undefined' || typeof MutationObserver !== 'function') return () => {};
+  document.title = full;
+  const el = document.querySelector('title');
+  if (!el) return () => {};
+  const mo = new MutationObserver(() => {
+    if (document.title !== full) document.title = full;
+  });
+  mo.observe(el, {
+    childList: true,
+    characterData: true,
+    subtree: true
+  });
+  return () => mo.disconnect();
+}
+
+/** 'Name — ₹1,199': a page title that names the price. */
+const priceTitle = (name, price) => `${name} — ₹${Math.round(Number(price) || 0).toLocaleString('en-IN')}`;
+const clip = (s, n = 155) => {
+  const t = String(s || '').replace(/\s+/g, ' ').trim();
+  return t.length > n ? `${t.slice(0, n - 1).replace(/\s+\S*$/, '')}…` : t;
+};
+
+/** The JSON-LD Product for a page; pure, so a test can call it. */
+function productLd({
+  name,
+  description,
+  image,
+  images,
+  brand,
+  sku,
+  price,
+  mrp,
+  inStock,
+  url
+}) {
+  const pics = (images && images.length ? images : [image]).filter(Boolean).slice(0, 6).map(absolute);
+  if (!name || !(price > 0)) return null;
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name,
+    ...(pics.length ? {
+      image: pics
+    } : {}),
+    ...(description ? {
+      description: clip(description, 500)
+    } : {}),
+    ...(brand ? {
+      brand: {
+        '@type': 'Brand',
+        name: brand
+      }
+    } : {}),
+    ...(sku ? {
+      sku
+    } : {}),
+    offers: {
+      '@type': 'Offer',
+      url: absolute(url),
+      priceCurrency: 'INR',
+      price: Number(price).toFixed(2),
+      availability: inStock ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+      itemCondition: 'https://schema.org/NewCondition',
+      seller: {
+        '@type': 'Organization',
+        name: SITE
+      }
+    }
+  };
+}
+
+/** Title (without the site name), description, picture, canonical path and, on a product page, its data. */
+function usePageMeta({
+  title,
+  description,
+  image,
+  path,
+  product
+} = {}, deps = []) {
+  reactExports.useEffect(() => {
+    if (typeof document === 'undefined' || !title) return undefined;
+    if (!base) base = {
+      description: INDEX_DESCRIPTION
+    };
+    const full = `${title} | ${SITE}`;
+    const desc = clip(description || base.description);
+    const url = absolute(path || window.location.pathname);
+    const release = holdTitle(full);
+    metaEl('name', 'description').setAttribute('content', desc);
+    metaEl('property', 'og:title').setAttribute('content', full);
+    metaEl('property', 'og:description').setAttribute('content', desc);
+    metaEl('property', 'og:url').setAttribute('content', url);
+    metaEl('property', 'og:type').setAttribute('content', product ? 'product' : 'website');
+    if (image) metaEl('property', 'og:image').setAttribute('content', absolute(image));
+    let canon = document.head.querySelector('link[rel="canonical"]');
+    if (!canon) {
+      canon = document.createElement('link');
+      canon.rel = 'canonical';
+      canon.dataset.pm = '1';
+      document.head.appendChild(canon);
+    }
+    canon.href = url;
+    document.head.querySelectorAll('script[type="application/ld+json"]:not([data-site])').forEach(el => el.remove()); // the share card's copy (api/share.js)
+    let ld = null;
+    const data = product ? productLd({
+      ...product,
+      url: path || window.location.pathname
+    }) : null;
+    const crumbs = Array.isArray(product?.crumbs) ? product.crumbs.filter(c => c && c.name) : [];
+    if (crumbs.length > 1) {
+      const bc = document.createElement('script');
+      bc.type = 'application/ld+json';
+      bc.dataset.pm = 'crumbs';
+      bc.textContent = JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: crumbs.map((c, i) => ({
+          '@type': 'ListItem',
+          position: i + 1,
+          name: c.name,
+          ...(c.href ? {
+            item: absolute(c.href)
+          } : {})
+        }))
+      });
+      document.head.appendChild(bc);
+    }
+    if (data) {
+      ld = document.createElement('script');
+      ld.type = 'application/ld+json';
+      ld.dataset.pm = 'product';
+      ld.textContent = JSON.stringify(data);
+      document.head.appendChild(ld);
+    }
+    return () => {
+      release();
+      document.title = siteHomeTitle();
+      metaEl('name', 'description').setAttribute('content', base.description);
+      if (ld) ld.remove();
+      document.head.querySelectorAll('link[rel="canonical"], script[type="application/ld+json"]:not([data-site])').forEach(el => el.remove()); // the page's own, or the share card's
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [title, description, image, path, ...deps]);
+}
+
+/** The site's own data for search engines: the business, and its search (Google's sitelinks search box). Pure. */
+function siteLd(phone) {
+  return [{
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: SITE,
+    url: ORIGIN$1,
+    logo: `${ORIGIN$1}/assets/favicon-192.png`,
+    ...(phone ? {
+      contactPoint: {
+        '@type': 'ContactPoint',
+        telephone: phone,
+        contactType: 'customer service',
+        areaServed: 'IN',
+        availableLanguage: ['en', 'hi']
+      }
+    } : {})
+  }, {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: SITE,
+    url: ORIGIN$1,
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: {
+        '@type': 'EntryPoint',
+        urlTemplate: `${ORIGIN$1}/shop?q={search_term_string}`
+      },
+      'query-input': 'required name=search_term_string'
+    }
+  }];
+}
+
+/** Puts siteLd in the head once (kept across pages). */
+function useSiteLd(phone) {
+  reactExports.useEffect(() => {
+    if (typeof document === 'undefined') return;
+    let el = document.head.querySelector('script[data-site]');
+    if (!el) {
+      el = document.createElement('script');
+      el.type = 'application/ld+json';
+      el.dataset.site = '1';
+      document.head.appendChild(el);
+    }
+    el.textContent = JSON.stringify(siteLd(phone));
+  }, [phone]);
+}
+
+// ============================================================
+// Skeleton loading (2026-11-13 redesign): while a product list loads, shimmering
+// card shapes in its place instead of a line of text, so the page holds its shape
+// and feels quicker. The words are still there for screen readers (role="status").
+// Styles: sora-ds.css (.sora-skel*). Nothing moves under prefers-reduced-motion.
+// ============================================================
+function SkeletonGrid({
+  count = 8,
+  label = 'Loading…',
+  className = ''
+}) {
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    role: "status",
+    className: className,
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+      className: "sora-sr",
+      children: label
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+      className: "sora-skel-grid",
+      "aria-hidden": "true",
+      children: Array.from({
+        length: count
+      }, (_, i) => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+        className: "sora-skel-card",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "sora-skel sora-skel--img"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "sora-skel sora-skel--line"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "sora-skel sora-skel--short"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          className: "sora-skel sora-skel--price"
+        })]
+      }, i))
+    })]
+  });
+}
+
+function FashionEdit({
+  id
+}) {
+  const edit = FASHION_EDITS[id];
+  const sections = useFashionEdit(id);
+  usePageMeta({
+    title: edit ? edit.title : 'Fashion',
+    description: edit?.meta,
+    path: edit?.path
+  });
+  if (!edit) return null;
+  return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+    className: "hx hx-wed",
+    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "hx-wrap",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
+        className: "hx-offers__crumbs",
+        "aria-label": "Breadcrumb",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+          to: "/fashion",
+          children: "Fashion"
+        }), " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "chevronRight",
+          size: 12
+        }), " ", /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          children: edit.title
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("header", {
+        className: "hx-wed__hero",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "hx-wed__eyebrow",
+          children: edit.eyebrow
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+          className: "hx-offers__h",
+          children: edit.title
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "hx-offers__lede",
+          children: edit.lede
+        }), edit.care && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "hx-offers__lede",
+          children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+            to: "/guides/leather-care",
+            className: "sora-origin__care",
+            children: ["How to care for leather ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+              name: "arrowRight",
+              size: 13
+            })]
+          })
+        }), sections && sections.length > 1 && /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+          className: "hx-wed__jump",
+          children: sections.map(s => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+            children: /*#__PURE__*/jsxRuntimeExports.jsx("a", {
+              href: `#${id}-${s.id}`,
+              children: s.title
+            })
+          }, s.id))
+        })]
+      }), sections === null ? /*#__PURE__*/jsxRuntimeExports.jsx(SkeletonGrid, {
+        label: "Loading the edit\u2026"
+      }) : sections.length === 0 ? /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+        className: "hx-offers__empty",
+        children: ["The edit is being put together. ", /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+          to: "/fashion",
+          children: "Browse Fashion"
+        })]
+      }) : sections.map(s => /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+        className: "hx-wed__sec",
+        id: `${id}-${s.id}`,
+        "aria-labelledby": `${id}-${s.id}-h`,
+        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          className: "hx-wed__head",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+              id: `${id}-${s.id}-h`,
+              children: s.title
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+              children: s.note
+            })]
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+            to: s.href,
+            className: "hx-wed__all",
+            children: ["View all ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+              name: "arrowRight",
+              size: 15
+            })]
+          })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+          className: "hx-offers__grid",
+          children: s.items.map((c, i) => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+            children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+              to: c.href,
+              className: "hx-deals__card",
+              children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+                className: "hx-deals__img",
+                children: c.image && /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+                  src: c.image,
+                  alt: "",
+                  width: "300",
+                  height: "300",
+                  loading: i < 4 ? 'eager' : 'lazy',
+                  decoding: "async"
+                })
+              }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+                className: "hx-deals__name",
+                children: c.name
+              }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+                className: "hx-deals__price",
+                children: /*#__PURE__*/jsxRuntimeExports.jsx("b", {
+                  children: money(c.price)
+                })
+              })]
+            })
+          }, c.key))
+        })]
+      }, s.id))]
+    })
+  });
+}
+
+/** The Fashion home's ways in to the edits: winter and leather, side by side. */
+function EditStrips() {
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: "sora-editstrips fs-sec",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+      to: "/fashion/winter",
+      className: "hx-wedstrip",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("em", {
+          children: "Winter is here"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("b", {
+          children: "The Winter edit"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("i", {
+          children: "Leather jackets and coats, shawls, stoles, mufflers and caps"
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+        className: "hx-wedstrip__go",
+        children: ["Explore ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "arrowRight",
+          size: 16
+        })]
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+      to: "/fashion/leather",
+      className: "hx-wedstrip",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("em", {
+          children: "The leather store"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("b", {
+          children: "Everything leather"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("i", {
+          children: "Jackets, coats, bags, wallets and belts from our leather makers"
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+        className: "hx-wedstrip__go",
+        children: ["Explore ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "arrowRight",
+          size: 16
+        })]
+      })]
+    })]
+  });
+}
+
 const COLOURS = Object.freeze([['Black', '#1B1B1B'], ['Brown', '#6B4226'], ['Beige', '#D8C3A5'], ['White', '#F7F5F0'], ['Red', '#B3261E'], ['Maroon', '#6D1A2A'], ['Pink', '#E58FB0'], ['Green', '#2F6B3F'], ['Blue', '#2F5DA8'], ['Grey', '#8A8D91'], ['Mustard', '#D4A12A'], ['Peach', '#F2B79A']]);
 function ShopByColour() {
   return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
@@ -44402,8 +45047,8 @@ function OfferBanner({
 
 const GIFT_SECTION = Object.freeze({
   hidden: false,
-  eyebrow: 'Festive gifting',
-  title: 'The Diwali gift shop'
+  eyebrow: 'Gifting season',
+  title: 'The gift shop'
 });
 const GIFT_TILES = Object.freeze([{
   store: 'fashion',
@@ -44484,10 +45129,20 @@ function GiftShop() {
       children: [s.eyebrow && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
         className: "hx-gifts__eyebrow",
         children: s.eyebrow
-      }), /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
-        className: "hx-gifts__h",
-        id: "hx-gifts-h",
-        children: s.title
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "hx-stores__head",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+          className: "hx-gifts__h",
+          id: "hx-gifts-h",
+          children: s.title
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: "/gifts",
+          className: "hx-more",
+          children: ["Find a gift by budget ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "arrowRight",
+            size: 15
+          })]
+        })]
       }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
         className: "hx-gifts__grid",
         children: tiles.map(t => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
@@ -48521,7 +49176,14 @@ function Home() {
       title: "Deals worth grabbing"
     }), /*#__PURE__*/jsxRuntimeExports.jsx(OfferBanner, {
       wrap: "hx-wrap"
-    }), /*#__PURE__*/jsxRuntimeExports.jsx(NewArrivals, {}), /*#__PURE__*/jsxRuntimeExports.jsx(PopularThisWeek, {}), /*#__PURE__*/jsxRuntimeExports.jsx(FestivePromo, {}), /*#__PURE__*/jsxRuntimeExports.jsx(BrandCarousel, {}), /*#__PURE__*/jsxRuntimeExports.jsx(TajLeatherPosters, {}), /*#__PURE__*/jsxRuntimeExports.jsx(AnsariPosters, {}), /*#__PURE__*/jsxRuntimeExports.jsx(HomeOffers, {
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(NewArrivals, {}), /*#__PURE__*/jsxRuntimeExports.jsx(PopularThisWeek, {}), /*#__PURE__*/jsxRuntimeExports.jsx(FestivePromo, {}), /*#__PURE__*/jsxRuntimeExports.jsx("section", {
+      className: "hx sora-homeedits",
+      "aria-label": "Edits",
+      children: /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+        className: "hx-wrap",
+        children: /*#__PURE__*/jsxRuntimeExports.jsx(EditStrips, {})
+      })
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(BrandCarousel, {}), /*#__PURE__*/jsxRuntimeExports.jsx(TajLeatherPosters, {}), /*#__PURE__*/jsxRuntimeExports.jsx(AnsariPosters, {}), /*#__PURE__*/jsxRuntimeExports.jsx(HomeOffers, {
       appearance: visuals.offers
     }), /*#__PURE__*/jsxRuntimeExports.jsx(HomeGroup, {
       eyebrow: "Shop by store",
@@ -51342,231 +52004,6 @@ function deliveryWindow(now = new Date(), min = DELIVERY_MIN_DAYS, max = DELIVER
     to,
     label: `${fmt(from)} – ${fmt(to)}`
   };
-}
-
-// ============================================================
-// Page titles, descriptions and product data for search engines (owner,
-// 2026-11-08: more features). Every page used to carry the same title and
-// description. A page calls usePageMeta with what it shows; leaving the page puts
-// the site's own back. On a product page the Product data (name, picture, brand,
-// price in INR, in stock or not) goes in as JSON-LD, which is what Google reads for
-// price and availability in results. Nothing here invents a rating or a review.
-// ============================================================
-const SITE = 'SORA LIFESTYLE';
-const ORIGIN$1 = 'https://www.soralifestyle.in';
-const INDEX_TITLE = 'Sora Lifestyle — Modern Wellness, Beauty & Everyday Care'; // index.html's
-/** The site's own title, with the admin's site name (as App.jsx sets it on start). */
-const siteHomeTitle = () => branding?.siteName ? titleWithSiteName(INDEX_TITLE, branding.siteName) : INDEX_TITLE;
-const INDEX_DESCRIPTION = 'Sora Lifestyle — premium health, wellness, beauty and personal-care essentials for modern living.';
-let base = null;
-const metaEl = (attr, key) => {
-  let el = document.head.querySelector(`meta[${attr}="${key}"]`);
-  if (!el) {
-    el = document.createElement('meta');
-    el.setAttribute(attr, key);
-    el.dataset.pm = '1';
-    document.head.appendChild(el);
-  }
-  return el;
-};
-const absolute = u => !u ? '' : /^https?:\/\//.test(u) ? u : `${ORIGIN$1}${u.startsWith('/') ? '' : '/'}${u}`;
-/**
- * Keep the page's title while it is open: the site name arriving after start-up
- * (App.jsx) rewrites document.title, which would otherwise undo a page's own.
- * Returns the function that stops holding it.
- */
-function holdTitle(full) {
-  if (typeof document === 'undefined' || typeof MutationObserver !== 'function') return () => {};
-  document.title = full;
-  const el = document.querySelector('title');
-  if (!el) return () => {};
-  const mo = new MutationObserver(() => {
-    if (document.title !== full) document.title = full;
-  });
-  mo.observe(el, {
-    childList: true,
-    characterData: true,
-    subtree: true
-  });
-  return () => mo.disconnect();
-}
-
-/** 'Name — ₹1,199': a page title that names the price. */
-const priceTitle = (name, price) => `${name} — ₹${Math.round(Number(price) || 0).toLocaleString('en-IN')}`;
-const clip = (s, n = 155) => {
-  const t = String(s || '').replace(/\s+/g, ' ').trim();
-  return t.length > n ? `${t.slice(0, n - 1).replace(/\s+\S*$/, '')}…` : t;
-};
-
-/** The JSON-LD Product for a page; pure, so a test can call it. */
-function productLd({
-  name,
-  description,
-  image,
-  images,
-  brand,
-  sku,
-  price,
-  mrp,
-  inStock,
-  url
-}) {
-  const pics = (images && images.length ? images : [image]).filter(Boolean).slice(0, 6).map(absolute);
-  if (!name || !(price > 0)) return null;
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'Product',
-    name,
-    ...(pics.length ? {
-      image: pics
-    } : {}),
-    ...(description ? {
-      description: clip(description, 500)
-    } : {}),
-    ...(brand ? {
-      brand: {
-        '@type': 'Brand',
-        name: brand
-      }
-    } : {}),
-    ...(sku ? {
-      sku
-    } : {}),
-    offers: {
-      '@type': 'Offer',
-      url: absolute(url),
-      priceCurrency: 'INR',
-      price: Number(price).toFixed(2),
-      availability: inStock ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
-      itemCondition: 'https://schema.org/NewCondition',
-      seller: {
-        '@type': 'Organization',
-        name: SITE
-      }
-    }
-  };
-}
-
-/** Title (without the site name), description, picture, canonical path and, on a product page, its data. */
-function usePageMeta({
-  title,
-  description,
-  image,
-  path,
-  product
-} = {}, deps = []) {
-  reactExports.useEffect(() => {
-    if (typeof document === 'undefined' || !title) return undefined;
-    if (!base) base = {
-      description: INDEX_DESCRIPTION
-    };
-    const full = `${title} | ${SITE}`;
-    const desc = clip(description || base.description);
-    const url = absolute(path || window.location.pathname);
-    const release = holdTitle(full);
-    metaEl('name', 'description').setAttribute('content', desc);
-    metaEl('property', 'og:title').setAttribute('content', full);
-    metaEl('property', 'og:description').setAttribute('content', desc);
-    metaEl('property', 'og:url').setAttribute('content', url);
-    metaEl('property', 'og:type').setAttribute('content', product ? 'product' : 'website');
-    if (image) metaEl('property', 'og:image').setAttribute('content', absolute(image));
-    let canon = document.head.querySelector('link[rel="canonical"]');
-    if (!canon) {
-      canon = document.createElement('link');
-      canon.rel = 'canonical';
-      canon.dataset.pm = '1';
-      document.head.appendChild(canon);
-    }
-    canon.href = url;
-    document.head.querySelectorAll('script[type="application/ld+json"]:not([data-site])').forEach(el => el.remove()); // the share card's copy (api/share.js)
-    let ld = null;
-    const data = product ? productLd({
-      ...product,
-      url: path || window.location.pathname
-    }) : null;
-    const crumbs = Array.isArray(product?.crumbs) ? product.crumbs.filter(c => c && c.name) : [];
-    if (crumbs.length > 1) {
-      const bc = document.createElement('script');
-      bc.type = 'application/ld+json';
-      bc.dataset.pm = 'crumbs';
-      bc.textContent = JSON.stringify({
-        '@context': 'https://schema.org',
-        '@type': 'BreadcrumbList',
-        itemListElement: crumbs.map((c, i) => ({
-          '@type': 'ListItem',
-          position: i + 1,
-          name: c.name,
-          ...(c.href ? {
-            item: absolute(c.href)
-          } : {})
-        }))
-      });
-      document.head.appendChild(bc);
-    }
-    if (data) {
-      ld = document.createElement('script');
-      ld.type = 'application/ld+json';
-      ld.dataset.pm = 'product';
-      ld.textContent = JSON.stringify(data);
-      document.head.appendChild(ld);
-    }
-    return () => {
-      release();
-      document.title = siteHomeTitle();
-      metaEl('name', 'description').setAttribute('content', base.description);
-      if (ld) ld.remove();
-      document.head.querySelectorAll('link[rel="canonical"], script[type="application/ld+json"]:not([data-site])').forEach(el => el.remove()); // the page's own, or the share card's
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [title, description, image, path, ...deps]);
-}
-
-/** The site's own data for search engines: the business, and its search (Google's sitelinks search box). Pure. */
-function siteLd(phone) {
-  return [{
-    '@context': 'https://schema.org',
-    '@type': 'Organization',
-    name: SITE,
-    url: ORIGIN$1,
-    logo: `${ORIGIN$1}/assets/favicon-192.png`,
-    ...(phone ? {
-      contactPoint: {
-        '@type': 'ContactPoint',
-        telephone: phone,
-        contactType: 'customer service',
-        areaServed: 'IN',
-        availableLanguage: ['en', 'hi']
-      }
-    } : {})
-  }, {
-    '@context': 'https://schema.org',
-    '@type': 'WebSite',
-    name: SITE,
-    url: ORIGIN$1,
-    potentialAction: {
-      '@type': 'SearchAction',
-      target: {
-        '@type': 'EntryPoint',
-        urlTemplate: `${ORIGIN$1}/shop?q={search_term_string}`
-      },
-      'query-input': 'required name=search_term_string'
-    }
-  }];
-}
-
-/** Puts siteLd in the head once (kept across pages). */
-function useSiteLd(phone) {
-  reactExports.useEffect(() => {
-    if (typeof document === 'undefined') return;
-    let el = document.head.querySelector('script[data-site]');
-    if (!el) {
-      el = document.createElement('script');
-      el.type = 'application/ld+json';
-      el.dataset.site = '1';
-      document.head.appendChild(el);
-    }
-    el.textContent = JSON.stringify(siteLd(phone));
-  }, [phone]);
 }
 
 // ============================================================
@@ -59452,44 +59889,6 @@ function LoadMore({
   });
 }
 
-// ============================================================
-// Skeleton loading (2026-11-13 redesign): while a product list loads, shimmering
-// card shapes in its place instead of a line of text, so the page holds its shape
-// and feels quicker. The words are still there for screen readers (role="status").
-// Styles: sora-ds.css (.sora-skel*). Nothing moves under prefers-reduced-motion.
-// ============================================================
-function SkeletonGrid({
-  count = 8,
-  label = 'Loading…',
-  className = ''
-}) {
-  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-    role: "status",
-    className: className,
-    children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-      className: "sora-sr",
-      children: label
-    }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
-      className: "sora-skel-grid",
-      "aria-hidden": "true",
-      children: Array.from({
-        length: count
-      }, (_, i) => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
-        className: "sora-skel-card",
-        children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-          className: "sora-skel sora-skel--img"
-        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-          className: "sora-skel sora-skel--line"
-        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-          className: "sora-skel sora-skel--short"
-        }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-          className: "sora-skel sora-skel--price"
-        })]
-      }, i))
-    })]
-  });
-}
-
 const STORES$1 = [{
   id: 'all',
   label: 'All'
@@ -59537,7 +59936,7 @@ const wellnessDeals = list => (Array.isArray(list) ? list : []).filter(p => p &&
 }));
 
 /** Budget chips (2026-11-13): deals at or under a price; '' is every price. */
-const BUDGETS$1 = [{
+const BUDGETS$2 = [{
   id: '',
   label: 'Any price'
 }, {
@@ -59704,7 +60103,7 @@ function Offers() {
     };
   }, []);
   const all = reactExports.useMemo(() => sortDeals([...wellnessDeals(products), ...(cat || [])]), [cat]);
-  const under = BUDGETS$1.some(b => b.id && b.id === params.get('under')) ? params.get('under') : '';
+  const under = BUDGETS$2.some(b => b.id && b.id === params.get('under')) ? params.get('under') : '';
   const shownDeals = underBudget(store === 'all' ? all : all.filter(d => d.store === store), under);
   const paging = useShowMore(shownDeals.length, `${store}|${under}`);
   usePageMeta({
@@ -59776,7 +60175,7 @@ function Offers() {
         className: "hx-offers__budget",
         role: "group",
         "aria-label": "Budget",
-        children: BUDGETS$1.map(b => /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        children: BUDGETS$2.map(b => /*#__PURE__*/jsxRuntimeExports.jsx("button", {
           type: "button",
           "aria-pressed": under === b.id,
           className: `hx-offers__chip${under === b.id ? ' is-on' : ''}`,
@@ -60424,99 +60823,6 @@ function NewArrivalsPage() {
   });
 }
 
-// ============================================================
-// The Wedding & Festive edit (2026-11-13: new features) — one page, /fashion/wedding,
-// putting together what the Fashion store already has for a wedding: the outfits,
-// the dupattas and shawls, the bags, the men's jackets, and gifts. Each section is
-// its categories' live, in-stock pieces (eight shown), opening the first category
-// for the rest. A section with nothing in stock is left out. Prices are the products'.
-// ============================================================
-const WEDDING_SECTIONS = Object.freeze([{
-  id: 'outfits',
-  title: 'Suits & sarees',
-  note: 'Banarasi silk and cotton suit sets, sarees',
-  slugs: ['suits-dress-materials', 'sarees']
-}, {
-  id: 'drape',
-  title: 'Dupattas, shawls & stoles',
-  note: 'Phulkari, Kullu and embroidered pieces',
-  slugs: ['dupattas-phulkari', 'womens-shawls', 'stoles']
-}, {
-  id: 'bags',
-  title: 'Clutches & handbags',
-  note: 'To carry through the functions',
-  slugs: ['clutches', 'handbags', 'pouches']
-}, {
-  id: 'him',
-  title: 'For him',
-  note: 'Leather jackets and shawls for the winter weddings',
-  slugs: ['mens-leather-jackets', 'mens-shawls']
-}, {
-  id: 'gifts',
-  title: 'Wedding gifting',
-  note: 'Gift-boxed shawls and leather sets',
-  slugs: ['shawl-gift-sets', 'leather-gift-sets']
-}]);
-const WEDDING_PER_SECTION = 8;
-const inStock$1 = r => {
-  const vs = (Array.isArray(r.variants) ? r.variants : []).filter(v => v && v.is_active !== false);
-  return vs.length ? vs.some(v => Number(v.stock) > 0) : Number(r.stock) > 0;
-};
-
-/** Rows → sections of cards; categories inside a section take turns. `sections` defaults to the wedding edit's (the Winter and Leather edits pass theirs, 2026-11-20). Pure. */
-function weddingSections(rows, per = WEDDING_PER_SECTION, sections = WEDDING_SECTIONS) {
-  const bySlug = new Map();
-  for (const r of Array.isArray(rows) ? rows : []) {
-    const slug = r?.category?.slug;
-    const image = Array.isArray(r?.images) ? r.images.find(Boolean) : null;
-    const price = cataloguePrice(r || {});
-    if (!slug || !r.slug || !image || !(price > 0) || r.is_demo || !inStock$1(r)) continue;
-    if (!bySlug.has(slug)) bySlug.set(slug, []);
-    bySlug.get(slug).push({
-      key: `fashion-${r.id}`,
-      name: String(r.name || '').trim(),
-      href: `/fashion/p/${r.slug}`,
-      image,
-      price
-    });
-  }
-  return sections.map(s => {
-    const lanes = s.slugs.map(slug => bySlug.get(slug) || []);
-    const items = [];
-    for (let i = 0; items.length < per && lanes.some(l => l.length > i); i += 1) for (const l of lanes) if (l[i] && items.length < per) items.push(l[i]);
-    return {
-      ...s,
-      href: `/fashion/c/${s.slugs[0]}`,
-      items
-    };
-  }).filter(s => s.items.length);
-}
-async function fetchWeddingRows(client = supabase) {
-  const slugs = WEDDING_SECTIONS.flatMap(s => s.slugs);
-  const {
-    data,
-    error
-  } = await client.from('catalogue_products').select('id, name, slug, mrp, sale_price, images, stock, is_demo, sort_order, category:catalogue_categories!inner(slug), variants:catalogue_variants(stock, is_active)').eq('store', 'fashion').eq('is_active', true).in('category.slug', slugs).order('sort_order', {
-    ascending: true
-  }).limit(600);
-  return error || !Array.isArray(data) ? [] : data;
-}
-function useWeddingEdit() {
-  const [rows, setRows] = reactExports.useState(null);
-  reactExports.useEffect(() => {
-    let live = true;
-    fetchWeddingRows().then(r => {
-      if (live) setRows(r);
-    }, () => {
-      if (live) setRows([]);
-    });
-    return () => {
-      live = false;
-    };
-  }, []);
-  return reactExports.useMemo(() => rows ? weddingSections(rows) : null, [rows]);
-}
-
 function WeddingEdit() {
   const sections = useWeddingEdit();
   usePageMeta({
@@ -60640,290 +60946,6 @@ function WeddingStrip() {
       children: ["Explore ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
         name: "arrowRight",
         size: 16
-      })]
-    })]
-  });
-}
-
-// ============================================================
-// More Fashion edits (owner, 2026-11-20: round 12), built the way the Wedding edit is
-// (weddingEdit.js): each section is its categories' live, in-stock pieces, the
-// categories taking turns, eight shown, "View all" opening the first category. A
-// section with nothing in stock is left out; an edit with nothing at all says so.
-//   * /fashion/winter  — jackets and coats for him and her, shawls and stoles,
-//     mufflers and caps, winter gifting;
-//   * /fashion/leather — every leather maker on SORA in one place: jackets, coats,
-//     bags, wallets and small leather, belts, gift sets — with the care guide.
-// ============================================================
-const FASHION_EDITS = Object.freeze({
-  winter: {
-    path: '/fashion/winter',
-    eyebrow: 'Winter is here',
-    title: 'The Winter edit',
-    lede: 'Leather jackets and coats, shawls, stoles, mufflers and caps — everything warm in the Fashion store, in one place.',
-    meta: 'Leather jackets and coats for men and women, shawls, stoles, mufflers and caps, and winter gift sets at SORA LIFESTYLE.',
-    sections: [{
-      id: 'him',
-      title: 'Jackets & coats for him',
-      note: 'Bikers, bombers and long leather coats',
-      slugs: ['mens-leather-jackets', 'mens-leather-coats']
-    }, {
-      id: 'her',
-      title: 'Jackets & coats for her',
-      note: 'Leather jackets and coats for women',
-      slugs: ['womens-leather-jackets', 'womens-leather-coats']
-    }, {
-      id: 'shawls',
-      title: 'Shawls & stoles',
-      note: 'Kullu weaves, woven and embroidered pieces',
-      slugs: ['womens-shawls', 'mens-shawls', 'stoles']
-    }, {
-      id: 'caps',
-      title: 'Mufflers & caps',
-      note: 'For the cold mornings',
-      slugs: ['mufflers-caps']
-    }, {
-      id: 'gifts',
-      title: 'Winter gifting',
-      note: 'Shawls in gift boxes',
-      slugs: ['shawl-gift-sets']
-    }]
-  },
-  leather: {
-    path: '/fashion/leather',
-    eyebrow: 'The leather store',
-    title: 'Everything leather',
-    lede: 'Jackets, coats, bags, wallets and belts from the leather makers on SORA — Taj Leather, Diamond Leather and Leather Factory.',
-    meta: 'Leather jackets, coats, bags, wallets, belts and gift sets from Taj Leather, Diamond Leather and Leather Factory at SORA LIFESTYLE.',
-    care: true,
-    sections: [{
-      id: 'jackets',
-      title: 'Leather jackets',
-      note: 'For men and women',
-      slugs: ['mens-leather-jackets', 'womens-leather-jackets']
-    }, {
-      id: 'coats',
-      title: 'Leather coats',
-      note: 'Long and three-quarter coats',
-      slugs: ['mens-leather-coats', 'womens-leather-coats']
-    }, {
-      id: 'bags',
-      title: 'Bags',
-      note: 'Handbags, slings, laptop and travel bags, clutches',
-      slugs: ['handbags', 'sling-bags', 'laptop-travel-bags', 'clutches', 'pouches']
-    }, {
-      id: 'small',
-      title: 'Wallets & small leather',
-      note: 'Wallets, card and passport holders, keychains',
-      slugs: ['mens-wallets', 'card-holders', 'passport-holders', 'keychains']
-    }, {
-      id: 'belts',
-      title: 'Belts',
-      note: 'Leather belts',
-      slugs: ['belts']
-    }, {
-      id: 'gifts',
-      title: 'Leather gift sets',
-      note: 'Boxed and ready to give',
-      slugs: ['leather-gift-sets']
-    }]
-  }
-});
-
-/** Rows → the edit's sections (the Wedding edit's rule, with this edit's sections). Pure. */
-function editSections(rows, edit, per = 8) {
-  return weddingSections(rows, per, edit.sections);
-}
-async function fetchEditRows(edit, client = supabase) {
-  const slugs = edit.sections.flatMap(s => s.slugs);
-  const {
-    data,
-    error
-  } = await client.from('catalogue_products').select('id, name, slug, mrp, sale_price, images, stock, is_demo, sort_order, category:catalogue_categories!inner(slug), variants:catalogue_variants(stock, is_active)').eq('store', 'fashion').eq('is_active', true).in('category.slug', slugs).order('sort_order', {
-    ascending: true
-  }).limit(1200);
-  return error || !Array.isArray(data) ? [] : data;
-}
-function useFashionEdit(id) {
-  const edit = FASHION_EDITS[id];
-  const [rows, setRows] = reactExports.useState(null);
-  reactExports.useEffect(() => {
-    let live = true;
-    setRows(null);
-    if (!edit) {
-      setRows([]);
-      return undefined;
-    }
-    fetchEditRows(edit).then(r => {
-      if (live) setRows(r);
-    }, () => {
-      if (live) setRows([]);
-    });
-    return () => {
-      live = false;
-    };
-  }, [edit]);
-  return reactExports.useMemo(() => rows && edit ? editSections(rows, edit) : null, [rows, edit]);
-}
-
-function FashionEdit({
-  id
-}) {
-  const edit = FASHION_EDITS[id];
-  const sections = useFashionEdit(id);
-  usePageMeta({
-    title: edit ? edit.title : 'Fashion',
-    description: edit?.meta,
-    path: edit?.path
-  });
-  if (!edit) return null;
-  return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
-    className: "hx hx-wed",
-    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-      className: "hx-wrap",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
-        className: "hx-offers__crumbs",
-        "aria-label": "Breadcrumb",
-        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-          to: "/fashion",
-          children: "Fashion"
-        }), " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-          name: "chevronRight",
-          size: 12
-        }), " ", /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-          children: edit.title
-        })]
-      }), /*#__PURE__*/jsxRuntimeExports.jsxs("header", {
-        className: "hx-wed__hero",
-        children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
-          className: "hx-wed__eyebrow",
-          children: edit.eyebrow
-        }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
-          className: "hx-offers__h",
-          children: edit.title
-        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-          className: "hx-offers__lede",
-          children: edit.lede
-        }), edit.care && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-          className: "hx-offers__lede",
-          children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-            to: "/guides/leather-care",
-            className: "sora-origin__care",
-            children: ["How to care for leather ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-              name: "arrowRight",
-              size: 13
-            })]
-          })
-        }), sections && sections.length > 1 && /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
-          className: "hx-wed__jump",
-          children: sections.map(s => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
-            children: /*#__PURE__*/jsxRuntimeExports.jsx("a", {
-              href: `#${id}-${s.id}`,
-              children: s.title
-            })
-          }, s.id))
-        })]
-      }), sections === null ? /*#__PURE__*/jsxRuntimeExports.jsx(SkeletonGrid, {
-        label: "Loading the edit\u2026"
-      }) : sections.length === 0 ? /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
-        className: "hx-offers__empty",
-        children: ["The edit is being put together. ", /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-          to: "/fashion",
-          children: "Browse Fashion"
-        })]
-      }) : sections.map(s => /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
-        className: "hx-wed__sec",
-        id: `${id}-${s.id}`,
-        "aria-labelledby": `${id}-${s.id}-h`,
-        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-          className: "hx-wed__head",
-          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-            children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
-              id: `${id}-${s.id}-h`,
-              children: s.title
-            }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
-              children: s.note
-            })]
-          }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-            to: s.href,
-            className: "hx-wed__all",
-            children: ["View all ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-              name: "arrowRight",
-              size: 15
-            })]
-          })]
-        }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
-          className: "hx-offers__grid",
-          children: s.items.map((c, i) => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
-            children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-              to: c.href,
-              className: "hx-deals__card",
-              children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-                className: "hx-deals__img",
-                children: c.image && /*#__PURE__*/jsxRuntimeExports.jsx("img", {
-                  src: c.image,
-                  alt: "",
-                  width: "300",
-                  height: "300",
-                  loading: i < 4 ? 'eager' : 'lazy',
-                  decoding: "async"
-                })
-              }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-                className: "hx-deals__name",
-                children: c.name
-              }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-                className: "hx-deals__price",
-                children: /*#__PURE__*/jsxRuntimeExports.jsx("b", {
-                  children: money(c.price)
-                })
-              })]
-            })
-          }, c.key))
-        })]
-      }, s.id))]
-    })
-  });
-}
-
-/** The Fashion home's ways in to the edits: winter and leather, side by side. */
-function EditStrips() {
-  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-    className: "sora-editstrips fs-sec",
-    children: [/*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-      to: "/fashion/winter",
-      className: "hx-wedstrip",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-        children: [/*#__PURE__*/jsxRuntimeExports.jsx("em", {
-          children: "Winter is here"
-        }), /*#__PURE__*/jsxRuntimeExports.jsx("b", {
-          children: "The Winter edit"
-        }), /*#__PURE__*/jsxRuntimeExports.jsx("i", {
-          children: "Leather jackets and coats, shawls, stoles, mufflers and caps"
-        })]
-      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-        className: "hx-wedstrip__go",
-        children: ["Explore ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-          name: "arrowRight",
-          size: 16
-        })]
-      })]
-    }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-      to: "/fashion/leather",
-      className: "hx-wedstrip",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-        children: [/*#__PURE__*/jsxRuntimeExports.jsx("em", {
-          children: "The leather store"
-        }), /*#__PURE__*/jsxRuntimeExports.jsx("b", {
-          children: "Everything leather"
-        }), /*#__PURE__*/jsxRuntimeExports.jsx("i", {
-          children: "Jackets, coats, bags, wallets and belts from our leather makers"
-        })]
-      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-        className: "hx-wedstrip__go",
-        children: ["Explore ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-          name: "arrowRight",
-          size: 16
-        })]
       })]
     })]
   });
@@ -61284,7 +61306,7 @@ const BRAND_SORTS = [{
   id: 'high',
   label: 'Price: high to low'
 }];
-const inStock = r => {
+const inStock$1 = r => {
   const vs = (Array.isArray(r.variants) ? r.variants : []).filter(v => v && v.is_active !== false);
   return vs.length ? vs.some(v => Number(v.stock) > 0) : Number(r.stock) > 0;
 };
@@ -61295,7 +61317,7 @@ function catalogueBrandCards(rows) {
   return (Array.isArray(rows) ? rows : []).flatMap((r, i) => {
     const image = Array.isArray(r?.images) ? r.images.find(Boolean) : null;
     const price = cataloguePrice(r || {});
-    if (!r?.slug || !image || !(price > 0) || r.is_demo || !inStock(r) || r.store !== 'fashion' && r.store !== 'homeliving') return [];
+    if (!r?.slug || !image || !(price > 0) || r.is_demo || !inStock$1(r) || r.store !== 'fashion' && r.store !== 'homeliving') return [];
     const mrp = Number(r.mrp) || 0;
     return [{
       key: `${r.store}-${r.id}`,
@@ -64494,6 +64516,269 @@ function LeatherCare() {
             size: 15
           })]
         })
+      })]
+    })
+  });
+}
+
+// ============================================================
+// Gift finder (owner, 2026-11-20: more features, round 13) — /gifts. Who it is for
+// × what to spend, over what is live and in stock today:
+//   * for her / for him — Fashion categories that make gifts;
+//   * for the home — Home & Living;
+//   * wellness — the wellness store's own products.
+// The budget is the price the shopper pays. Cheapest first within a budget; nothing
+// is ranked as "best". A recipient or budget with nothing in it says so.
+// ============================================================
+const RECIPIENTS = Object.freeze([{
+  id: 'her',
+  label: 'For her',
+  store: 'fashion',
+  slugs: ['womens-shawls', 'stoles', 'dupattas-phulkari', 'handbags', 'clutches', 'sling-bags', 'pouches', 'shawl-gift-sets', 'womens-leather-jackets']
+}, {
+  id: 'him',
+  label: 'For him',
+  store: 'fashion',
+  slugs: ['mens-wallets', 'belts', 'card-holders', 'passport-holders', 'mens-shawls', 'mufflers-caps', 'leather-gift-sets', 'laptop-travel-bags', 'mens-leather-jackets']
+}, {
+  id: 'home',
+  label: 'For the home',
+  store: 'homeliving',
+  slugs: ['table-covers', 'rugs-mats', 'cushion-covers', 'bedsheets', 'quilts-blankets', 'towels']
+}, {
+  id: 'wellness',
+  label: 'Wellness',
+  store: 'wellness',
+  slugs: []
+}]);
+const BUDGETS$1 = Object.freeze([{
+  id: 'u1000',
+  label: 'Under ₹1,000',
+  min: 0,
+  max: 999
+}, {
+  id: '1000-2500',
+  label: '₹1,000–2,500',
+  min: 1000,
+  max: 2500
+}, {
+  id: '2500-5000',
+  label: '₹2,500–5,000',
+  min: 2501,
+  max: 5000
+}, {
+  id: '5000',
+  label: 'Above ₹5,000',
+  min: 5001,
+  max: Infinity
+}]);
+const GIFT_LIMIT = 24;
+const inStock = r => {
+  const vs = (Array.isArray(r.variants) ? r.variants : []).filter(v => v && v.is_active !== false);
+  return vs.length ? vs.some(v => Number(v.stock) > 0) : Number(r.stock) > 0;
+};
+
+/** Catalogue rows → gift cards { key, name, href, image, price, slug } for a recipient. Pure. */
+function catalogueGifts(rows, recipient) {
+  const want = new Set(recipient.slugs);
+  const out = [];
+  for (const r of Array.isArray(rows) ? rows : []) {
+    const image = Array.isArray(r?.images) ? r.images.find(Boolean) : null;
+    const price = cataloguePrice(r || {});
+    if (r?.store !== recipient.store || !want.has(r?.category?.slug) || !r.slug || !image || !(price > 0) || r.is_demo || !inStock(r)) continue;
+    out.push({
+      key: `${r.store}-${r.id}`,
+      name: String(r.name || '').trim(),
+      href: r.store === 'fashion' ? `/fashion/p/${r.slug}` : `/homeliving/p/${r.slug}`,
+      image,
+      price,
+      mrp: Number(r.mrp) || null
+    });
+  }
+  return out;
+}
+
+/** Wellness products → gift cards. Pure. */
+function wellnessGifts(products) {
+  return (Array.isArray(products) ? products : []).filter(p => p && p.slug && p.image && Number(p.price) > 0 && Number(p.stock) > 0).map(p => ({
+    key: `wellness-${p.id}`,
+    name: p.name,
+    href: `/product/${p.slug}`,
+    image: p.image,
+    price: Number(p.price),
+    mrp: Number(p.mrp) || null
+  }));
+}
+
+/** Cards in the budget, cheapest first, at most `limit`. Pure. */
+function inBudget(cards, budget, limit = GIFT_LIMIT) {
+  const b = BUDGETS$1.find(x => x.id === budget) || null;
+  return (Array.isArray(cards) ? cards : []).filter(c => !b || c.price >= b.min && c.price <= b.max).sort((a, b2) => a.price - b2.price || a.name.localeCompare(b2.name)).slice(0, limit);
+}
+
+/** How many cards fall in each budget, for the chips. Pure. */
+const budgetCounts = cards => Object.fromEntries(BUDGETS$1.map(b => [b.id, (cards || []).filter(c => c.price >= b.min && c.price <= b.max).length]));
+async function fetchGiftRows(client = supabase) {
+  const slugs = RECIPIENTS.flatMap(r => r.slugs);
+  const {
+    data,
+    error
+  } = await client.from('catalogue_products').select('id, store, name, slug, mrp, sale_price, images, stock, is_demo, category:catalogue_categories!inner(slug), variants:catalogue_variants(stock, is_active)').in('store', ['fashion', 'homeliving']).eq('is_active', true).in('category.slug', slugs).order('sort_order', {
+    ascending: true
+  }).limit(2000);
+  return error || !Array.isArray(data) ? [] : data;
+}
+
+/** All cards for a recipient; null while loading. */
+function useGiftCards(recipientId, wellnessProducts) {
+  const [rows, setRows] = reactExports.useState(null);
+  reactExports.useEffect(() => {
+    let live = true;
+    fetchGiftRows().then(r => {
+      if (live) setRows(r);
+    }, () => {
+      if (live) setRows([]);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+  const recipient = RECIPIENTS.find(r => r.id === recipientId) || RECIPIENTS[0];
+  return reactExports.useMemo(() => {
+    if (recipient.store === 'wellness') return wellnessGifts(wellnessProducts);
+    return rows ? catalogueGifts(rows, recipient) : null;
+  }, [rows, recipient, wellnessProducts]);
+}
+
+function Gifts() {
+  const [params, setParams] = useSearchParams();
+  const who = RECIPIENTS.some(r => r.id === params.get('for')) ? params.get('for') : 'her';
+  const budget = BUDGETS$1.some(b => b.id === params.get('budget')) ? params.get('budget') : '';
+  const cards = useGiftCards(who, products);
+  const counts = cards ? budgetCounts(cards) : {};
+  const shown = cards ? inBudget(cards, budget) : [];
+  const set = (k, v) => {
+    const p = new URLSearchParams(params);
+    if (v) p.set(k, v);else p.delete(k);
+    if (k === 'for') p.delete('budget');
+    setParams(p, {
+      replace: true
+    });
+  };
+  usePageMeta({
+    title: 'Gift finder',
+    description: 'Find a gift by who it is for and what you want to spend: shawls, wallets, leather, home and wellness gifts at SORA LIFESTYLE.',
+    path: '/gifts'
+  });
+  return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+    className: "hx hx-wed sora-gifts",
+    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "hx-wrap",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
+        className: "hx-offers__crumbs",
+        "aria-label": "Breadcrumb",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+          to: "/",
+          children: "Home"
+        }), " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "chevronRight",
+          size: 12
+        }), " ", /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          children: "Gift finder"
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("header", {
+        className: "hx-wed__hero",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "hx-wed__eyebrow",
+          children: "Gifting season"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+          className: "hx-offers__h",
+          children: "Find a gift"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "hx-offers__lede",
+          children: "Who is it for, and what would you like to spend? Everything shown is in stock today."
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+        className: "sora-gifts__pick",
+        role: "group",
+        "aria-label": "Who is it for",
+        children: RECIPIENTS.map(r => /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+          type: "button",
+          "aria-pressed": who === r.id,
+          className: `hx-offers__chip${who === r.id ? ' is-on' : ''}`,
+          onClick: () => set('for', r.id),
+          children: r.label
+        }, r.id))
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "sora-gifts__pick",
+        role: "group",
+        "aria-label": "Budget",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("button", {
+          type: "button",
+          "aria-pressed": !budget,
+          className: `hx-offers__chip${!budget ? ' is-on' : ''}`,
+          onClick: () => set('budget', ''),
+          children: "Any budget"
+        }), BUDGETS$1.map(b => /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
+          type: "button",
+          "aria-pressed": budget === b.id,
+          disabled: cards && !counts[b.id],
+          className: `hx-offers__chip${budget === b.id ? ' is-on' : ''}`,
+          onClick: () => set('budget', b.id),
+          children: [b.label, cards ? /*#__PURE__*/jsxRuntimeExports.jsx("em", {
+            children: counts[b.id] || 0
+          }) : null]
+        }, b.id))]
+      }), cards === null ? /*#__PURE__*/jsxRuntimeExports.jsx(SkeletonGrid, {
+        label: "Finding gifts\u2026"
+      }) : shown.length === 0 ? /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+        className: "hx-offers__empty",
+        children: ["Nothing in this budget right now. Try another budget, or ", /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+          to: "/hamper",
+          children: "build a hamper"
+        }), "."]
+      }) : /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+          className: "sora-gifts__count",
+          role: "status",
+          children: [shown.length < (budget ? counts[budget] : cards.length) ? `The ${shown.length} lowest-priced of ${budget ? counts[budget] : cards.length}` : `${shown.length} gift${shown.length === 1 ? '' : 's'}`, ", lowest price first"]
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+          className: "hx-offers__grid",
+          children: shown.map((c, i) => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+            children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+              to: c.href,
+              className: "hx-deals__card",
+              children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+                className: "hx-deals__img",
+                children: /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+                  src: c.image,
+                  alt: "",
+                  width: "300",
+                  height: "300",
+                  loading: i < 4 ? 'eager' : 'lazy',
+                  decoding: "async"
+                })
+              }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+                className: "hx-deals__name",
+                children: c.name
+              }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+                className: "hx-deals__price",
+                children: /*#__PURE__*/jsxRuntimeExports.jsx("b", {
+                  children: money(c.price)
+                })
+              })]
+            })
+          }, c.key))
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+        className: "sora-gifts__more",
+        children: ["Want several things in one box? ", /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+          to: "/hamper",
+          children: "Build a hamper"
+        }), " \xB7 Ordering many? ", /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+          to: "/sell#bulk",
+          children: "Bulk & corporate gifting"
+        })]
       })]
     })
   });
@@ -82035,6 +82320,9 @@ function App() {
       }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
         path: "/guides/leather-care",
         element: /*#__PURE__*/jsxRuntimeExports.jsx(LeatherCare, {})
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
+        path: "/gifts",
+        element: /*#__PURE__*/jsxRuntimeExports.jsx(Gifts, {})
       }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
         path: "/creator/:tab?",
         element: /*#__PURE__*/jsxRuntimeExports.jsx(CreatorPortal, {})
