@@ -8236,16 +8236,16 @@ function applyCatalog(rawList, source = 'supabase') {
 function getByCategory(slug) {
   return products.filter(p => (p.categories || [p.category]).includes(slug));
 }
-function inStock$3(list) {
+function inStock$4(list) {
   return list.filter(p => p.stock > 0);
 }
 function getBestsellers(n = 12) {
-  const flagged = inStock$3(products).filter(p => p.isBestseller);
+  const flagged = inStock$4(products).filter(p => p.isBestseller);
   if (flagged.length >= n) return flagged.slice(0, n);
   const picks = [...flagged];
   const used = new Set(picks.map(p => p.id));
   const byCat = {};
-  inStock$3(products).forEach(p => {
+  inStock$4(products).forEach(p => {
     (byCat[p.category] ||= []).push(p);
   });
   for (const cat of Object.keys(byCat)) {
@@ -8255,7 +8255,7 @@ function getBestsellers(n = 12) {
       used.add(first.id);
     }
   }
-  for (const p of inStock$3(products)) {
+  for (const p of inStock$4(products)) {
     if (picks.length >= n) break;
     if (!used.has(p.id)) {
       picks.push(p);
@@ -42412,7 +42412,7 @@ const WEDDING_SECTIONS = Object.freeze([{
   slugs: ['shawl-gift-sets', 'leather-gift-sets']
 }]);
 const WEDDING_PER_SECTION = 8;
-const inStock$2 = r => {
+const inStock$3 = r => {
   const vs = (Array.isArray(r.variants) ? r.variants : []).filter(v => v && v.is_active !== false);
   return vs.length ? vs.some(v => Number(v.stock) > 0) : Number(r.stock) > 0;
 };
@@ -42424,7 +42424,7 @@ function weddingSections(rows, per = WEDDING_PER_SECTION, sections = WEDDING_SEC
     const slug = r?.category?.slug;
     const image = Array.isArray(r?.images) ? r.images.find(Boolean) : null;
     const price = cataloguePrice(r || {});
-    if (!slug || !r.slug || !image || !(price > 0) || r.is_demo || !inStock$2(r)) continue;
+    if (!slug || !r.slug || !image || !(price > 0) || r.is_demo || !inStock$3(r)) continue;
     if (!bySlug.has(slug)) bySlug.set(slug, []);
     bySlug.get(slug).push({
       key: `fashion-${r.id}`,
@@ -42855,6 +42855,48 @@ function SkeletonGrid({
   });
 }
 
+const shareText = (title, url) => `${String(title || 'Have a look').trim()} on SORA LIFESTYLE: ${url}`;
+function PageShare({
+  title
+}) {
+  const [copied, setCopied] = reactExports.useState(false);
+  const url = typeof window !== 'undefined' ? window.location.href.split('#')[0] : '';
+  const more = async () => {
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title,
+          text: `${title} on SORA LIFESTYLE`,
+          url
+        });
+        return;
+      }
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {/* dismissed */}
+  };
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+    className: "sora-pshare",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("a", {
+      href: `https://wa.me/?text=${encodeURIComponent(shareText(title, url))}`,
+      target: "_blank",
+      rel: "noopener noreferrer",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: "chat",
+        size: 15
+      }), " Send on WhatsApp"]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("button", {
+      type: "button",
+      onClick: more,
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: "copy",
+        size: 15
+      }), " ", copied ? 'Link copied' : 'Share']
+    })]
+  });
+}
+
 function FashionEdit({
   id
 }) {
@@ -42904,6 +42946,8 @@ function FashionEdit({
         }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
           className: "hx-offers__lede",
           children: edit.lede
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(PageShare, {
+          title: edit.title
         }), edit.care && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
           className: "hx-offers__lede",
           children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
@@ -43230,202 +43274,6 @@ function ShopByOccasion({
             })]
           })
         }, t.id))
-      })]
-    })
-  });
-}
-
-const COLOURS = Object.freeze([['Black', '#1B1B1B'], ['Brown', '#6B4226'], ['Beige', '#D8C3A5'], ['White', '#F7F5F0'], ['Red', '#B3261E'], ['Maroon', '#6D1A2A'], ['Pink', '#E58FB0'], ['Green', '#2F6B3F'], ['Blue', '#2F5DA8'], ['Grey', '#8A8D91'], ['Mustard', '#D4A12A'], ['Peach', '#F2B79A']]);
-function ShopByColour() {
-  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
-    className: "fs-sec sora-colours",
-    "aria-labelledby": "sora-colours-h",
-    children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
-      className: "fs-sec__head",
-      children: /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
-        className: "fs-sec__h serif",
-        id: "sora-colours-h",
-        children: "Shop by colour"
-      })
-    }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
-      className: "sora-colours__row",
-      children: COLOURS.map(([name, hex]) => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
-        children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-          to: `/fashion/search?colour=${encodeURIComponent(name)}`,
-          className: "sora-colours__sw",
-          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
-            style: {
-              background: hex
-            },
-            "aria-hidden": "true"
-          }), name]
-        })
-      }, name))
-    })]
-  });
-}
-const STYLING_TIPS = Object.freeze([[/suit|dress-material|salwar|kurta/, ['Pair with a contrasting dupatta, or let a woven one carry the colour.', 'Juttis or block heels keep it festive; kolhapuris keep it easy.', 'Jhumkas or chandbalis suit a Banarasi neckline; keep the rest light.']], [/saree/, ['A plain blouse lets a woven saree speak; a brocade blouse lifts a plain one.', 'Pleat the pallu for a day function, leave it open in the evening.', 'A potli or a clutch in the border’s colour ties the look together.']], [/leather-jacket|leather-coat/, ['Over a plain tee and dark jeans is the classic; add boots for winter.', 'Leave it open over a knit, or belt a coat for a sharper line.', 'Match the belt and shoes to the leather’s tone, brown with brown, black with black.']], [/shawl|stole|dupatta|muffler/, ['Drape over one shoulder on a plain outfit to let the weave lead.', 'Wrap it twice for warmth on a cold evening.', 'A woven shawl turns a simple kurta into a function look.']], [/handbag|clutch|sling|pouch|potli/, ['Pick a bag a shade apart from the outfit, not an exact match.', 'A clutch for the evening, a sling when you need your hands free.']], [/wallet|belt|card-holder|passport/, ['Match the belt to your shoes.', 'Leather mellows and darkens with use: that’s the character, not wear.']]]);
-
-/** The tips for a category slug; [] when none fit. Pure. */
-const stylingTips = slug => (STYLING_TIPS.find(([re]) => re.test(String(slug || ''))) || [null, []])[1];
-function StylingTips({
-  slug
-}) {
-  const tips = stylingTips(slug);
-  if (!tips.length) return null;
-  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
-    className: "sora-tips",
-    "aria-labelledby": "sora-tips-h",
-    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("h2", {
-      className: "pdpk-h",
-      id: "sora-tips-h",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
-        name: "sparkle",
-        size: 17
-      }), " How to wear it"]
-    }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
-      children: tips.map(t => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
-        children: t
-      }, t))
-    })]
-  });
-}
-
-/** Rows → cards: in-stock, priced, pictured; fewest left first. Pure. */
-function lastChanceCards(rows) {
-  return (Array.isArray(rows) ? rows : []).flatMap(r => {
-    const p = r?.product;
-    const image = Array.isArray(p?.images) ? p.images.find(Boolean) : null;
-    const price = p ? cataloguePrice(p) : 0;
-    if (!p?.slug || !image || !(price > 0)) return [];
-    return [{
-      key: `${p.store}-${p.id}`,
-      name: String(p.name || '').trim(),
-      image,
-      price,
-      left: r.left_in_stock,
-      href: p.store === 'fashion' ? `/fashion/p/${p.slug}` : `/homeliving/p/${p.slug}`
-    }];
-  }).sort((a, b) => a.left - b.left || a.name.localeCompare(b.name));
-}
-function LastChance({
-  wrap = 'hx-wrap',
-  max = 10
-}) {
-  const [cards, setCards] = reactExports.useState([]);
-  reactExports.useEffect(() => {
-    if (!supabase) return undefined;
-    let live = true;
-    (async () => {
-      const {
-        data: left
-      } = await supabase.from('catalogue_last_chance').select('product_id, left_in_stock').limit(40);
-      if (!Array.isArray(left) || !left.length) return;
-      const {
-        data: rows
-      } = await supabase.from('catalogue_products').select('id, store, name, slug, mrp, sale_price, images').in('id', left.map(r => r.product_id));
-      const byId = new Map((rows || []).map(r => [r.id, r]));
-      if (live) setCards(lastChanceCards(left.map(r => ({
-        left_in_stock: r.left_in_stock,
-        product: byId.get(r.product_id)
-      }))).slice(0, max));
-    })().catch(() => {});
-    return () => {
-      live = false;
-    };
-  }, [max]);
-  if (cards.length < 3) return null;
-  return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
-    className: "hx sora-last",
-    "aria-labelledby": "sora-last-h",
-    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-      className: wrap,
-      children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
-        className: "hx-stores__head",
-        children: /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
-          className: "hx-stores__h",
-          id: "sora-last-h",
-          children: "Almost gone"
-        })
-      }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
-        className: "sora-last__row",
-        children: cards.map(c => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
-          children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-            to: c.href,
-            className: "hx-deals__card",
-            children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
-              className: "hx-deals__img",
-              children: [/*#__PURE__*/jsxRuntimeExports.jsx("img", {
-                src: c.image,
-                alt: "",
-                width: "240",
-                height: "240",
-                loading: "lazy",
-                decoding: "async"
-              }), /*#__PURE__*/jsxRuntimeExports.jsxs("b", {
-                className: "sora-last__left",
-                children: ["Only ", c.left, " left"]
-              })]
-            }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-              className: "hx-deals__name",
-              children: c.name
-            }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-              className: "hx-deals__price",
-              children: /*#__PURE__*/jsxRuntimeExports.jsx("b", {
-                children: money(c.price)
-              })
-            })]
-          })
-        }, c.key))
-      })]
-    })
-  });
-}
-
-// ---- Shop by ingredient (round 9, 2026-11-16) ------------------------------------
-// The wellness ingredients named in at least three in-stock product names, most first,
-// each opening the wellness search for it. Names only: nothing here says what an
-// ingredient does. An ingredient the catalogue does not carry is never shown.
-const INGREDIENTS = Object.freeze(['Sea buckthorn', 'Tulsi', 'Honey', 'Neem', 'Aloe vera', 'Turmeric', 'Noni', 'Moringa', 'Ashwagandha', 'Amla', 'Ginseng', 'Spirulina', 'Shilajit', 'Giloy', 'Triphala', 'Brahmi', 'Saffron', 'Lemon', 'Rose']);
-const INGREDIENT_MIN = 3;
-
-/** [{ name, count, href }] for ingredients in INGREDIENT_MIN+ in-stock product names, most first, at most `max`. Pure. */
-function ingredientChips(products, max = 10) {
-  const names = (Array.isArray(products) ? products : []).filter(p => p && Number(p.stock) > 0).map(p => ` ${String(p.name || '').toLowerCase()} `);
-  return INGREDIENTS.map(name => {
-    const needle = name.toLowerCase();
-    const re = new RegExp(`[^a-z]${needle.replace(/ /g, '\\s+')}[^a-z]`);
-    return {
-      name,
-      count: names.filter(n => re.test(n)).length,
-      href: `/shop?q=${encodeURIComponent(needle)}`
-    };
-  }).filter(c => c.count >= INGREDIENT_MIN).sort((a, b) => b.count - a.count).slice(0, max);
-}
-function ShopByIngredient({
-  products
-}) {
-  const chips = ingredientChips(products);
-  if (chips.length < 3) return null;
-  return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
-    className: "hx sora-ingr",
-    "aria-labelledby": "sora-ingr-h",
-    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-      className: "hx-wrap",
-      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
-        className: "hx-stores__h",
-        id: "sora-ingr-h",
-        children: "Shop by ingredient"
-      }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
-        className: "sora-ingr__list",
-        children: chips.map(c => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
-          children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
-            to: c.href,
-            children: [c.name, " ", /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-              children: c.count
-            })]
-          })
-        }, c.name))
       })]
     })
   });
@@ -44941,6 +44789,364 @@ function PdpReviews({
       productKey: productKey,
       productName: productName
     })]
+  });
+}
+
+// ============================================================
+// "More like what you viewed" (owner, 2026-11-20: more features, round 15). From this
+// browser's own recently viewed list (kept in this browser only, PdpOwnerKit.jsx), the
+// last few products' categories, and other in-stock products from them that the
+// visitor has not opened yet — the categories taking turns. Nothing leaves the
+// browser but the product slugs needed to look the categories up. Fewer than four
+// cards and the row does not show.
+// ============================================================
+const LIKE_MIN = 4;
+const LIKE_MAX = 12;
+const LIKE_SEEDS = 4;
+
+/** The last few product pages viewed, as { store, slug }, newest first, no repeats. Pure. */
+function viewedSeeds(recent, max = LIKE_SEEDS) {
+  const out = [];
+  const seen = new Set();
+  for (const r of Array.isArray(recent) ? recent : []) {
+    const v = viewOf(String(r?.href || '').split('?')[0]);
+    if (!v || seen.has(`${v.store}/${v.slug}`)) continue;
+    seen.add(`${v.store}/${v.slug}`);
+    out.push(v);
+    if (out.length >= max) break;
+  }
+  return out;
+}
+
+/** Lanes of cards (one per seed category) → one list, lanes taking turns, viewed ones and repeats left out. Pure. */
+function interleave(lanes, exclude = new Set(), max = LIKE_MAX) {
+  const out = [];
+  const seen = new Set(exclude);
+  for (let i = 0; out.length < max && lanes.some(l => l.length > i); i += 1) {
+    for (const l of lanes) {
+      const c = l[i];
+      if (c && !seen.has(c.slugKey) && out.length < max) {
+        seen.add(c.slugKey);
+        out.push(c);
+      }
+    }
+  }
+  return out;
+}
+const inStock$2 = r => {
+  const vs = (Array.isArray(r.variants) ? r.variants : []).filter(v => v && v.is_active !== false);
+  return vs.length ? vs.some(v => Number(v.stock) > 0) : Number(r.stock) > 0;
+};
+
+/** Wellness lanes: the seed product's category, other in-stock products in it. Pure. */
+function wellnessLanes(seeds, bySlug, all) {
+  return seeds.filter(s => s.store === 'wellness' && bySlug[s.slug]).map(s => {
+    const cat = bySlug[s.slug].category;
+    return (all || []).filter(p => p.category === cat && p.slug && p.image && Number(p.stock) > 0 && Number(p.price) > 0).map(p => ({
+      key: `wellness-${p.id}`,
+      slugKey: `wellness/${p.slug}`,
+      name: p.name,
+      href: `/product/${p.slug}`,
+      image: p.image,
+      price: Number(p.price)
+    }));
+  });
+}
+
+/** Catalogue rows → a lane per seed category, in the seeds' order. Pure. */
+function catalogueLanes(seedRows, rows) {
+  const byCat = new Map();
+  for (const r of Array.isArray(rows) ? rows : []) {
+    const image = Array.isArray(r?.images) ? r.images.find(Boolean) : null;
+    const price = cataloguePrice(r || {});
+    if (!r?.slug || !image || !(price > 0) || r.is_demo || !inStock$2(r)) continue;
+    if (!byCat.has(r.category_id)) byCat.set(r.category_id, []);
+    byCat.get(r.category_id).push({
+      key: `${r.store}-${r.id}`,
+      slugKey: `${r.store}/${r.slug}`,
+      name: String(r.name || '').trim(),
+      href: r.store === 'fashion' ? `/fashion/p/${r.slug}` : `/homeliving/p/${r.slug}`,
+      image,
+      price
+    });
+  }
+  const cats = [...new Set((seedRows || []).map(s => s.category_id).filter(Boolean))];
+  return cats.map(c => byCat.get(c) || []);
+}
+async function fetchLikeRows(seeds, client = supabase) {
+  const slugs = seeds.filter(s => s.store !== 'wellness').map(s => s.slug);
+  if (!slugs.length || !client) return {
+    seedRows: [],
+    rows: []
+  };
+  const {
+    data: seedRows
+  } = await client.from('catalogue_products').select('slug, store, category_id').in('slug', slugs);
+  const order = new Map(slugs.map((s, i) => [s, i]));
+  const sorted = (seedRows || []).sort((a, b) => (order.get(a.slug) ?? 99) - (order.get(b.slug) ?? 99));
+  const cats = [...new Set(sorted.map(r => r.category_id).filter(Boolean))];
+  if (!cats.length) return {
+    seedRows: sorted,
+    rows: []
+  };
+  const {
+    data
+  } = await client.from('catalogue_products').select('id, store, name, slug, mrp, sale_price, images, stock, is_demo, category_id, variants:catalogue_variants(stock, is_active)').in('category_id', cats).eq('is_active', true).order('sort_order', {
+    ascending: true
+  }).limit(160);
+  return {
+    seedRows: sorted,
+    rows: data || []
+  };
+}
+
+/** The row's cards; [] until known or when fewer than LIKE_MIN. */
+function useViewedLike(recent, bySlug, all) {
+  const [cards, setCards] = reactExports.useState([]);
+  const sig = viewedSeeds(recent).map(s => `${s.store}/${s.slug}`).join('|');
+  reactExports.useEffect(() => {
+    let live = true;
+    const seeds = viewedSeeds(recent);
+    if (!seeds.length) {
+      setCards([]);
+      return undefined;
+    }
+    const exclude = new Set((Array.isArray(recent) ? recent : []).map(r => viewOf(String(r?.href || '').split('?')[0])).filter(Boolean).map(v => `${v.store}/${v.slug}`));
+    fetchLikeRows(seeds).then(({
+      seedRows,
+      rows
+    }) => {
+      if (!live) return;
+      const lanes = [...catalogueLanes(seedRows, rows), ...wellnessLanes(seeds, bySlug || {}, all)];
+      const list = interleave(lanes, exclude);
+      setCards(list.length >= LIKE_MIN ? list : []);
+    }, () => {
+      if (live) setCards([]);
+    });
+    return () => {
+      live = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sig]);
+  return cards;
+}
+
+const LIKE_SECTION = Object.freeze({
+  hidden: false,
+  title: 'More like what you viewed',
+  more: '',
+  link: ''
+});
+function ViewedLike() {
+  const recent = typeof window !== 'undefined' ? readRecentlyViewed() : [];
+  const items = useViewedLike(recent, productBySlug, products);
+  if (!items.length) return null;
+  return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+    className: "hx-wv-range",
+    children: /*#__PURE__*/jsxRuntimeExports.jsx(SlidingRail, {
+      id: "viewedlike",
+      label: "More like what you viewed",
+      section: LIKE_SECTION,
+      defaults: LIKE_SECTION,
+      link: "",
+      items: items
+    })
+  });
+}
+
+const COLOURS = Object.freeze([['Black', '#1B1B1B'], ['Brown', '#6B4226'], ['Beige', '#D8C3A5'], ['White', '#F7F5F0'], ['Red', '#B3261E'], ['Maroon', '#6D1A2A'], ['Pink', '#E58FB0'], ['Green', '#2F6B3F'], ['Blue', '#2F5DA8'], ['Grey', '#8A8D91'], ['Mustard', '#D4A12A'], ['Peach', '#F2B79A']]);
+function ShopByColour() {
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: "fs-sec sora-colours",
+    "aria-labelledby": "sora-colours-h",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+      className: "fs-sec__head",
+      children: /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+        className: "fs-sec__h serif",
+        id: "sora-colours-h",
+        children: "Shop by colour"
+      })
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+      className: "sora-colours__row",
+      children: COLOURS.map(([name, hex]) => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+        children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: `/fashion/search?colour=${encodeURIComponent(name)}`,
+          className: "sora-colours__sw",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            style: {
+              background: hex
+            },
+            "aria-hidden": "true"
+          }), name]
+        })
+      }, name))
+    })]
+  });
+}
+const STYLING_TIPS = Object.freeze([[/suit|dress-material|salwar|kurta/, ['Pair with a contrasting dupatta, or let a woven one carry the colour.', 'Juttis or block heels keep it festive; kolhapuris keep it easy.', 'Jhumkas or chandbalis suit a Banarasi neckline; keep the rest light.']], [/saree/, ['A plain blouse lets a woven saree speak; a brocade blouse lifts a plain one.', 'Pleat the pallu for a day function, leave it open in the evening.', 'A potli or a clutch in the border’s colour ties the look together.']], [/leather-jacket|leather-coat/, ['Over a plain tee and dark jeans is the classic; add boots for winter.', 'Leave it open over a knit, or belt a coat for a sharper line.', 'Match the belt and shoes to the leather’s tone, brown with brown, black with black.']], [/shawl|stole|dupatta|muffler/, ['Drape over one shoulder on a plain outfit to let the weave lead.', 'Wrap it twice for warmth on a cold evening.', 'A woven shawl turns a simple kurta into a function look.']], [/handbag|clutch|sling|pouch|potli/, ['Pick a bag a shade apart from the outfit, not an exact match.', 'A clutch for the evening, a sling when you need your hands free.']], [/wallet|belt|card-holder|passport/, ['Match the belt to your shoes.', 'Leather mellows and darkens with use: that’s the character, not wear.']]]);
+
+/** The tips for a category slug; [] when none fit. Pure. */
+const stylingTips = slug => (STYLING_TIPS.find(([re]) => re.test(String(slug || ''))) || [null, []])[1];
+function StylingTips({
+  slug
+}) {
+  const tips = stylingTips(slug);
+  if (!tips.length) return null;
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: "sora-tips",
+    "aria-labelledby": "sora-tips-h",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("h2", {
+      className: "pdpk-h",
+      id: "sora-tips-h",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: "sparkle",
+        size: 17
+      }), " How to wear it"]
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+      children: tips.map(t => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+        children: t
+      }, t))
+    })]
+  });
+}
+
+/** Rows → cards: in-stock, priced, pictured; fewest left first. Pure. */
+function lastChanceCards(rows) {
+  return (Array.isArray(rows) ? rows : []).flatMap(r => {
+    const p = r?.product;
+    const image = Array.isArray(p?.images) ? p.images.find(Boolean) : null;
+    const price = p ? cataloguePrice(p) : 0;
+    if (!p?.slug || !image || !(price > 0)) return [];
+    return [{
+      key: `${p.store}-${p.id}`,
+      name: String(p.name || '').trim(),
+      image,
+      price,
+      left: r.left_in_stock,
+      href: p.store === 'fashion' ? `/fashion/p/${p.slug}` : `/homeliving/p/${p.slug}`
+    }];
+  }).sort((a, b) => a.left - b.left || a.name.localeCompare(b.name));
+}
+function LastChance({
+  wrap = 'hx-wrap',
+  max = 10
+}) {
+  const [cards, setCards] = reactExports.useState([]);
+  reactExports.useEffect(() => {
+    if (!supabase) return undefined;
+    let live = true;
+    (async () => {
+      const {
+        data: left
+      } = await supabase.from('catalogue_last_chance').select('product_id, left_in_stock').limit(40);
+      if (!Array.isArray(left) || !left.length) return;
+      const {
+        data: rows
+      } = await supabase.from('catalogue_products').select('id, store, name, slug, mrp, sale_price, images').in('id', left.map(r => r.product_id));
+      const byId = new Map((rows || []).map(r => [r.id, r]));
+      if (live) setCards(lastChanceCards(left.map(r => ({
+        left_in_stock: r.left_in_stock,
+        product: byId.get(r.product_id)
+      }))).slice(0, max));
+    })().catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [max]);
+  if (cards.length < 3) return null;
+  return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
+    className: "hx sora-last",
+    "aria-labelledby": "sora-last-h",
+    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: wrap,
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+        className: "hx-stores__head",
+        children: /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+          className: "hx-stores__h",
+          id: "sora-last-h",
+          children: "Almost gone"
+        })
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+        className: "sora-last__row",
+        children: cards.map(c => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+          children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+            to: c.href,
+            className: "hx-deals__card",
+            children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+              className: "hx-deals__img",
+              children: [/*#__PURE__*/jsxRuntimeExports.jsx("img", {
+                src: c.image,
+                alt: "",
+                width: "240",
+                height: "240",
+                loading: "lazy",
+                decoding: "async"
+              }), /*#__PURE__*/jsxRuntimeExports.jsxs("b", {
+                className: "sora-last__left",
+                children: ["Only ", c.left, " left"]
+              })]
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+              className: "hx-deals__name",
+              children: c.name
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+              className: "hx-deals__price",
+              children: /*#__PURE__*/jsxRuntimeExports.jsx("b", {
+                children: money(c.price)
+              })
+            })]
+          })
+        }, c.key))
+      })]
+    })
+  });
+}
+
+// ---- Shop by ingredient (round 9, 2026-11-16) ------------------------------------
+// The wellness ingredients named in at least three in-stock product names, most first,
+// each opening the wellness search for it. Names only: nothing here says what an
+// ingredient does. An ingredient the catalogue does not carry is never shown.
+const INGREDIENTS = Object.freeze(['Sea buckthorn', 'Tulsi', 'Honey', 'Neem', 'Aloe vera', 'Turmeric', 'Noni', 'Moringa', 'Ashwagandha', 'Amla', 'Ginseng', 'Spirulina', 'Shilajit', 'Giloy', 'Triphala', 'Brahmi', 'Saffron', 'Lemon', 'Rose']);
+const INGREDIENT_MIN = 3;
+
+/** [{ name, count, href }] for ingredients in INGREDIENT_MIN+ in-stock product names, most first, at most `max`. Pure. */
+function ingredientChips(products, max = 10) {
+  const names = (Array.isArray(products) ? products : []).filter(p => p && Number(p.stock) > 0).map(p => ` ${String(p.name || '').toLowerCase()} `);
+  return INGREDIENTS.map(name => {
+    const needle = name.toLowerCase();
+    const re = new RegExp(`[^a-z]${needle.replace(/ /g, '\\s+')}[^a-z]`);
+    return {
+      name,
+      count: names.filter(n => re.test(n)).length,
+      href: `/shop?q=${encodeURIComponent(needle)}`
+    };
+  }).filter(c => c.count >= INGREDIENT_MIN).sort((a, b) => b.count - a.count).slice(0, max);
+}
+function ShopByIngredient({
+  products
+}) {
+  const chips = ingredientChips(products);
+  if (chips.length < 3) return null;
+  return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
+    className: "hx sora-ingr",
+    "aria-labelledby": "sora-ingr-h",
+    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "hx-wrap",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+        className: "hx-stores__h",
+        id: "sora-ingr-h",
+        children: "Shop by ingredient"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+        className: "sora-ingr__list",
+        children: chips.map(c => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+          children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+            to: c.href,
+            children: [c.name, " ", /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+              children: c.count
+            })]
+          })
+        }, c.name))
+      })]
+    })
   });
 }
 
@@ -49410,7 +49616,7 @@ function Home() {
     }), /*#__PURE__*/jsxRuntimeExports.jsx(ShopByOccasion, {}), /*#__PURE__*/jsxRuntimeExports.jsx(GiftShop, {}), /*#__PURE__*/jsxRuntimeExports.jsx(TopDeals, {}), /*#__PURE__*/jsxRuntimeExports.jsx(BiosashRange, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Bedsheets, {}), /*#__PURE__*/jsxRuntimeExports.jsx(LifestyleBanner, {}), /*#__PURE__*/jsxRuntimeExports.jsx(JewelleryBanner, {}), /*#__PURE__*/jsxRuntimeExports.jsx(HomeGroup, {
       eyebrow: "For you",
       title: "Picked for you"
-    }), /*#__PURE__*/jsxRuntimeExports.jsx(RecentlyViewedHome, {}), /*#__PURE__*/jsxRuntimeExports.jsx(WishlistRail, {}), /*#__PURE__*/jsxRuntimeExports.jsx(MarketplaceProductRail, {
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(RecentlyViewedHome, {}), /*#__PURE__*/jsxRuntimeExports.jsx(ViewedLike, {}), /*#__PURE__*/jsxRuntimeExports.jsx(WishlistRail, {}), /*#__PURE__*/jsxRuntimeExports.jsx(MarketplaceProductRail, {
       id: "trending",
       eyebrow: "Across the catalogue",
       title: "Start here",
@@ -60977,6 +61183,8 @@ function WeddingEdit() {
         }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
           className: "hx-offers__lede",
           children: "Everything for the functions in one place: outfits, drapes, bags, something for him, and gifts for the couple."
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(PageShare, {
+          title: "The Wedding & Festive edit"
         }), sections && sections.length > 1 && /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
           className: "hx-wed__jump",
           children: sections.map(s => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
@@ -64853,6 +65061,8 @@ function Gifts() {
         }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
           className: "hx-offers__lede",
           children: "Who is it for, and what would you like to spend? Everything shown is in stock today."
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(PageShare, {
+          title: `Gift ideas ${(RECIPIENTS.find(r => r.id === who) || {}).label?.toLowerCase() || ''}${budget ? `, ${(BUDGETS$1.find(b => b.id === budget) || {}).label}` : ''}`
         })]
       }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
         className: "sora-gifts__pick",

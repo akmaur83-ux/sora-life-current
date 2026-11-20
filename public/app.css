@@ -10104,6 +10104,10 @@ body .fs .hx-ans .hx-ans__cta { background: #D9B26A; color: #121A16; }
 .sora-guides b { font-size: 22px; font-weight: 500; color: #1E3A2F; }
 .sora-guides span { font-size: 14.5px; line-height: 1.55; }
 .sora-guides i { margin-top: auto; display: inline-flex; align-items: center; gap: 4px; font-style: normal; font-weight: 600; color: #2C5341; }
+/* Share this page (round 15, 2026-11-20). */
+.sora-pshare { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 0; }
+.sora-pshare a, .sora-pshare button { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 6px 12px; font: inherit; font-size: 13.5px; font-weight: 600; color: #1E3A2F; text-decoration: none; background: #fff; border: 1px solid rgba(30, 58, 47, .2); cursor: pointer; }
+.sora-pshare a:hover, .sora-pshare button:hover { border-color: #2C5341; }
 
 /* ═══ src/styles/storefront-sections.css ═══ */
 /* ============================================================

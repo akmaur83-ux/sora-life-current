@@ -98,6 +98,22 @@ function stockWatch(rows, low = 3) {
     low: live.filter(r => Number(r.stock) >= 1 && Number(r.stock) <= low).map(pick).sort((a, b) => a.stock - b.stock || a.name.localeCompare(b.name))
   };
 }
+
+/** product_views rows → { store, slug, n }, most viewed first. Pure. */
+function topViewed(rows) {
+  const m = new Map();
+  for (const r of Array.isArray(rows) ? rows : []) {
+    if (!r?.slug || !r?.store) continue;
+    const k = `${r.store}/${r.slug}`;
+    m.set(k, {
+      store: r.store,
+      slug: r.slug,
+      n: (m.get(k)?.n || 0) + 1
+    });
+  }
+  return [...m.values()].sort((a, b) => b.n - a.n || a.slug.localeCompare(b.slug));
+}
+const productHref = (store, slug) => store === 'fashion' ? `/fashion/p/${slug}` : store === 'homeliving' ? `/homeliving/p/${slug}` : `/product/${slug}`;
 const STORE = {
   wellness: 'Wellness',
   fashion: 'Fashion',
@@ -152,13 +168,41 @@ function Insights() {
   const [sellers, setSellers] = reactExports.useState(null);
   const [brands, setBrands] = reactExports.useState(null);
   const [stock, setStock] = reactExports.useState(null);
+  const [viewed, setViewed] = reactExports.useState(null);
   const [error, setError] = reactExports.useState('');
   reactExports.useEffect(() => {
     let live = true;
     setSearches(null);
     setSellers(null);
     setBrands(null);
+    setViewed(null);
     setError('');
+    supabase.from('product_views').select('store, slug').gte('created_at', since).limit(20000).then(async ({
+      data,
+      error: e
+    }) => {
+      if (!live) return;
+      if (e) {
+        setViewed([]);
+        return;
+      }
+      const top = topViewed(data).slice(0, 25);
+      const cat = top.filter(t => t.store !== 'wellness').map(t => t.slug);
+      const well = top.filter(t => t.store === 'wellness').map(t => t.slug);
+      const [c, w] = await Promise.all([cat.length ? supabase.from('catalogue_products').select('slug, store, name').in('slug', cat) : {
+        data: []
+      }, well.length ? supabase.from('products').select('slug, name').in('slug', well) : {
+        data: []
+      }]);
+      if (!live) return;
+      const names = new Map([...(c.data || []).map(r => [`${r.store}/${r.slug}`, r.name]), ...(w.data || []).map(r => [`wellness/${r.slug}`, r.name])]);
+      setViewed(top.map(t => ({
+        ...t,
+        name: names.get(`${t.store}/${t.slug}`) || t.slug
+      })));
+    }, () => {
+      if (live) setViewed([]);
+    });
     const since = new Date(Date.now() - days * 86400e3).toISOString();
     supabase.from('search_log').select('q, store, results').gte('created_at', since).order('created_at', {
       ascending: false
@@ -367,6 +411,26 @@ function Insights() {
           })]
         })]
       }), /*#__PURE__*/jsxRuntimeExports.jsx(List, {
+        title: "Most viewed",
+        hint: "Product pages opened most in the period: once per product, per browser, per day.",
+        rows: viewed,
+        empty: "No product views recorded in this period yet.",
+        render: r => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("a", {
+            href: productHref(r.store, r.slug),
+            target: "_blank",
+            rel: "noopener noreferrer",
+            children: /*#__PURE__*/jsxRuntimeExports.jsx("b", {
+              children: r.name
+            })
+          }), " ", /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+            style: {
+              color: '#5F6D64'
+            },
+            children: ["\xB7 ", STORE[r.store] || r.store, " \xB7 ", r.n, " views"]
+          })]
+        }, `${r.store}/${r.slug}`)
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(List, {
         title: `Out of stock${stock ? ` (${stock.out.length})` : ''}`,
         hint: "Live products with none left: restock them, or hide them from the shop.",
         rows: stock?.out ?? null,
@@ -401,5 +465,5 @@ function Insights() {
   });
 }
 
-export { RANGES, bestSellers, Insights as default, lineBrand, salesByBrand, stockWatch, summariseSearches };
+export { RANGES, bestSellers, Insights as default, lineBrand, productHref, salesByBrand, stockWatch, summariseSearches, topViewed };
 //# sourceMappingURL=Insights.js.map
