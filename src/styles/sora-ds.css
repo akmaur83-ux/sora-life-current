@@ -821,3 +821,65 @@ html.sora-wintertop .v2-hdr { position: sticky; }
 .hx-wedstrip::before { opacity: .8; }/* The words always sit above the fanned pictures, and the fan leans right, clear of them. */
 .hx-wedstrip > span:not(.hx-wedstrip__art) { z-index: 2; }
 .hx-wedstrip__art img { left: 58%; }
+
+/* ============================================================
+   The winter bottom bar (owner, 2026-11-21): night-blue frosted glass with snow along its top
+   edge and a little snowfall inside; a gold glow slides to the lit tab; the icon hops and a
+   snowflake rises when a tab is chosen; the cart count glows. Still for reduced motion.
+   ============================================================ */
+.tabbar.tabbar--winter {
+  --tw-night: #0E2247; --tw-gold: #F2C14E;
+  overflow: visible; border-top: 0; border-radius: 22px 22px 0 0;
+  background:
+    radial-gradient(1.6px 1.6px at 12% 30%, rgba(255, 255, 255, .55) 50%, transparent 51%),
+    radial-gradient(1.2px 1.2px at 38% 65%, rgba(255, 255, 255, .45) 50%, transparent 51%),
+    radial-gradient(1.8px 1.8px at 63% 20%, rgba(255, 255, 255, .5) 50%, transparent 51%),
+    radial-gradient(1.2px 1.2px at 86% 55%, rgba(255, 255, 255, .45) 50%, transparent 51%),
+    linear-gradient(180deg, rgba(27, 63, 124, .97), rgba(14, 34, 71, .98));
+  background-size: 120px 60px, 140px 60px, 110px 60px, 130px 60px, 100% 100%;
+  animation: tw-snow 7s linear infinite;
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  box-shadow: 0 -8px 24px rgba(14, 34, 71, .35);
+}
+@keyframes tw-snow {
+  from { background-position: 0 0, 0 0, 0 0, 0 0, 0 0; }
+  to { background-position: 20px 60px, -15px 60px, 10px 60px, -20px 60px, 0 0; }
+}
+/* Snow settled along the top edge. */
+.tabbar.tabbar--winter::before {
+  content: ''; position: absolute; left: 18px; right: 18px; top: -3px; height: 6px; pointer-events: none;
+  background: radial-gradient(circle at 5px 5px, rgba(255, 255, 255, .95) 4px, transparent 5px) 0 0 / 10px 6px repeat-x;
+  filter: drop-shadow(0 -1px 1px rgba(0, 0, 0, .15));
+}
+.tabbar--winter .tabbar__item { position: relative; z-index: 1; color: #B9C8E6; transition: color .3s ease; }
+.tabbar--winter .tabbar__item svg { transition: transform .35s cubic-bezier(.3, 1.6, .5, 1); }
+.tabbar--winter .tabbar__item.active { color: var(--tw-gold); }
+.tabbar--winter .tabbar__item.active > svg, .tabbar--winter .tabbar__item.active .tabbar__ic > svg {
+  animation: tw-hop .6s cubic-bezier(.3, 1.5, .5, 1) both; filter: drop-shadow(0 0 6px rgba(242, 193, 78, .55));
+}
+@keyframes tw-hop { 0% { transform: translateY(0) scale(1); } 35% { transform: translateY(-7px) scale(1.15) rotate(-6deg); } 65% { transform: translateY(1px) scale(.96); } 100% { transform: translateY(-2px) scale(1.06); } }
+.tabbar--winter .tabbar__item.active > span:last-child { font-weight: 800; letter-spacing: .01em; }
+/* A snowflake rising from the chosen tab. */
+.tabbar--winter .tabbar__item.active::after {
+  content: '\2744'; position: absolute; top: 2px; left: 50%; font-size: 11px; color: #fff; pointer-events: none;
+  animation: tw-flake 1.1s ease-out forwards;
+}
+@keyframes tw-flake { 0% { opacity: 0; transform: translate(-50%, 6px) scale(.4) rotate(0); } 25% { opacity: 1; } 100% { opacity: 0; transform: translate(calc(-50% + 10px), -26px) scale(1.1) rotate(160deg); } }
+/* The glow under the lit tab, sliding across. */
+.tabbar__glide {
+  position: absolute; z-index: 0; top: 6px; height: 46px; width: calc(20% - 14px); left: calc(var(--i, 0) * 20% + 7px);
+  border-radius: 16px; pointer-events: none;
+  background: radial-gradient(70% 90% at 50% 40%, rgba(242, 193, 78, .28), rgba(242, 193, 78, .06) 70%, transparent);
+  box-shadow: inset 0 0 0 1px rgba(242, 193, 78, .35);
+  transition: left .5s cubic-bezier(.3, 1.3, .5, 1), opacity .3s ease;
+}
+/* The counts: gold, glowing. */
+.tabbar--winter .tabbar__badge { background: var(--tw-gold); color: var(--tw-night); border-color: #1B3F7C; box-shadow: 0 0 0 0 rgba(242, 193, 78, .6); animation: countpop .45s ease, tw-pulse 2.2s ease-out .5s infinite; }
+@keyframes tw-pulse { 0% { box-shadow: 0 0 0 0 rgba(242, 193, 78, .55); } 70%, 100% { box-shadow: 0 0 0 8px rgba(242, 193, 78, 0); } }
+.tabbar--winter .tabbar__dot { border-color: #1B3F7C; }
+.tabbar--winter .tabbar__item:active svg { transform: scale(.85); }
+@media (prefers-reduced-motion: reduce) {
+  .tabbar.tabbar--winter, .tabbar--winter .tabbar__item.active svg, .tabbar--winter .tabbar__badge { animation: none !important; }
+  .tabbar--winter .tabbar__item.active::after { display: none; }
+  .tabbar__glide { transition: none; }
+}

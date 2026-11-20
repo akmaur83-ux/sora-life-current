@@ -133,5 +133,17 @@ test('round 31: ethnic textures on every edit banner — mandala, paisley, jaali
   assert.match(css, /\.fs \.hx-wedstrip\.hx-wedstrip--art \{ padding-right: calc\(38% \+ 12px\); \}/);
   assert.ok(!read('src/components/StripArt.jsx').includes("'clutches'"), 'no picture with a seller\'s lettering');
 });
+test('round 32: the winter bottom bar — sliding glow under the lit tab, hop and snowflake, snow edge — Nov to Feb only', () => {
+  const t = loadModule('src/components/MobileTabBar.jsx', { NavLink: () => null, useLocation: () => ({ pathname: '/' }), Icon: () => null, useStore: () => ({}), isWinterSeason: () => true });
+  const W = { home: '/', shop: '/shop', saved: '/wishlist' }, F = { home: '/fashion', shop: '/categories?store=fashion', saved: '/fashion/wishlist' };
+  assert.deepEqual(['/', '/shop', '/wishlist', '/cart', '/account/orders', '/product/x'].map((p) => t.activeTab(p, W)), [0, 1, 2, 3, 4, -1]);
+  assert.deepEqual(['/fashion', '/categories', '/fashion/wishlist', '/fashion/p/x'].map((p) => t.activeTab(p, F)), [0, 1, 2, -1]);
+  const c = read('src/components/MobileTabBar.jsx');
+  assert.match(c, /const winter = isWinterSeason\(\);/);
+  assert.match(c, /\$\{winter \? ' tabbar--winter' : ''\}/);
+  const css = read('src/styles/sora-ds.css');
+  for (const k of ['@keyframes tw-hop', '@keyframes tw-flake', '@keyframes tw-snow', '@keyframes tw-pulse', '.tabbar__glide {']) assert.ok(css.includes(k), k);
+  assert.match(css, /\.tabbar--winter \.tabbar__item\.active::after \{ display: none; \}/, 'reduced motion: no rising flake');
+});
 if (failed) { console.log(`\n${failed} failed`); process.exit(1); }
 console.log('\nall passed');
