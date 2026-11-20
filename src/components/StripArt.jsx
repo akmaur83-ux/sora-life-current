@@ -10,9 +10,10 @@ import { fetchCategoryCovers } from '../lib/insights.js';
 // stays as it was (text only).
 // ============================================================
 export const STRIP_ART = Object.freeze({
-  winter: ['mens-leather-jackets', 'womens-shawls', 'mufflers-caps'],
+  winter: ['mens-leather-jackets', 'stoles', 'mufflers-caps'],
   leather: ['handbags', 'mens-leather-coats', 'mens-wallets'],
-  wedding: ['suits-dress-materials', 'clutches', 'shawl-gift-sets'],
+  // No clutches: their cover carries the seller's own lettering (2026-11-21).
+  wedding: ['suits-dress-materials', 'shawl-gift-sets', 'womens-shawls'],
 });
 
 let picsPromise = null;

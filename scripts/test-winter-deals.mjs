@@ -124,5 +124,14 @@ test('round 30: the winter header stays sticky; edit banners carry their own cat
   assert.match(edit, /<StripArt id="winter" \/>/); assert.match(edit, /<StripArt id="leather" \/>/);
   assert.match(read('src/fashion/WeddingEdit.jsx'), /<StripArt id="wedding" \/>/);
 });
+test('round 31: ethnic textures on every edit banner — mandala, paisley, jaali — with a dupatta-edge border; words clear of the pictures', () => {
+  const css = read('src/styles/sora-ds.css');
+  assert.match(css, /\.hx-wedstrip::before \{\n  content: ''; position: absolute; inset: 0; z-index: -1;/);
+  assert.ok(!css.includes('%2523'), 'colours encoded once');
+  assert.match(css, /\.sora-editstrips \.hx-wedstrip:first-child::before \{/);
+  assert.match(css, /\.sora-editstrips \.hx-wedstrip:last-child::before \{/);
+  assert.match(css, /\.fs \.hx-wedstrip\.hx-wedstrip--art \{ padding-right: calc\(38% \+ 12px\); \}/);
+  assert.ok(!read('src/components/StripArt.jsx').includes("'clutches'"), 'no picture with a seller\'s lettering');
+});
 if (failed) { console.log(`\n${failed} failed`); process.exit(1); }
 console.log('\nall passed');
