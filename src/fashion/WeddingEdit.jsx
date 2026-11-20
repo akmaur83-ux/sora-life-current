@@ -5,6 +5,7 @@ import { useWeddingEdit } from '../lib/weddingEdit.js';
 import { usePageMeta } from '../lib/pageMeta.js';
 import SkeletonGrid from '../components/Skeleton.jsx';
 import PageShare from '../components/PageShare.jsx';
+import StripArt from '../components/StripArt.jsx';
 
 // /fashion/wedding — the Wedding & Festive edit (weddingEdit.js has what is shown and why).
 export default function WeddingEdit() {
@@ -55,9 +56,10 @@ export default function WeddingEdit() {
 /** The Fashion home's way in to the edit. */
 export function WeddingStrip() {
   return (
-    <Link to="/fashion/wedding" className="hx-wedstrip fs-sec">
+    <Link to="/fashion/wedding" className="hx-wedstrip hx-wedstrip--art fs-sec">
       <span><em>Shaadi season</em><b>The Wedding &amp; Festive edit</b><i>Suits, sarees, shawls, clutches, jackets for him and gifts, in one place</i></span>
       <span className="hx-wedstrip__go">Explore <Icon name="arrowRight" size={16} /></span>
+      <StripArt id="wedding" />
     </Link>
   );
 }

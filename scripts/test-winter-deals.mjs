@@ -112,5 +112,17 @@ test('round 29: less air above the heading; "Up to" on one line', () => {
   assert.match(css, /\.sora-winter__in \{ padding-top: 10px; \}/);
   assert.match(css, /\.sora-winter__badge > span \{ white-space: nowrap; \}/);
 });
+test('round 30: the winter header stays sticky; edit banners carry their own categories\' pictures', () => {
+  const css = read('src/styles/sora-ds.css');
+  assert.ok(!/html\.sora-wintertop \.v2-hdr \{ position: relative;/.test(css), 'never unstuck');
+  assert.match(css, /html\.sora-wintertop \.v2-hdr \{ position: sticky; \}/);
+  const a = loadModule('src/components/StripArt.jsx', { useEffect: () => {}, useState: (v) => [v, () => {}], supabase: null, fetchCategoryCovers: async () => ({}) });
+  assert.deepEqual(a.stripPictures({ 'mens-leather-jackets': 'j', 'mufflers-caps': 'm' }, 'winter'), ['j', 'm']);
+  assert.deepEqual(a.stripPictures({}, 'leather'), []);
+  assert.deepEqual(a.stripPictures(null, 'nope'), []);
+  const edit = read('src/fashion/FashionEdit.jsx');
+  assert.match(edit, /<StripArt id="winter" \/>/); assert.match(edit, /<StripArt id="leather" \/>/);
+  assert.match(read('src/fashion/WeddingEdit.jsx'), /<StripArt id="wedding" \/>/);
+});
 if (failed) { console.log(`\n${failed} failed`); process.exit(1); }
 console.log('\nall passed');

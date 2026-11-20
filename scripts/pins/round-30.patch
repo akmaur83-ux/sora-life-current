@@ -1,0 +1,149 @@
+diff --git a/src/components/StripArt.jsx b/src/components/StripArt.jsx
+new file mode 100644
+index 0000000..e465028
+--- /dev/null
++++ b/src/components/StripArt.jsx
+@@ -0,0 +1,46 @@
++import { useEffect, useState } from 'react';
++import { supabase } from '../lib/supabase.js';
++import { fetchCategoryCovers } from '../lib/insights.js';
++
++// ============================================================
++// Pictures on the edit banners (owner, 2026-11-21: "winter edit everything leather jaise
++// banner hain na isme pic lgao sab mein accordingly"). Each banner shows the live cover
++// of three of its own categories — real products, never stock photos, no words on them —
++// fanned on its right. A category with no live cover is skipped; none, and the banner
++// stays as it was (text only).
++// ============================================================
++export const STRIP_ART = Object.freeze({
++  winter: ['mens-leather-jackets', 'womens-shawls', 'mufflers-caps'],
++  leather: ['handbags', 'mens-leather-coats', 'mens-wallets'],
++  wedding: ['suits-dress-materials', 'clutches', 'shawl-gift-sets'],
++});
++
++let picsPromise = null;
++/** { slug: picture } for every banner's categories, fetched once per visit. */
++export function fetchStripPictures(client = supabase) {
++  if (!client) return Promise.resolve({});
++  if (!picsPromise) {
++    const slugs = [...new Set(Object.values(STRIP_ART).flat())];
++    picsPromise = Promise.all([
++      client.from('catalogue_categories').select('id, slug').in('slug', slugs),
++      fetchCategoryCovers(client),
++    ]).then(([{ data: cats }, covers]) => Object.fromEntries((cats || []).filter((c) => covers[c.id]).map((c) => [c.slug, covers[c.id]])))
++      .catch(() => { picsPromise = null; return {}; });
++  }
++  return picsPromise;
++}
++
++/** A banner's pictures, in its order, at most three. Pure. */
++export const stripPictures = (pics, id) => (STRIP_ART[id] || []).map((slug) => pics?.[slug]).filter(Boolean).slice(0, 3);
++
++export default function StripArt({ id }) {
++  const [pics, setPics] = useState(null);
++  useEffect(() => { let live = true; fetchStripPictures().then((p) => { if (live) setPics(p); }); return () => { live = false; }; }, []);
++  const list = stripPictures(pics, id);
++  if (!list.length) return null;
++  return (
++    <span className="hx-wedstrip__art" aria-hidden="true">
++      {list.map((src, k) => <img key={src} src={src} alt="" width="120" height="150" loading="lazy" decoding="async" style={{ '--k': k - (list.length - 1) / 2 }} />)}
++    </span>
++  );
++}
+diff --git a/src/fashion/FashionEdit.jsx b/src/fashion/FashionEdit.jsx
+index a43f28a..a7a5c74 100644
+--- a/src/fashion/FashionEdit.jsx
++++ b/src/fashion/FashionEdit.jsx
+@@ -6,6 +6,7 @@ import { FASHION_EDITS, useFashionEdit } from '../lib/fashionEdits.js';
+ import { usePageMeta } from '../lib/pageMeta.js';
+ import SkeletonGrid from '../components/Skeleton.jsx';
+ import PageShare from '../components/PageShare.jsx';
++import StripArt from '../components/StripArt.jsx';
+ 
+ // /fashion/winter and /fashion/leather (round 12, 2026-11-20) — fashionEdits.js has what
+ // is shown and why. The same page as the Wedding edit, with the edit's own sections.
+@@ -68,13 +69,15 @@ export default function FashionEdit({ id }) {
+ export function EditStrips() {
+   return (
+     <div className="sora-editstrips fs-sec">
+-      <Link to="/fashion/winter" className="hx-wedstrip">
++      <Link to="/fashion/winter" className="hx-wedstrip hx-wedstrip--art">
+         <span><em>Winter is here</em><b>The Winter edit</b><i>Leather jackets and coats, shawls, stoles, mufflers and caps</i></span>
+         <span className="hx-wedstrip__go">Explore <Icon name="arrowRight" size={16} /></span>
++        <StripArt id="winter" />
+       </Link>
+-      <Link to="/fashion/leather" className="hx-wedstrip">
++      <Link to="/fashion/leather" className="hx-wedstrip hx-wedstrip--art">
+         <span><em>The leather store</em><b>Everything leather</b><i>Jackets, coats, bags, wallets and belts from our leather makers</i></span>
+         <span className="hx-wedstrip__go">Explore <Icon name="arrowRight" size={16} /></span>
++        <StripArt id="leather" />
+       </Link>
+     </div>
+   );
+diff --git a/src/fashion/WeddingEdit.jsx b/src/fashion/WeddingEdit.jsx
+index 264c378..8c08fa3 100644
+--- a/src/fashion/WeddingEdit.jsx
++++ b/src/fashion/WeddingEdit.jsx
+@@ -5,6 +5,7 @@ import { useWeddingEdit } from '../lib/weddingEdit.js';
+ import { usePageMeta } from '../lib/pageMeta.js';
+ import SkeletonGrid from '../components/Skeleton.jsx';
+ import PageShare from '../components/PageShare.jsx';
++import StripArt from '../components/StripArt.jsx';
+ 
+ // /fashion/wedding — the Wedding & Festive edit (weddingEdit.js has what is shown and why).
+ export default function WeddingEdit() {
+@@ -55,9 +56,10 @@ export default function WeddingEdit() {
+ /** The Fashion home's way in to the edit. */
+ export function WeddingStrip() {
+   return (
+-    <Link to="/fashion/wedding" className="hx-wedstrip fs-sec">
++    <Link to="/fashion/wedding" className="hx-wedstrip hx-wedstrip--art fs-sec">
+       <span><em>Shaadi season</em><b>The Wedding &amp; Festive edit</b><i>Suits, sarees, shawls, clutches, jackets for him and gifts, in one place</i></span>
+       <span className="hx-wedstrip__go">Explore <Icon name="arrowRight" size={16} /></span>
++      <StripArt id="wedding" />
+     </Link>
+   );
+ }
+diff --git a/src/styles/sora-ds.css b/src/styles/sora-ds.css
+index 72b80a4..ac7d3a6 100644
+--- a/src/styles/sora-ds.css
++++ b/src/styles/sora-ds.css
+@@ -624,7 +624,7 @@ html.sora-wintertop .sora-storebar { background: #10244C; border-color: rgba(255
+ html.sora-wintertop .sora-storebar__store { color: #C9D6EE; }
+ html.sora-wintertop .sora-storebar__store.is-on { background: #1B3F7C; color: #FBF3E4; }
+ html.sora-wintertop .v2-ann { background: #0E2247; color: #FBF3E4; }
+-html.sora-wintertop .v2-hdr { position: relative; background: #17366E; border-color: rgba(255, 255, 255, .08); box-shadow: none; }
++html.sora-wintertop .v2-hdr { background: #17366E; border-color: rgba(255, 255, 255, .08); box-shadow: none; }
+ html.sora-wintertop .v2-hdr .v2-hdr__act, html.sora-wintertop .v2-hdr .v2-hdr__act svg { color: #FBF3E4; }
+ html.sora-wintertop .v2-hdr .v2-hdr__count, html.sora-wintertop .v2-hdr [class*="badge"] { box-shadow: 0 0 0 2px #17366E; }
+ html.sora-wintertop .v2-hdr .v2-hdr__search input { background: #fff; }
+@@ -765,3 +765,28 @@ html.sora-wintertop .v2-hdr__bar, html.sora-wintertop .sora-stickycats > * { pos
+   .sora-winter__badge b { padding: 3px 5px; font-size: 14px; }
+ }
+ @media (min-width: 760px) { .sora-winter__in { padding-top: 16px; } }
++/* The winter header stays sticky (owner, 2026-11-21: "category wali line scroll krne pe niche a
++   jati hai"): `position: relative` had unstuck it, leaving the chips stuck below an empty gap. */
++html.sora-wintertop .v2-hdr { position: sticky; }
++
++/* Edit banners with their own products' pictures, fanned on the right (owner, 2026-11-21). */
++.hx-wedstrip--art { position: relative; overflow: hidden; padding-right: calc(38% + 12px); min-height: 172px; }
++.hx-wedstrip__art { position: absolute; top: 0; right: 0; bottom: 0; width: 40%; pointer-events: none; }
++.hx-wedstrip__art img {
++  position: absolute; bottom: 14px; left: 50%; width: 46%; aspect-ratio: 4 / 5; height: auto; object-fit: cover;
++  border: 3px solid #fff; border-radius: 10px; box-shadow: 0 10px 22px rgba(0, 0, 0, .35); background: #fff;
++  transform: translateX(calc(-50% + var(--k) * 58%)) rotate(calc(var(--k) * 8deg)); transform-origin: 50% 100%;
++  transition: transform .35s cubic-bezier(.2, .8, .2, 1);
++}
++.hx-wedstrip__art img:nth-child(2) { z-index: 2; bottom: 22px; width: 52%; }
++.hx-wedstrip--art:hover .hx-wedstrip__art img { transform: translateX(calc(-50% + var(--k) * 66%)) rotate(calc(var(--k) * 11deg)) translateY(-4px); }
++.fs .hx-wedstrip__art img { border-radius: 0 !important; }
++@media (max-width: 600px) {
++  .hx-wedstrip--art { padding-right: calc(40% + 6px); }
++  .hx-wedstrip--art b { font-size: 19px; }
++  .hx-wedstrip--art i { font-size: 13px; }
++  .hx-wedstrip__art { width: 42%; }
++  .hx-wedstrip__art img { width: 50%; bottom: 16px; }
++  .hx-wedstrip__art img:nth-child(2) { width: 56%; }
++}
++@media (prefers-reduced-motion: reduce) { .hx-wedstrip__art img { transition: none; } }
+\ No newline at end of file

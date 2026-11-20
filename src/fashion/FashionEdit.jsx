@@ -6,6 +6,7 @@ import { FASHION_EDITS, useFashionEdit } from '../lib/fashionEdits.js';
 import { usePageMeta } from '../lib/pageMeta.js';
 import SkeletonGrid from '../components/Skeleton.jsx';
 import PageShare from '../components/PageShare.jsx';
+import StripArt from '../components/StripArt.jsx';
 
 // /fashion/winter and /fashion/leather (round 12, 2026-11-20) — fashionEdits.js has what
 // is shown and why. The same page as the Wedding edit, with the edit's own sections.
@@ -68,13 +69,15 @@ export default function FashionEdit({ id }) {
 export function EditStrips() {
   return (
     <div className="sora-editstrips fs-sec">
-      <Link to="/fashion/winter" className="hx-wedstrip">
+      <Link to="/fashion/winter" className="hx-wedstrip hx-wedstrip--art">
         <span><em>Winter is here</em><b>The Winter edit</b><i>Leather jackets and coats, shawls, stoles, mufflers and caps</i></span>
         <span className="hx-wedstrip__go">Explore <Icon name="arrowRight" size={16} /></span>
+        <StripArt id="winter" />
       </Link>
-      <Link to="/fashion/leather" className="hx-wedstrip">
+      <Link to="/fashion/leather" className="hx-wedstrip hx-wedstrip--art">
         <span><em>The leather store</em><b>Everything leather</b><i>Jackets, coats, bags, wallets and belts from our leather makers</i></span>
         <span className="hx-wedstrip__go">Explore <Icon name="arrowRight" size={16} /></span>
+        <StripArt id="leather" />
       </Link>
     </div>
   );
