@@ -126,6 +126,63 @@ export async function checkPhotos(rows, load, parallel = 12, onProgress = () => 
 }
 const loadImage = (url) => new Promise((res) => { const i = new Image(); const t = setTimeout(() => res(false), 15000); i.onload = () => { clearTimeout(t); res(i.naturalWidth > 0); }; i.onerror = () => { clearTimeout(t); res(false); }; i.src = url; });
 
+/**
+ * Orders per day (round 22, 2026-11-20): real orders only — paid, or cash on delivery
+ * not cancelled — counted on their India date, every day of the period shown (0s too). Pure.
+ */
+const istDay = (d) => new Date(d).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+export function ordersPerDay(rows, days, now = Date.now()) {
+  const counts = new Map();
+  for (const o of rows || []) {
+    if (!o?.created_at) continue;
+    const real = o.payment_status === 'paid' || (o.payment_method === 'cod' && o.fulfillment_status !== 'cancelled');
+    if (real) counts.set(istDay(o.created_at), (counts.get(istDay(o.created_at)) || 0) + 1);
+  }
+  const out = [];
+  for (let i = days - 1; i >= 0; i -= 1) {
+    const at = now - i * 86400e3;
+    const day = istDay(at);
+    out.push({ day, label: new Date(at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' }), n: counts.get(day) || 0 });
+  }
+  return out;
+}
+
+function DayBars({ rows }) {
+  const [hover, setHover] = useState(null);
+  const max = Math.max(1, ...rows.map((r) => r.n));
+  const total = rows.reduce((t, r) => t + r.n, 0);
+  const W = 600; const H = 140; const gap = 2; const bw = (W - gap * (rows.length - 1)) / rows.length;
+  const r = Math.min(4, bw / 2);
+  const shown = hover != null ? rows[hover] : null;
+  return (
+    <div className="adm-daybars">
+      <p className="adm-daybars__read" aria-live="polite">
+        {shown ? <><b>{shown.n}</b> {shown.n === 1 ? 'order' : 'orders'} on {shown.label}</> : <><b>{total}</b> orders in the period</>}
+      </p>
+      <svg viewBox={`0 0 ${W} ${H + 18}`} role="img" aria-label={`Orders per day: ${total} in ${rows.length} days`} onMouseLeave={() => setHover(null)}>
+        <line x1="0" x2={W} y1={H} y2={H} stroke="#C9D1C6" strokeWidth="1" />
+        {rows.map((d, i) => {
+          const x = i * (bw + gap);
+          const h = d.n ? Math.max(3, (d.n / max) * (H - 6)) : 0;
+          const y = H - h; const rr = Math.min(r, h);
+          return (
+            <g key={d.day} onMouseEnter={() => setHover(i)} onFocus={() => setHover(i)} tabIndex={0} aria-label={`${d.label}: ${d.n}`}>
+              <rect x={x} y="0" width={bw + gap} height={H} fill="transparent" />
+              {h > 0 && <path d={`M${x},${H} V${y + rr} Q${x},${y} ${x + rr},${y} H${x + bw - rr} Q${x + bw},${y} ${x + bw},${y + rr} V${H} Z`} fill={hover === i ? '#1E3B2E' : '#2C5341'} />}
+            </g>
+          );
+        })}
+        <text x="0" y={H + 14} fontSize="11" fill="#5F6D64">{rows[0]?.label}</text>
+        <text x={W} y={H + 14} fontSize="11" fill="#5F6D64" textAnchor="end">{rows[rows.length - 1]?.label}</text>
+      </svg>
+      <details className="adm-hint"><summary>See as a table</summary>
+        <table className="adm-table" style={{ fontSize: 13 }}><thead><tr><th>Day</th><th>Orders</th></tr></thead>
+          <tbody>{rows.filter((d) => d.n > 0).map((d) => <tr key={d.day}><td>{d.label}</td><td>{d.n}</td></tr>)}</tbody></table>
+      </details>
+    </div>
+  );
+}
+
 const STORE = { wellness: 'Wellness', fashion: 'Fashion', homeliving: 'Home & Living', grocery: 'Grocery' };
 const box = { border: '1px solid #E4E8E1', background: '#fff', padding: 14 };
 
@@ -148,6 +205,7 @@ export default function Insights() {
   const [brands, setBrands] = useState(null);
   const [stock, setStock] = useState(null);
   const [viewed, setViewed] = useState(null);
+  const [perDay, setPerDay] = useState(null);
   const [photos, setPhotos] = useState({ state: 'idle', done: 0, total: 0, bad: [] });
   const runPhotoCheck = async () => {
     setPhotos({ state: 'running', done: 0, total: 0, bad: [] });
@@ -159,6 +217,7 @@ export default function Insights() {
   useEffect(() => {
     let live = true;
     setSearches(null); setSellers(null); setBrands(null); setViewed(null); setError('');
+    const since = new Date(Date.now() - days * 86400e3).toISOString();
     supabase.from('product_views').select('store, slug').gte('created_at', since).limit(20000)
       .then(async ({ data, error: e }) => {
         if (!live) return;
@@ -174,7 +233,9 @@ export default function Insights() {
         const names = new Map([...(c.data || []).map((r) => [`${r.store}/${r.slug}`, r.name]), ...(w.data || []).map((r) => [`wellness/${r.slug}`, r.name])]);
         setViewed(top.map((t) => ({ ...t, name: names.get(`${t.store}/${t.slug}`) || t.slug })));
       }, () => { if (live) setViewed([]); });
-    const since = new Date(Date.now() - days * 86400e3).toISOString();
+    setPerDay(null);
+    supabase.from('orders').select('created_at, payment_status, payment_method, fulfillment_status').gte('created_at', since).limit(5000)
+      .then(({ data, error: e }) => { if (live) setPerDay(e ? [] : ordersPerDay(data, days)); }, () => { if (live) setPerDay([]); });
     supabase.from('search_log').select('q, store, results').gte('created_at', since).order('created_at', { ascending: false }).limit(5000)
       .then(({ data, error: e }) => { if (!live) return; if (e) { setError(e.message); setSearches({ top: [], zero: [] }); } else setSearches(summariseSearches(data)); });
     supabase.from('orders').select('items, payment_status, created_at').eq('payment_status', 'paid').gte('created_at', since).limit(2000)
@@ -222,6 +283,11 @@ export default function Insights() {
       </div>
       {error && <div className="adm-banner error">{error}</div>}
       <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' }}>
+        <section style={{ ...box, gridColumn: '1 / -1' }}>
+          <h2 style={{ margin: '0 0 4px', fontSize: 16 }}>Orders per day</h2>
+          <p className="adm-hint" style={{ margin: '0 0 6px' }}>Paid orders and cash-on-delivery orders not cancelled, by the day they were placed (India time).</p>
+          {perDay === null ? <p>Loading…</p> : perDay.length === 0 ? <p className="adm-hint">Could not load orders.</p> : <DayBars rows={perDay} />}
+        </section>
         <List title="Top searches" hint="What shoppers typed, and found something." rows={searches?.top ?? null} empty="No searches yet in this period."
           render={(r) => <li key={`${r.store}|${r.q}`}><b>{r.q}</b> <span style={{ color: '#5F6D64' }}>· {STORE[r.store]} · {r.n}×</span></li>} />
         <List title="Searched, nothing found" hint="Demand you are not meeting yet: stock it, or add these words to the right products." rows={searches?.zero ?? null} empty="Nothing went unfound in this period."

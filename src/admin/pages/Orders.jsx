@@ -92,6 +92,72 @@ export function reviewAskHref(o) {
   return n ? `https://wa.me/${n}?text=${encodeURIComponent(reviewAskText(o))}` : '';
 }
 
+/**
+ * Packing slip (round 22, 2026-11-20): what goes in the box — ship-to, items and qty,
+ * no prices (a gift should not carry them). An unpaid COD order says how much the courier
+ * collects. Pure: the component below prints it.
+ */
+export function packingSlip(o) {
+  const items = (Array.isArray(o?.items) ? o.items : []).map((l) => ({
+    name: l?.name || l?.product_id || 'Item',
+    variant: l?.variant || '',
+    sku: l?.sku || '',
+    qty: Number(l?.qty) || 1,
+  }));
+  const cod = o?.payment_method === 'cod' && o?.payment_status !== 'paid';
+  return {
+    orderNumber: o?.order_number || '',
+    date: o?.created_at ? new Date(o.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '',
+    shipTo: formatAddress(o?.customer || {}),
+    items,
+    units: items.reduce((n, l) => n + l.qty, 0),
+    collect: cod && Number(o?.amount_paise) > 0 ? money(Number(o.amount_paise) / 100) : '',
+  };
+}
+
+function PackingSlip({ order }) {
+  const s = packingSlip(order);
+  return (
+    <div className="adm-slip" aria-hidden="true">
+      <div className="adm-slip__head">
+        <strong>SORA LIFESTYLE</strong>
+        <span>Packing slip</span>
+      </div>
+      <p className="adm-slip__meta">Order {s.orderNumber}{s.date && ` · ${s.date}`}</p>
+      <h4>Ship to</h4>
+      <address>{s.shipTo || 'No address on record'}</address>
+      <table>
+        <thead><tr><th>Item</th><th>Size / variant</th><th>Qty</th></tr></thead>
+        <tbody>
+          {s.items.map((l, i) => (
+            <tr key={i}><td>{l.name}{l.sku && <small> · {l.sku}</small>}</td><td>{l.variant || '—'}</td><td>{l.qty}</td></tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="adm-slip__meta">{s.units} {s.units === 1 ? 'item' : 'items'} in this parcel</p>
+      {s.collect && <p className="adm-slip__cod">Cash on delivery: collect {s.collect}</p>}
+      <p className="adm-slip__foot">Thank you for shopping with SORA LIFESTYLE · www.soralifestyle.in</p>
+    </div>
+  );
+}
+
+/**
+ * "On its way" (round 22, 2026-11-20): a WhatsApp message for a shipped order with the
+ * courier and tracking link (or the customer's orders page). '' without a phone.
+ */
+export function shippedText(o, site = 'https://www.soralifestyle.in') {
+  const first = String(o?.customer?.firstName || '').trim().split(' ')[0];
+  const carrier = String(o?.carrier_name || '').trim();
+  const track = /^https?:\/\//i.test(String(o?.tracking_url || '')) ? o.tracking_url : `${site}/account/orders`;
+  const awb = String(o?.tracking_number || '').trim();
+  return `Hi${first ? ` ${first}` : ''}, this is SORA LIFESTYLE. Your order ${o?.order_number || ''} is on its way${carrier ? ` with ${carrier}` : ''}.${awb ? ` Tracking number: ${awb}.` : ''} Track it here: ${track}`;
+}
+export function shippedHref(o) {
+  const d = String(o?.customer?.phone || '').replace(/\D/g, '');
+  const n = d.length === 10 ? `91${d}` : d.length === 12 && d.startsWith('91') ? d : '';
+  return n ? `https://wa.me/${n}?text=${encodeURIComponent(shippedText(o))}` : '';
+}
+
 // The audit trail an order can prove from its own columns. Steps with no
 // timestamp are not shown — nothing here is inferred or back-dated.
 function timeline(o) {
@@ -125,6 +191,15 @@ export default function Orders() {
   // Recorded admin actions per order (0040) — who collected a COD order's
   // cash — loaded when its details open.
   const [events, setEvents] = useState({});
+  // The order whose packing slip is being printed (round 22).
+  const [slipOrder, setSlipOrder] = useState(null);
+  function printSlip(order) {
+    setSlipOrder(order);
+    document.body.classList.add('adm-printing-slip');
+    const done = () => { document.body.classList.remove('adm-printing-slip'); window.removeEventListener('afterprint', done); };
+    window.addEventListener('afterprint', done);
+    setTimeout(() => { window.print(); }, 60);
+  }
 
   async function loadEvents(orderId) {
     try {
@@ -293,6 +368,10 @@ export default function Orders() {
                               {o.fulfillment_status === 'delivered' && reviewAskHref(o) && (
                                 <a className="btn btn-sm btn-outline" style={{ marginTop: 10 }} href={reviewAskHref(o)} target="_blank" rel="noopener noreferrer">Ask for a review on WhatsApp</a>
                               )}
+                              {/* Tell them it shipped (round 22): the tracking link, on WhatsApp, the admin presses send. */}
+                              {o.fulfillment_status === 'shipped' && shippedHref(o) && (
+                                <a className="btn btn-sm btn-outline" style={{ marginTop: 10 }} href={shippedHref(o)} target="_blank" rel="noopener noreferrer">Send "shipped" on WhatsApp</a>
+                              )}
                             </section>
 
                             {/* Order + payment meta */}
@@ -325,6 +404,9 @@ export default function Orders() {
                               <Link to={`/invoice/${o.order_number}`} className="btn btn-sm" style={{ marginTop: 10 }}>
                                 Open invoice
                               </Link>
+                              <button type="button" className="btn btn-sm btn-light" style={{ marginTop: 10, marginLeft: 8 }} onClick={() => printSlip(o)}>
+                                Print packing slip
+                              </button>
                             </section>
 
                             <FulfillmentEditor order={o} onUpdated={updateOrder} />
@@ -442,6 +524,7 @@ export default function Orders() {
           </table>
         </div>
       )}
+      {slipOrder && <PackingSlip order={slipOrder} />}
     </div>
   );
 }
