@@ -41,6 +41,75 @@ function instantly(move) {
 }
 const jump = (y) => instantly((behavior) => window.scrollTo(behavior ? { top: y, left: 0, behavior } : { top: y, left: 0 }));
 
+// What was on screen (owner, 2026-11-20: "kuch bhi back krte hain to page niche chle jata hai").
+// A position alone is not enough coming back: the page re-renders with its loading sections
+// empty, they fill in above the shopper, and the browser keeps pushing the page down — 1,200
+// px became 2,162 (measured at 412, home → product → back). So on leaving, the link (or
+// section) in the middle of the screen is noted with where it sat; coming back, the page
+// follows that element until it has stopped moving. Sampled only when leaving, never on scroll.
+const ANCHOR_WAIT_MS = 2500;            // for the noted element to render again
+const ANCHOR_STILL_MS = 700;            // it must sit still this long before the hold ends
+const ANCHOR_HOLD_MS = 5000;            // at most
+export function noteAnchor() {
+  try {
+    const w = window.innerWidth, h = window.innerHeight;
+    for (const [fx, fy] of [[0.5, 0.35], [0.25, 0.35], [0.75, 0.35], [0.5, 0.5], [0.5, 0.2], [0.5, 0.65]]) {
+      const hit = document.elementFromPoint(w * fx, h * fy);
+      const el = hit?.closest?.('a[href], section[id], [id]:not(html):not(body):not(#root)');
+      if (!el || el.closest('header, nav, [role="dialog"]')) continue;
+      const pos = window.getComputedStyle(el).position;
+      if (pos === 'fixed' || pos === 'sticky') continue;
+      const sel = el.matches('a[href]') ? `a[href="${CSS.escape(el.getAttribute('href'))}"]` : `#${CSS.escape(el.id)}`;
+      const all = [...document.querySelectorAll(sel)];
+      const nth = all.indexOf(el);
+      if (nth < 0) continue;
+      return { sel, nth, of: all.length, off: Math.round(el.getBoundingClientRect().top) };
+    }
+  } catch { /* an old engine: the position alone */ }
+  return null;
+}
+// The same product can be linked twice (the winter band and New arrivals): until the page
+// has as many such links as when it was left, the nth one may be a different card.
+const findAnchor = (a) => {
+  try { const all = document.querySelectorAll(a.sel); return all.length >= (a.of || 0) ? all[a.nth] || null : null; } catch { return null; }
+};
+// Kept for the tab (sessionStorage), so a reload or a back into the site follows them too.
+const ANCHOR_KEY = 'sora-scroll-anchors';
+function readAnchors() {
+  try { const raw = JSON.parse(window.sessionStorage.getItem(ANCHOR_KEY) || '[]'); return new Map(Array.isArray(raw) ? raw.filter((e) => Array.isArray(e) && typeof e[0] === 'string' && e[1] && typeof e[1].sel === 'string') : []); } catch { return new Map(); }
+}
+function writeAnchors(map) {
+  try { window.sessionStorage.setItem(ANCHOR_KEY, JSON.stringify([...map].slice(-60))); } catch { /* storage full or blocked */ }
+}
+
+/** Follow the noted element until it has sat still; the plain position until it renders. */
+function followAnchor(y, anchor) {
+  const start = Date.now();
+  let still = 0, lastTop = null, live = true, frame = null, timer = null;
+  const tick = () => {
+    if (!live) return;
+    frame = timer = null;
+    const now = Date.now();
+    const el = findAnchor(anchor);
+    if (el) {
+      const top = el.getBoundingClientRect().top;
+      const want = Math.max(0, Math.min(window.scrollY + top - anchor.off, maxScroll()));
+      if (Math.abs(window.scrollY - want) > 1) jump(want);
+      const at = Math.round(el.getBoundingClientRect().top);
+      if (lastTop === at) { still = still || now; } else { still = 0; lastTop = at; }
+      if ((still && now - still >= ANCHOR_STILL_MS) || now - start >= ANCHOR_HOLD_MS) { live = false; return; }
+    } else {
+      const want = Math.min(y, maxScroll());
+      if (Math.abs(window.scrollY - want) > 1) jump(want);
+      if (now - start >= ANCHOR_WAIT_MS) { live = false; return; }
+    }
+    if (document.hidden) timer = window.setTimeout(tick, 50);
+    else frame = window.requestAnimationFrame(tick);
+  };
+  tick();
+  return () => { live = false; if (frame != null) window.cancelAnimationFrame(frame); if (timer != null) window.clearTimeout(timer); };
+}
+
 // Back/forward: the position has to be taken at the popstate, before React Router renders
 // the other entry — a last scroll whose event has not been dispatched yet would otherwise be
 // lost. Listeners on window run in the order they were added (the capture flag does not
@@ -95,8 +164,9 @@ function follow(step, onGiveUp) {
   return () => { live = false; if (frame != null) window.cancelAnimationFrame(frame); if (timer != null) window.clearTimeout(timer); };
 }
 
-function apply(decision, sameDocumentAnchor) {
+function apply(decision, sameDocumentAnchor, anchor = null) {
   if (decision.kind === 'top') { jump(0); return null; }
+  if (decision.kind === 'restore' && anchor) return followAnchor(decision.y, anchor);
   if (decision.kind === 'restore') {
     const y = decision.y;
     return follow(() => {
@@ -136,7 +206,7 @@ export default function ScrollManager() {
   const location = useLocation();
   const action = useNavigationType();
   const s = useRef(null);
-  if (!s.current) s.current = { positions: null, key: null, prev: null, frozen: null, frozenUntil: 0, cancel: null, anchorClick: null };
+  if (!s.current) s.current = { positions: null, key: null, prev: null, frozen: null, frozenUntil: 0, cancel: null, anchorClick: null, anchors: null };
 
   useEffect(() => {
     const st = s.current;
@@ -147,6 +217,8 @@ export default function ScrollManager() {
       const link = e.target?.closest?.('a[href]');
       if (!st.key || !link) return;
       rememberPosition(st.positions, st.key, window.scrollY);
+      const noted = noteAnchor();
+      if (noted) st.anchors.set(st.key, { ...noted, y: window.scrollY }); else st.anchors.delete(st.key);
       st.frozen = st.key; st.frozenUntil = Date.now() + FREEZE_MS;
       // A plain <a href="#x"> arrives as a POP: mark it so the anchor wins over any
       // position remembered for an earlier visit to the same #x.
@@ -154,17 +226,26 @@ export default function ScrollManager() {
       st.anchorClick = href.startsWith('#') ? { hash: href, until: Date.now() + FREEZE_MS } : null;
     };
     const giveWay = () => { st.cancel?.(); st.cancel = null; };
-    const persist = () => writePositions(window.sessionStorage, st.positions);
+    const persist = () => {
+      writePositions(window.sessionStorage, st.positions);
+      if (st.key) { const noted = noteAnchor(); if (noted) st.anchors.set(st.key, { ...noted, y: window.scrollY }); }
+      writeAnchors(st.anchors);
+    };
     window.addEventListener('scroll', remember, { passive: true });
     // The module-level popstate listener (above) calls this. The click freeze still applies,
     // so a native #anchor jump never overwrites where the page was before the click.
-    beforePop = remember;
+    beforePop = () => {
+      remember();
+      if (!st.key) return;
+      const noted = noteAnchor();
+      if (noted) st.anchors.set(st.key, { ...noted, y: window.scrollY }); else st.anchors.delete(st.key);
+    };
     document.addEventListener('click', onClick, true);
     for (const type of INTENT) window.addEventListener(type, giveWay, { passive: true, capture: true });
     window.addEventListener('pagehide', persist);
     return () => {
       window.removeEventListener('scroll', remember);
-      if (beforePop === remember) beforePop = null;
+      beforePop = null;
       document.removeEventListener('click', onClick, true);
       for (const type of INTENT) window.removeEventListener(type, giveWay, { capture: true });
       window.removeEventListener('pagehide', persist);
@@ -177,6 +258,7 @@ export default function ScrollManager() {
   useLayoutEffect(() => {
     const st = s.current;
     if (!st.positions) st.positions = readPositions(window.sessionStorage);
+    if (!st.anchors) st.anchors = readAnchors();
     st.cancel?.(); st.cancel = null;
     const key = entryKey(location);
     const anchorClicked = !!st.anchorClick && st.anchorClick.hash === location.hash && Date.now() < st.anchorClick.until;
@@ -187,8 +269,11 @@ export default function ScrollManager() {
     const decision = scrollDecision({ action, prev: st.prev, next: location, saved, anchorClicked });
     const sameDocumentAnchor = !!st.prev && st.prev.pathname === location.pathname && !!anchorId(location.hash);
     st.key = key; st.frozen = null; st.prev = location;
-    st.cancel = apply(decision, sameDocumentAnchor);
+    // The noted element counts only if the page was left from the position being restored.
+    const noted = decision.kind === 'restore' ? st.anchors.get(key) : null;
+    st.cancel = apply(decision, sameDocumentAnchor, noted && Math.abs(noted.y - decision.y) <= 2 ? noted : null);
     writePositions(window.sessionStorage, st.positions);
+    writeAnchors(st.anchors);
   }, [location, action]);
 
   return null;

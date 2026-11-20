@@ -1,0 +1,291 @@
+diff --git a/src/components/Header.jsx b/src/components/Header.jsx
+index 9b19e44..e202d8d 100644
+--- a/src/components/Header.jsx
++++ b/src/components/Header.jsx
+@@ -1,7 +1,8 @@
+ import { useEffect, useRef, useState } from 'react';
+ import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
+ import Icon from './Icon.jsx';
+-import Logo from './Logo.jsx';
++import Logo, { BrandMark } from './Logo.jsx';
++import { isWinterSeason } from '../lib/winterDeals.js';
+ import ProductImage from './ProductImage.jsx';
+ import AnnouncementBar from './AnnouncementBar.jsx';
+ import { useStore } from '../lib/store.jsx';
+@@ -65,6 +66,15 @@ export default function Header() {
+   const navigate = useNavigate();
+   const location = useLocation();
+   const boxRef = useRef(null);
++  // Winter at the top (owner, 2026-11-20: "soralifestyle.in ke theek niche se sab usi mein
++  // blend ho"): on the homepage, November to February, the store bar, the strip, the
++  // header and the chips turn winter night-blue into the winter band (sora-ds.css).
++  const winterTop = location.pathname === '/' && isWinterSeason();
++  useEffect(() => {
++    const root = document.documentElement;
++    root.classList.toggle('sora-wintertop', winterTop);
++    return () => root.classList.remove('sora-wintertop');
++  }, [winterTop]);
+   const mobileInputRef = useRef(null);
+ 
+   useEffect(() => {
+@@ -175,7 +185,9 @@ export default function Header() {
+           </div>
+ 
+           <div className="v2-hdr__brand">
+-            <Logo />
++            {winterTop ? (
++              <Link to="/" className="logo logo--img" aria-label={`${branding.siteName} — ${branding.tagline}`}><BrandMark light className="logo__img" /></Link>
++            ) : <Logo />}
+           </div>
+ 
+           <div className="v2-hdr__right">
+diff --git a/src/components/ScrollManager.jsx b/src/components/ScrollManager.jsx
+index acc6ffe..2a2a273 100644
+--- a/src/components/ScrollManager.jsx
++++ b/src/components/ScrollManager.jsx
+@@ -41,6 +41,75 @@ function instantly(move) {
+ }
+ const jump = (y) => instantly((behavior) => window.scrollTo(behavior ? { top: y, left: 0, behavior } : { top: y, left: 0 }));
+ 
++// What was on screen (owner, 2026-11-20: "kuch bhi back krte hain to page niche chle jata hai").
++// A position alone is not enough coming back: the page re-renders with its loading sections
++// empty, they fill in above the shopper, and the browser keeps pushing the page down — 1,200
++// px became 2,162 (measured at 412, home → product → back). So on leaving, the link (or
++// section) in the middle of the screen is noted with where it sat; coming back, the page
++// follows that element until it has stopped moving. Sampled only when leaving, never on scroll.
++const ANCHOR_WAIT_MS = 2500;            // for the noted element to render again
++const ANCHOR_STILL_MS = 700;            // it must sit still this long before the hold ends
++const ANCHOR_HOLD_MS = 5000;            // at most
++export function noteAnchor() {
++  try {
++    const w = window.innerWidth, h = window.innerHeight;
++    for (const [fx, fy] of [[0.5, 0.35], [0.25, 0.35], [0.75, 0.35], [0.5, 0.5], [0.5, 0.2], [0.5, 0.65]]) {
++      const hit = document.elementFromPoint(w * fx, h * fy);
++      const el = hit?.closest?.('a[href], section[id], [id]:not(html):not(body):not(#root)');
++      if (!el || el.closest('header, nav, [role="dialog"]')) continue;
++      const pos = window.getComputedStyle(el).position;
++      if (pos === 'fixed' || pos === 'sticky') continue;
++      const sel = el.matches('a[href]') ? `a[href="${CSS.escape(el.getAttribute('href'))}"]` : `#${CSS.escape(el.id)}`;
++      const all = [...document.querySelectorAll(sel)];
++      const nth = all.indexOf(el);
++      if (nth < 0) continue;
++      return { sel, nth, of: all.length, off: Math.round(el.getBoundingClientRect().top) };
++    }
++  } catch { /* an old engine: the position alone */ }
++  return null;
++}
++// The same product can be linked twice (the winter band and New arrivals): until the page
++// has as many such links as when it was left, the nth one may be a different card.
++const findAnchor = (a) => {
++  try { const all = document.querySelectorAll(a.sel); return all.length >= (a.of || 0) ? all[a.nth] || null : null; } catch { return null; }
++};
++// Kept for the tab (sessionStorage), so a reload or a back into the site follows them too.
++const ANCHOR_KEY = 'sora-scroll-anchors';
++function readAnchors() {
++  try { const raw = JSON.parse(window.sessionStorage.getItem(ANCHOR_KEY) || '[]'); return new Map(Array.isArray(raw) ? raw.filter((e) => Array.isArray(e) && typeof e[0] === 'string' && e[1] && typeof e[1].sel === 'string') : []); } catch { return new Map(); }
++}
++function writeAnchors(map) {
++  try { window.sessionStorage.setItem(ANCHOR_KEY, JSON.stringify([...map].slice(-60))); } catch { /* storage full or blocked */ }
++}
++
++/** Follow the noted element until it has sat still; the plain position until it renders. */
++function followAnchor(y, anchor) {
++  const start = Date.now();
++  let still = 0, lastTop = null, live = true, frame = null, timer = null;
++  const tick = () => {
++    if (!live) return;
++    frame = timer = null;
++    const now = Date.now();
++    const el = findAnchor(anchor);
++    if (el) {
++      const top = el.getBoundingClientRect().top;
++      const want = Math.max(0, Math.min(window.scrollY + top - anchor.off, maxScroll()));
++      if (Math.abs(window.scrollY - want) > 1) jump(want);
++      const at = Math.round(el.getBoundingClientRect().top);
++      if (lastTop === at) { still = still || now; } else { still = 0; lastTop = at; }
++      if ((still && now - still >= ANCHOR_STILL_MS) || now - start >= ANCHOR_HOLD_MS) { live = false; return; }
++    } else {
++      const want = Math.min(y, maxScroll());
++      if (Math.abs(window.scrollY - want) > 1) jump(want);
++      if (now - start >= ANCHOR_WAIT_MS) { live = false; return; }
++    }
++    if (document.hidden) timer = window.setTimeout(tick, 50);
++    else frame = window.requestAnimationFrame(tick);
++  };
++  tick();
++  return () => { live = false; if (frame != null) window.cancelAnimationFrame(frame); if (timer != null) window.clearTimeout(timer); };
++}
++
+ // Back/forward: the position has to be taken at the popstate, before React Router renders
+ // the other entry — a last scroll whose event has not been dispatched yet would otherwise be
+ // lost. Listeners on window run in the order they were added (the capture flag does not
+@@ -95,8 +164,9 @@ function follow(step, onGiveUp) {
+   return () => { live = false; if (frame != null) window.cancelAnimationFrame(frame); if (timer != null) window.clearTimeout(timer); };
+ }
+ 
+-function apply(decision, sameDocumentAnchor) {
++function apply(decision, sameDocumentAnchor, anchor = null) {
+   if (decision.kind === 'top') { jump(0); return null; }
++  if (decision.kind === 'restore' && anchor) return followAnchor(decision.y, anchor);
+   if (decision.kind === 'restore') {
+     const y = decision.y;
+     return follow(() => {
+@@ -136,7 +206,7 @@ export default function ScrollManager() {
+   const location = useLocation();
+   const action = useNavigationType();
+   const s = useRef(null);
+-  if (!s.current) s.current = { positions: null, key: null, prev: null, frozen: null, frozenUntil: 0, cancel: null, anchorClick: null };
++  if (!s.current) s.current = { positions: null, key: null, prev: null, frozen: null, frozenUntil: 0, cancel: null, anchorClick: null, anchors: null };
+ 
+   useEffect(() => {
+     const st = s.current;
+@@ -147,6 +217,8 @@ export default function ScrollManager() {
+       const link = e.target?.closest?.('a[href]');
+       if (!st.key || !link) return;
+       rememberPosition(st.positions, st.key, window.scrollY);
++      const noted = noteAnchor();
++      if (noted) st.anchors.set(st.key, { ...noted, y: window.scrollY }); else st.anchors.delete(st.key);
+       st.frozen = st.key; st.frozenUntil = Date.now() + FREEZE_MS;
+       // A plain <a href="#x"> arrives as a POP: mark it so the anchor wins over any
+       // position remembered for an earlier visit to the same #x.
+@@ -154,17 +226,26 @@ export default function ScrollManager() {
+       st.anchorClick = href.startsWith('#') ? { hash: href, until: Date.now() + FREEZE_MS } : null;
+     };
+     const giveWay = () => { st.cancel?.(); st.cancel = null; };
+-    const persist = () => writePositions(window.sessionStorage, st.positions);
++    const persist = () => {
++      writePositions(window.sessionStorage, st.positions);
++      if (st.key) { const noted = noteAnchor(); if (noted) st.anchors.set(st.key, { ...noted, y: window.scrollY }); }
++      writeAnchors(st.anchors);
++    };
+     window.addEventListener('scroll', remember, { passive: true });
+     // The module-level popstate listener (above) calls this. The click freeze still applies,
+     // so a native #anchor jump never overwrites where the page was before the click.
+-    beforePop = remember;
++    beforePop = () => {
++      remember();
++      if (!st.key) return;
++      const noted = noteAnchor();
++      if (noted) st.anchors.set(st.key, { ...noted, y: window.scrollY }); else st.anchors.delete(st.key);
++    };
+     document.addEventListener('click', onClick, true);
+     for (const type of INTENT) window.addEventListener(type, giveWay, { passive: true, capture: true });
+     window.addEventListener('pagehide', persist);
+     return () => {
+       window.removeEventListener('scroll', remember);
+-      if (beforePop === remember) beforePop = null;
++      beforePop = null;
+       document.removeEventListener('click', onClick, true);
+       for (const type of INTENT) window.removeEventListener(type, giveWay, { capture: true });
+       window.removeEventListener('pagehide', persist);
+@@ -177,6 +258,7 @@ export default function ScrollManager() {
+   useLayoutEffect(() => {
+     const st = s.current;
+     if (!st.positions) st.positions = readPositions(window.sessionStorage);
++    if (!st.anchors) st.anchors = readAnchors();
+     st.cancel?.(); st.cancel = null;
+     const key = entryKey(location);
+     const anchorClicked = !!st.anchorClick && st.anchorClick.hash === location.hash && Date.now() < st.anchorClick.until;
+@@ -187,8 +269,11 @@ export default function ScrollManager() {
+     const decision = scrollDecision({ action, prev: st.prev, next: location, saved, anchorClicked });
+     const sameDocumentAnchor = !!st.prev && st.prev.pathname === location.pathname && !!anchorId(location.hash);
+     st.key = key; st.frozen = null; st.prev = location;
+-    st.cancel = apply(decision, sameDocumentAnchor);
++    // The noted element counts only if the page was left from the position being restored.
++    const noted = decision.kind === 'restore' ? st.anchors.get(key) : null;
++    st.cancel = apply(decision, sameDocumentAnchor, noted && Math.abs(noted.y - decision.y) <= 2 ? noted : null);
+     writePositions(window.sessionStorage, st.positions);
++    writeAnchors(st.anchors);
+   }, [location, action]);
+ 
+   return null;
+diff --git a/src/pages/Home.jsx b/src/pages/Home.jsx
+index 2ef9c1b..9cdb09b 100644
+--- a/src/pages/Home.jsx
++++ b/src/pages/Home.jsx
+@@ -77,6 +77,9 @@ export default function Home() {
+       {/* The top of the page — white with an orange accent (HomeStorefront.jsx).
+              The hero is static: the admin Hero Slides page no longer drives it,
+              and the circle row replaced the category strip. */}
++      {/* Winter deals (owner, 2026-11-20): the seasonal band, Nov–Feb, real discounts only (WinterDeals.jsx) —
++          straight under the header, which turns winter-blue to meet it (Header.jsx). */}
++      <WinterDeals />
+       <HomeHero />
+       <HomeTrustStrip />
+       {/* Something already in the bag: how many, and the way to it (HomeExtras.jsx). */}
+@@ -84,8 +87,6 @@ export default function Home() {
+       <HomeTiles />
+       {/* The round quick-nav row stays straight under the hero, above the offers (test-home-discovery D18). */}
+       <ExploreStores />
+-      {/* Winter deals (owner, 2026-11-20): the seasonal band, Nov–Feb, real discounts only (WinterDeals.jsx). */}
+-      <WinterDeals />
+ 
+       <HomeGroup eyebrow="Offers" title="Deals worth grabbing" />
+       {/* The running offer with a live countdown (OfferBanner.jsx); nothing once it ends. */}
+diff --git a/src/styles/fashion.css b/src/styles/fashion.css
+index e710363..a804f1c 100644
+--- a/src/styles/fashion.css
++++ b/src/styles/fashion.css
+@@ -560,6 +560,9 @@
+ /* The picture counter (2026-11-09). */
+ .fs-gallery { position: relative; }
+ @media (min-width: 768px) { .fs-pdp--mk .fs-gallery { position: sticky; } }
++/* Below 768 the gallery is not sticky, so the sticky `top` (120/196 px) must not apply: with
++   position: relative it pushed every product picture down over the name and price (2026-11-20). */
++@media (max-width: 767px) { .fs .fs-gallery { top: auto; } }
+ .fs-gallery__count { position: absolute; top: 10px; left: 10px; z-index: 2; padding: 3px 9px; background: rgba(15, 17, 17, .72); color: #fff; font: 600 12px/1.4 Arial, sans-serif; font-variant-numeric: tabular-nums; pointer-events: none; }
+ /* Search by voice in the search bar (2026-11-10): the microphone sits inside the field, left of the search button. */
+ .fs-search .hx-voice { position: absolute; right: 98px; top: 8px; }
+diff --git a/src/styles/sora-ds.css b/src/styles/sora-ds.css
+index b9d9047..67dffee 100644
+--- a/src/styles/sora-ds.css
++++ b/src/styles/sora-ds.css
+@@ -611,17 +611,37 @@ body .fs .hx-ans .hx-ans__cta { background: #D9B26A; color: #121A16; }
+ }
+ /* A press you can feel, on a phone. */
+ .sora-winter__hero:active, .sora-winter__tile:active, .sora-winter__all:active { transform: scale(.96); transition-duration: .08s; }
+-/* The heading catches the light every few seconds. */
+-.sora-winter__title { position: relative; }
+-.sora-winter__title::after {
+-  content: ''; position: absolute; inset: -6px -10px; pointer-events: none; mix-blend-mode: soft-light;
+-  background: linear-gradient(110deg, transparent 35%, rgba(255, 255, 255, .9) 50%, transparent 65%) no-repeat;
+-  background-size: 250% 100%; animation: sw-gleam 5s ease-in-out 1.5s infinite;
+-}
+-@keyframes sw-gleam { 0%, 60% { background-position: 150% 0; } 100% { background-position: -50% 0; } }
+ @media (max-width: 759px) { .sora-winter__orn:nth-child(2), .sora-winter__orn:nth-child(3) { display: none; } }
+ @media (prefers-reduced-motion: reduce) { .sora-winter__deco, .sora-winter__hem i { animation: none !important; } .sora-winter__twinkle { display: none; } }
+ /* Inside the Fashion store (square corners by design, `.fs *` in fashion.css): the tiles
+    take its corners, but snow and pom-poms stay round and the edit link stays readable. */
+ .fs .sora-winter__snow i, .fs .sora-winter__hem i { border-radius: 50% !important; }
+-.fs a.sora-winter__all { color: var(--w-ink); }
+\ No newline at end of file
++.fs a.sora-winter__all { color: var(--w-ink); }
++
++/* Winter at the top of the homepage (owner, 2026-11-20): store bar, strip, header and
++   chips in the band's night-blue, snow drifting across them, the band straight below. */
++html.sora-wintertop .sora-storebar { background: #10244C; border-color: rgba(255, 255, 255, .08); }
++html.sora-wintertop .sora-storebar__store { color: #C9D6EE; }
++html.sora-wintertop .sora-storebar__store.is-on { background: #1B3F7C; color: #FBF3E4; }
++html.sora-wintertop .v2-ann { background: #0E2247; color: #FBF3E4; }
++html.sora-wintertop .v2-hdr { position: relative; background: #17366E; border-color: rgba(255, 255, 255, .08); box-shadow: none; }
++html.sora-wintertop .v2-hdr .v2-hdr__act, html.sora-wintertop .v2-hdr .v2-hdr__act svg { color: #FBF3E4; }
++html.sora-wintertop .v2-hdr .v2-hdr__count, html.sora-wintertop .v2-hdr [class*="badge"] { box-shadow: 0 0 0 2px #17366E; }
++html.sora-wintertop .v2-hdr .v2-hdr__search input { background: #fff; }
++html.sora-wintertop .sora-stickycats { background: #1B3F7C; border-color: rgba(255, 255, 255, .08); box-shadow: none; }
++html.sora-wintertop .sora-stickycats a { background: rgba(255, 255, 255, .1) !important; color: #FBF3E4 !important; border-color: rgba(255, 255, 255, .28) !important; }
++html.sora-wintertop .sora-stickycats a:hover { background: rgba(255, 255, 255, .18) !important; }
++html.sora-wintertop .sora-winter { margin-top: 0; }
++html.sora-wintertop .sora-winter { background: linear-gradient(180deg, #1B3F7C 0%, var(--w-night) 100%); }
++/* Snow drifting across the header: two dot layers moving down, no extra elements. */
++html.sora-wintertop .v2-hdr::after, html.sora-wintertop .sora-stickycats::after {
++  content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 0;
++  background-image: radial-gradient(2px 2px at 20px 30px, rgba(255, 255, 255, .8) 50%, transparent 51%),
++    radial-gradient(1.5px 1.5px at 90px 10px, rgba(255, 255, 255, .6) 50%, transparent 51%),
++    radial-gradient(2.5px 2.5px at 150px 50px, rgba(255, 255, 255, .7) 50%, transparent 51%),
++    radial-gradient(1.5px 1.5px at 60px 70px, rgba(255, 255, 255, .5) 50%, transparent 51%);
++  background-size: 180px 90px; animation: sw-drift 9s linear infinite;
++}
++html.sora-wintertop .v2-hdr__bar, html.sora-wintertop .sora-stickycats > * { position: relative; z-index: 1; }
++@keyframes sw-drift { from { background-position: 0 0, 0 0, 0 0, 0 0; } to { background-position: 30px 90px, -20px 90px, 20px 90px, -30px 90px; } }
++@media (prefers-reduced-motion: reduce) { html.sora-wintertop .v2-hdr::after, html.sora-wintertop .sora-stickycats::after { animation: none; } }
+\ No newline at end of file

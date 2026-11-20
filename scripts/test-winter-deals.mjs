@@ -43,8 +43,8 @@ test('links open the winter and leather edit sections that exist', () => {
   const hrefs = w.WINTER_TILES.map((t) => t.href);
   assert.deepEqual(hrefs, ['/fashion/winter', '/fashion/winter#winter-shawls', '/fashion/leather#leather-coats', '/fashion/winter#winter-caps']);
 });
-test('on the homepage under the store circles; motion stops for reduced-motion; no words in pictures', () => {
-  assert.match(read('src/pages/Home.jsx'), /<ExploreStores \/>\n.*\n      <WinterDeals \/>/);
+test('on the homepage straight under the header; motion stops for reduced-motion; no words in pictures', () => {
+  assert.match(read('src/pages/Home.jsx'), /<WinterDeals \/>\n      <HomeHero \/>/);
   const css = read('src/styles/sora-ds.css');
   assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{\n  \.sora-winter__snow \{ display: none; \}/);
   const c = read('src/components/WinterDeals.jsx');
@@ -60,6 +60,25 @@ test('round 25: on the Fashion home under the category chips; ornaments, twinkle
   assert.match(css, /\.fs \.sora-winter__snow i, \.fs \.sora-winter__hem i \{ border-radius: 50% !important; \}/);
   assert.match(css, /\.fs a\.sora-winter__all \{ color: var\(--w-ink\); \}/);
   assert.match(css, /prefers-reduced-motion: reduce\) \{ \.sora-winter__deco, \.sora-winter__hem i \{ animation: none !important; \}/);
+});
+test('round 26: the homepage top turns winter-blue into the band; the light sparrow there', () => {
+  const h = read('src/components/Header.jsx');
+  assert.match(h, /const winterTop = location\.pathname === '\/' && isWinterSeason\(\);/);
+  assert.match(h, /root\.classList\.toggle\('sora-wintertop', winterTop\)/);
+  assert.match(h, /<BrandMark light className="logo__img" \/>/);
+  const css = read('src/styles/sora-ds.css');
+  for (const sel of ['html.sora-wintertop .sora-storebar {', 'html.sora-wintertop .v2-ann {', 'html.sora-wintertop .v2-hdr {', 'html.sora-wintertop .sora-stickycats {']) assert.ok(css.includes(sel), sel);
+  assert.ok(!css.includes('sw-gleam'), 'the boxy gleam is gone');
+});
+test('product pictures on phones start at the top of the gallery (no sticky offset)', () => {
+  assert.match(read('src/styles/fashion.css'), /@media \(max-width: 767px\) \{ \.fs \.fs-gallery \{ top: auto; \} \}/);
+});
+test('back returns to what was on screen: the element is noted on leaving and followed', () => {
+  const m = read('src/components/ScrollManager.jsx');
+  assert.match(m, /export function noteAnchor\(\)/);
+  assert.match(m, /if \(decision\.kind === 'restore' && anchor\) return followAnchor\(decision\.y, anchor\);/);
+  assert.match(m, /all\.length >= \(a\.of \|\| 0\)/);
+  assert.match(m, /const ANCHOR_KEY = 'sora-scroll-anchors';/);
 });
 if (failed) { console.log(`\n${failed} failed`); process.exit(1); }
 console.log('\nall passed');

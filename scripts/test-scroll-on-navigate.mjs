@@ -201,7 +201,7 @@ await test('the link click takes the position before the next page can move it: 
 await test('the popstate listener is added when the module loads, ahead of the router’s (on window the order of adding decides, not the capture flag)', () => {
   const src = read('src/components/ScrollManager.jsx');
   assert.match(src, /^if \(typeof window !== 'undefined'\) window\.addEventListener\('popstate', \(\) => beforePop\?\.\(\)\);$/m, 'at the top level of the module');
-  assert.match(src, /beforePop = remember;/);
+  assert.match(src, /beforePop = \(\) => \{\n      remember\(\);/, 'the position first, then what was on screen (2026-11-20)');
   const main = read('src/main.jsx');
   assert.ok(main.indexOf("import ScrollManager from './components/ScrollManager.jsx';") < main.indexOf('ReactDOM.createRoot('), 'imported before anything renders');
 });

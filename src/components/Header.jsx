@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import Icon from './Icon.jsx';
-import Logo from './Logo.jsx';
+import Logo, { BrandMark } from './Logo.jsx';
+import { isWinterSeason } from '../lib/winterDeals.js';
 import ProductImage from './ProductImage.jsx';
 import AnnouncementBar from './AnnouncementBar.jsx';
 import { useStore } from '../lib/store.jsx';
@@ -65,6 +66,15 @@ export default function Header() {
   const navigate = useNavigate();
   const location = useLocation();
   const boxRef = useRef(null);
+  // Winter at the top (owner, 2026-11-20: "soralifestyle.in ke theek niche se sab usi mein
+  // blend ho"): on the homepage, November to February, the store bar, the strip, the
+  // header and the chips turn winter night-blue into the winter band (sora-ds.css).
+  const winterTop = location.pathname === '/' && isWinterSeason();
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.toggle('sora-wintertop', winterTop);
+    return () => root.classList.remove('sora-wintertop');
+  }, [winterTop]);
   const mobileInputRef = useRef(null);
 
   useEffect(() => {
@@ -175,7 +185,9 @@ export default function Header() {
           </div>
 
           <div className="v2-hdr__brand">
-            <Logo />
+            {winterTop ? (
+              <Link to="/" className="logo logo--img" aria-label={`${branding.siteName} — ${branding.tagline}`}><BrandMark light className="logo__img" /></Link>
+            ) : <Logo />}
           </div>
 
           <div className="v2-hdr__right">

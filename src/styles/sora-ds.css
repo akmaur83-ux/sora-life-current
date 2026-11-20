@@ -611,17 +611,37 @@ body .fs .hx-ans .hx-ans__cta { background: #D9B26A; color: #121A16; }
 }
 /* A press you can feel, on a phone. */
 .sora-winter__hero:active, .sora-winter__tile:active, .sora-winter__all:active { transform: scale(.96); transition-duration: .08s; }
-/* The heading catches the light every few seconds. */
-.sora-winter__title { position: relative; }
-.sora-winter__title::after {
-  content: ''; position: absolute; inset: -6px -10px; pointer-events: none; mix-blend-mode: soft-light;
-  background: linear-gradient(110deg, transparent 35%, rgba(255, 255, 255, .9) 50%, transparent 65%) no-repeat;
-  background-size: 250% 100%; animation: sw-gleam 5s ease-in-out 1.5s infinite;
-}
-@keyframes sw-gleam { 0%, 60% { background-position: 150% 0; } 100% { background-position: -50% 0; } }
 @media (max-width: 759px) { .sora-winter__orn:nth-child(2), .sora-winter__orn:nth-child(3) { display: none; } }
 @media (prefers-reduced-motion: reduce) { .sora-winter__deco, .sora-winter__hem i { animation: none !important; } .sora-winter__twinkle { display: none; } }
 /* Inside the Fashion store (square corners by design, `.fs *` in fashion.css): the tiles
    take its corners, but snow and pom-poms stay round and the edit link stays readable. */
 .fs .sora-winter__snow i, .fs .sora-winter__hem i { border-radius: 50% !important; }
 .fs a.sora-winter__all { color: var(--w-ink); }
+
+/* Winter at the top of the homepage (owner, 2026-11-20): store bar, strip, header and
+   chips in the band's night-blue, snow drifting across them, the band straight below. */
+html.sora-wintertop .sora-storebar { background: #10244C; border-color: rgba(255, 255, 255, .08); }
+html.sora-wintertop .sora-storebar__store { color: #C9D6EE; }
+html.sora-wintertop .sora-storebar__store.is-on { background: #1B3F7C; color: #FBF3E4; }
+html.sora-wintertop .v2-ann { background: #0E2247; color: #FBF3E4; }
+html.sora-wintertop .v2-hdr { position: relative; background: #17366E; border-color: rgba(255, 255, 255, .08); box-shadow: none; }
+html.sora-wintertop .v2-hdr .v2-hdr__act, html.sora-wintertop .v2-hdr .v2-hdr__act svg { color: #FBF3E4; }
+html.sora-wintertop .v2-hdr .v2-hdr__count, html.sora-wintertop .v2-hdr [class*="badge"] { box-shadow: 0 0 0 2px #17366E; }
+html.sora-wintertop .v2-hdr .v2-hdr__search input { background: #fff; }
+html.sora-wintertop .sora-stickycats { background: #1B3F7C; border-color: rgba(255, 255, 255, .08); box-shadow: none; }
+html.sora-wintertop .sora-stickycats a { background: rgba(255, 255, 255, .1) !important; color: #FBF3E4 !important; border-color: rgba(255, 255, 255, .28) !important; }
+html.sora-wintertop .sora-stickycats a:hover { background: rgba(255, 255, 255, .18) !important; }
+html.sora-wintertop .sora-winter { margin-top: 0; }
+html.sora-wintertop .sora-winter { background: linear-gradient(180deg, #1B3F7C 0%, var(--w-night) 100%); }
+/* Snow drifting across the header: two dot layers moving down, no extra elements. */
+html.sora-wintertop .v2-hdr::after, html.sora-wintertop .sora-stickycats::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 0;
+  background-image: radial-gradient(2px 2px at 20px 30px, rgba(255, 255, 255, .8) 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 90px 10px, rgba(255, 255, 255, .6) 50%, transparent 51%),
+    radial-gradient(2.5px 2.5px at 150px 50px, rgba(255, 255, 255, .7) 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 60px 70px, rgba(255, 255, 255, .5) 50%, transparent 51%);
+  background-size: 180px 90px; animation: sw-drift 9s linear infinite;
+}
+html.sora-wintertop .v2-hdr__bar, html.sora-wintertop .sora-stickycats > * { position: relative; z-index: 1; }
+@keyframes sw-drift { from { background-position: 0 0, 0 0, 0 0, 0 0; } to { background-position: 30px 90px, -20px 90px, 20px 90px, -30px 90px; } }
+@media (prefers-reduced-motion: reduce) { html.sora-wintertop .v2-hdr::after, html.sora-wintertop .sora-stickycats::after { animation: none; } }

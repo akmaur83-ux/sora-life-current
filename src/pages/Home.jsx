@@ -77,6 +77,9 @@ export default function Home() {
       {/* The top of the page — white with an orange accent (HomeStorefront.jsx).
              The hero is static: the admin Hero Slides page no longer drives it,
              and the circle row replaced the category strip. */}
+      {/* Winter deals (owner, 2026-11-20): the seasonal band, Nov–Feb, real discounts only (WinterDeals.jsx) —
+          straight under the header, which turns winter-blue to meet it (Header.jsx). */}
+      <WinterDeals />
       <HomeHero />
       <HomeTrustStrip />
       {/* Something already in the bag: how many, and the way to it (HomeExtras.jsx). */}
@@ -84,8 +87,6 @@ export default function Home() {
       <HomeTiles />
       {/* The round quick-nav row stays straight under the hero, above the offers (test-home-discovery D18). */}
       <ExploreStores />
-      {/* Winter deals (owner, 2026-11-20): the seasonal band, Nov–Feb, real discounts only (WinterDeals.jsx). */}
-      <WinterDeals />
 
       <HomeGroup eyebrow="Offers" title="Deals worth grabbing" />
       {/* The running offer with a live countdown (OfferBanner.jsx); nothing once it ends. */}
