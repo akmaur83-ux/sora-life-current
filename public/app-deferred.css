@@ -820,6 +820,33 @@
   .sc-toolbar .sc-field { max-width: none; }
 }
 
+/* Packing slip (round 22, 2026-11-20): hidden on screen, the only thing on paper. */
+.adm-slip { display: none; }
+@media print {
+  body.adm-printing-slip * { visibility: hidden !important; }
+  body.adm-printing-slip .adm-slip, body.adm-printing-slip .adm-slip * { visibility: visible !important; }
+  body.adm-printing-slip .adm-slip {
+    display: block; position: absolute; left: 0; top: 0; width: 100%;
+    padding: 12mm; color: #000; background: #fff; font: 12pt/1.45 Georgia, 'Times New Roman', serif;
+  }
+  .adm-slip__head { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 2px solid #000; padding-bottom: 6px; }
+  .adm-slip__head strong { font-size: 16pt; letter-spacing: .08em; }
+  .adm-slip h4 { margin: 14px 0 4px; font-size: 10pt; text-transform: uppercase; letter-spacing: .1em; }
+  .adm-slip address { white-space: pre-line; font-style: normal; font-size: 13pt; }
+  .adm-slip table { width: 100%; border-collapse: collapse; margin-top: 14px; }
+  .adm-slip th, .adm-slip td { text-align: left; border-bottom: 1px solid #999; padding: 6px 4px; }
+  .adm-slip td:last-child, .adm-slip th:last-child { text-align: right; }
+  .adm-slip__meta { margin: 8px 0 0; }
+  .adm-slip__cod { margin-top: 14px; padding: 8px; border: 2px solid #000; font-weight: 700; font-size: 14pt; }
+  .adm-slip__foot { margin-top: 24px; font-size: 9pt; }
+}
+
+/* Orders per day (round 22). */
+.adm-daybars svg { width: 100%; height: auto; display: block; }
+.adm-daybars g { cursor: default; outline: none; }
+.adm-daybars__read { margin: 0 0 6px; font-size: var(--text-sm); min-height: 1.4em; }
+.adm-daybars details { margin-top: 8px; }
+
 /* ═══ src/styles/passport.css ═══ */
 /* ============================================================
    PURCHASE PASSPORT
