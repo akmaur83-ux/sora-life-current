@@ -33,8 +33,12 @@ const IMAGE_TYPES = { 'image/webp': 'webp', 'image/png': 'png', 'image/jpeg': 'j
 
 /** The Supabase project URL and publishable key the committed bundle uses (both public). */
 export function supabaseFromBundle(bundleText) {
-  const url = /const supabaseUrl = "(https:\/\/[a-z0-9]+\.supabase\.co)"/.exec(bundleText)?.[1];
-  const key = /const supabasePublishableKey = "([A-Za-z0-9_.-]{20,})"/.exec(bundleText)?.[1];
+  // The named constants when the bundle is readable; the values themselves when it is minified
+  // (2026-11-20: the build now minifies, which renames the constants).
+  const url = /const supabaseUrl = "(https:\/\/[a-z0-9]+\.supabase\.co)"/.exec(bundleText)?.[1]
+    || /"(https:\/\/[a-z0-9]{15,}\.supabase\.co)"/.exec(bundleText)?.[1];
+  const key = /const supabasePublishableKey = "([A-Za-z0-9_.-]{20,})"/.exec(bundleText)?.[1]
+    || /"(sb_publishable_[A-Za-z0-9_-]{20,})"/.exec(bundleText)?.[1];
   if (!url || !key) throw new Error('public/bundle.js carries no Supabase project URL and key, so the published content cannot be read.');
   return { url, key };
 }

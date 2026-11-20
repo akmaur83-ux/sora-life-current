@@ -6,6 +6,7 @@ import { nodeResolve } from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
 import replace from '@rollup/plugin-replace';
 import { babel } from '@rollup/plugin-babel';
+import terser from '@rollup/plugin-terser';
 import {
   INTENDED_PROVIDERS, parseEnabledProviders, missingIntendedProviders,
 } from './src/lib/oauthProviders.js';
@@ -289,6 +290,10 @@ export default {
       exclude: 'node_modules/**',
       presets: [['@babel/preset-react', { runtime: 'automatic' }]],
     }),
+    // Minified (2026-11-20, round 19): the bundle was shipped as written — 3.3 MB to parse on
+    // a phone. Names are shortened and comments dropped; behaviour is unchanged. The
+    // Supabase URL and key stay as plain strings (build/publish-content.mjs reads them).
+    terser({ compress: { passes: 2 }, format: { comments: false } }),
     // The verify-only artifact has done its job once the build succeeds:
     // it proved the source compiles. Delete it so it cannot be picked up as
     // deployable output (outputDirectory is the repo root).
