@@ -8,6 +8,14 @@ import { useWinterDeals } from '../lib/winterDeals.js';
 // ============================================================
 const rupees = (n) => `₹${Math.round(Number(n) || 0).toLocaleString('en-IN')}`;
 
+// Hanging ornaments (left %, string length px, swing seconds, delay s), twinkling stars
+// (left %, top %, size px, delay s) and the pom-poms along the hem — round 25, 2026-11-20.
+export const ORNAMENTS = Object.freeze([[6, 34, 3.4, 0], [17, 18, 2.9, .6], [83, 22, 3.1, .3], [94, 38, 3.6, .9]]);
+export const TWINKLES = Object.freeze([[12, 30, 10, 0], [30, 14, 7, 1.1], [70, 12, 8, .5], [88, 46, 9, 1.6], [50, 6, 6, 2.2], [4, 62, 7, .8]]);
+export const POMPOMS = 24;
+// The nearer layer of snow: bigger, softer, faster.
+export const NEAR_FLAKES = Object.freeze([[9, 11, 7, 2, 30], [29, 9, 8, 5, -26], [52, 12, 6.5, 0, 24], [73, 10, 7.5, 4, -30], [90, 9, 8.5, 1, 20], [41, 8, 7, 6, -18]]);
+
 // Fixed flakes (no Math.random: the same band every render): left %, size px, seconds, delay s, drift px.
 export const FLAKES = Object.freeze([
   [4, 6, 9, 0, 18], [11, 4, 12, 3, -12], [18, 8, 10, 6, 22], [26, 5, 13, 1, -16], [33, 3, 8, 4, 10],
@@ -49,6 +57,19 @@ export default function WinterDeals() {
           <i key={k} style={{ '--x': `${x}%`, '--s': `${s}px`, '--d': `${d}s`, '--delay': `-${delay}s`, '--drift': `${drift}px` }} />
         ))}
       </div>
+      <div className="sora-winter__snow sora-winter__snow--near" aria-hidden="true">
+        {NEAR_FLAKES.map(([x, s, d, delay, drift], k) => (
+          <i key={k} style={{ '--x': `${x}%`, '--s': `${s}px`, '--d': `${d}s`, '--delay': `-${delay}s`, '--drift': `${drift}px` }} />
+        ))}
+      </div>
+      <div className="sora-winter__deco" aria-hidden="true">
+        {ORNAMENTS.map(([x, len, d, delay], k) => (
+          <span key={k} className="sora-winter__orn" style={{ '--x': `${x}%`, '--len': `${len}px`, '--d': `${d}s`, '--delay': `-${delay}s` }}><Flake /></span>
+        ))}
+        {TWINKLES.map(([x, y, s, delay], k) => (
+          <span key={k} className="sora-winter__twinkle" style={{ '--x': `${x}%`, '--y': `${y}%`, '--s': `${s}px`, '--delay': `${delay}s` }} />
+        ))}
+      </div>
       <div className="sora-winter__in">
         <div className="sora-winter__head">
           <Flake />
@@ -81,6 +102,9 @@ export default function WinterDeals() {
           <span><b>The winter edit</b> — every jacket, shawl and muffler in one place</span>
           <span aria-hidden="true">›</span>
         </Link>
+      </div>
+      <div className="sora-winter__hem" aria-hidden="true">
+        {Array.from({ length: POMPOMS }, (_, k) => <i key={k} style={{ '--k': k }} />)}
       </div>
     </section>
   );

@@ -1,0 +1,129 @@
+diff --git a/src/components/WinterDeals.jsx b/src/components/WinterDeals.jsx
+index 3d2d42c..c18bc11 100644
+--- a/src/components/WinterDeals.jsx
++++ b/src/components/WinterDeals.jsx
+@@ -8,6 +8,14 @@ import { useWinterDeals } from '../lib/winterDeals.js';
+ // ============================================================
+ const rupees = (n) => `₹${Math.round(Number(n) || 0).toLocaleString('en-IN')}`;
+ 
++// Hanging ornaments (left %, string length px, swing seconds, delay s), twinkling stars
++// (left %, top %, size px, delay s) and the pom-poms along the hem — round 25, 2026-11-20.
++export const ORNAMENTS = Object.freeze([[6, 34, 3.4, 0], [17, 18, 2.9, .6], [83, 22, 3.1, .3], [94, 38, 3.6, .9]]);
++export const TWINKLES = Object.freeze([[12, 30, 10, 0], [30, 14, 7, 1.1], [70, 12, 8, .5], [88, 46, 9, 1.6], [50, 6, 6, 2.2], [4, 62, 7, .8]]);
++export const POMPOMS = 24;
++// The nearer layer of snow: bigger, softer, faster.
++export const NEAR_FLAKES = Object.freeze([[9, 11, 7, 2, 30], [29, 9, 8, 5, -26], [52, 12, 6.5, 0, 24], [73, 10, 7.5, 4, -30], [90, 9, 8.5, 1, 20], [41, 8, 7, 6, -18]]);
++
+ // Fixed flakes (no Math.random: the same band every render): left %, size px, seconds, delay s, drift px.
+ export const FLAKES = Object.freeze([
+   [4, 6, 9, 0, 18], [11, 4, 12, 3, -12], [18, 8, 10, 6, 22], [26, 5, 13, 1, -16], [33, 3, 8, 4, 10],
+@@ -49,6 +57,19 @@ export default function WinterDeals() {
+           <i key={k} style={{ '--x': `${x}%`, '--s': `${s}px`, '--d': `${d}s`, '--delay': `-${delay}s`, '--drift': `${drift}px` }} />
+         ))}
+       </div>
++      <div className="sora-winter__snow sora-winter__snow--near" aria-hidden="true">
++        {NEAR_FLAKES.map(([x, s, d, delay, drift], k) => (
++          <i key={k} style={{ '--x': `${x}%`, '--s': `${s}px`, '--d': `${d}s`, '--delay': `-${delay}s`, '--drift': `${drift}px` }} />
++        ))}
++      </div>
++      <div className="sora-winter__deco" aria-hidden="true">
++        {ORNAMENTS.map(([x, len, d, delay], k) => (
++          <span key={k} className="sora-winter__orn" style={{ '--x': `${x}%`, '--len': `${len}px`, '--d': `${d}s`, '--delay': `-${delay}s` }}><Flake /></span>
++        ))}
++        {TWINKLES.map(([x, y, s, delay], k) => (
++          <span key={k} className="sora-winter__twinkle" style={{ '--x': `${x}%`, '--y': `${y}%`, '--s': `${s}px`, '--delay': `${delay}s` }} />
++        ))}
++      </div>
+       <div className="sora-winter__in">
+         <div className="sora-winter__head">
+           <Flake />
+@@ -82,6 +103,9 @@ export default function WinterDeals() {
+           <span aria-hidden="true">›</span>
+         </Link>
+       </div>
++      <div className="sora-winter__hem" aria-hidden="true">
++        {Array.from({ length: POMPOMS }, (_, k) => <i key={k} style={{ '--k': k }} />)}
++      </div>
+     </section>
+   );
+ }
+diff --git a/src/fashion/FashionHome.jsx b/src/fashion/FashionHome.jsx
+index 98df34d..af30a11 100644
+--- a/src/fashion/FashionHome.jsx
++++ b/src/fashion/FashionHome.jsx
+@@ -21,6 +21,7 @@ import { HERO_IMAGE, circleArt, cardArt } from './fashionArt.js';
+ import { getHomepageSnapshot, subscribeHomepage } from '../lib/settings.js';
+ import { DEFAULT_FASHION_STOREFRONT, normalizeFashionStorefront } from '../lib/storefrontCustomization.js';
+ import { useStorefrontSection } from '../lib/storefrontSections.js';
++import WinterDeals from '../components/WinterDeals.jsx';
+ 
+ // ============================================================
+ // /fashion — circular category tiles, the benefits strip, the hero (image
+@@ -160,6 +161,8 @@ export default function FashionHome() {
+     <div className="fs-home">
+       <Hero config={config.hero} />
+       <CategoryChips />
++      {/* Winter deals (owner, 2026-11-20: "lga do"): the homepage's seasonal band, here too (WinterDeals.jsx). */}
++      <WinterDeals />
+       {/* Taj Leather (partner, 2026-11-11): their campaign posters right under the hero (TajLeather.jsx). */}
+       <TajLeatherPosters />
+       {/* Ansari Fashion (partner, 2026-11-13): their category posters (AnsariFashion.jsx). */}
+diff --git a/src/styles/sora-ds.css b/src/styles/sora-ds.css
+index 5b3e88b..b9d9047 100644
+--- a/src/styles/sora-ds.css
++++ b/src/styles/sora-ds.css
+@@ -577,4 +577,51 @@ body .fs .hx-ans .hx-ans__cta { background: #D9B26A; color: #121A16; }
+ @media (prefers-reduced-motion: reduce) {
+   .sora-winter__snow { display: none; }
+   .sora-winter *, .sora-winter *::after { animation: none !important; transition: none !important; }
+-}
+\ No newline at end of file
++}
++
++/* Winter band, round 25 (owner, 2026-11-20: "live animations ... add krdo"). */
++.sora-winter__snow--near i { opacity: .55; filter: blur(1.6px); animation-name: sw-fall-near; }
++@keyframes sw-fall-near {
++  0% { transform: translate3d(0, 0, 0) scale(1); opacity: 0; }
++  12% { opacity: .6; }
++  50% { transform: translate3d(calc(var(--drift) * -.6), 380px, 0) scale(1.1); }
++  100% { transform: translate3d(var(--drift), 760px, 0) scale(.9); opacity: .15; }
++}
++.sora-winter__deco { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
++/* Ornaments hang from the top edge on a thread and swing. */
++.sora-winter__orn {
++  position: absolute; top: 0; left: var(--x); display: flex; flex-direction: column; align-items: center;
++  transform-origin: 50% 0; animation: sw-swing var(--d) ease-in-out var(--delay) infinite alternate;
++}
++.sora-winter__orn::before { content: ''; width: 1px; height: var(--len); background: linear-gradient(#ffffff00, #E9DCC0); }
++.sora-winter__orn svg { width: 26px; height: 26px; color: #FBF3E4; filter: drop-shadow(0 3px 4px rgba(0, 0, 0, .35)); animation: sw-spin 9s linear infinite; }
++@keyframes sw-swing { from { transform: rotate(-9deg); } to { transform: rotate(9deg); } }
++/* Stars that twinkle. */
++.sora-winter__twinkle {
++  position: absolute; left: var(--x); top: var(--y); width: var(--s); height: var(--s); background: #FFF6DA;
++  clip-path: polygon(50% 0, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0 50%, 39% 39%);
++  animation: sw-twinkle 2.6s ease-in-out var(--delay) infinite; opacity: 0;
++}
++@keyframes sw-twinkle { 0%, 100% { opacity: 0; transform: scale(.4) rotate(0); } 50% { opacity: 1; transform: scale(1.2) rotate(45deg); } }
++/* Pom-poms along the hem, bobbing in a wave. */
++.sora-winter__hem { position: relative; z-index: 1; display: flex; justify-content: space-between; padding: 0 6px 6px; margin-top: -2px; }
++.sora-winter__hem i {
++  width: 10px; height: 10px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #fff, #E6DCC8);
++  box-shadow: 0 2px 3px rgba(0, 0, 0, .25); animation: sw-bob 2.4s ease-in-out infinite; animation-delay: calc(var(--k) * .1s);
++}
++/* A press you can feel, on a phone. */
++.sora-winter__hero:active, .sora-winter__tile:active, .sora-winter__all:active { transform: scale(.96); transition-duration: .08s; }
++/* The heading catches the light every few seconds. */
++.sora-winter__title { position: relative; }
++.sora-winter__title::after {
++  content: ''; position: absolute; inset: -6px -10px; pointer-events: none; mix-blend-mode: soft-light;
++  background: linear-gradient(110deg, transparent 35%, rgba(255, 255, 255, .9) 50%, transparent 65%) no-repeat;
++  background-size: 250% 100%; animation: sw-gleam 5s ease-in-out 1.5s infinite;
++}
++@keyframes sw-gleam { 0%, 60% { background-position: 150% 0; } 100% { background-position: -50% 0; } }
++@media (max-width: 759px) { .sora-winter__orn:nth-child(2), .sora-winter__orn:nth-child(3) { display: none; } }
++@media (prefers-reduced-motion: reduce) { .sora-winter__deco, .sora-winter__hem i { animation: none !important; } .sora-winter__twinkle { display: none; } }
++/* Inside the Fashion store (square corners by design, `.fs *` in fashion.css): the tiles
++   take its corners, but snow and pom-poms stay round and the edit link stays readable. */
++.fs .sora-winter__snow i, .fs .sora-winter__hem i { border-radius: 50% !important; }
++.fs a.sora-winter__all { color: var(--w-ink); }
+\ No newline at end of file

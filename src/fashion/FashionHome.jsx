@@ -21,6 +21,7 @@ import { HERO_IMAGE, circleArt, cardArt } from './fashionArt.js';
 import { getHomepageSnapshot, subscribeHomepage } from '../lib/settings.js';
 import { DEFAULT_FASHION_STOREFRONT, normalizeFashionStorefront } from '../lib/storefrontCustomization.js';
 import { useStorefrontSection } from '../lib/storefrontSections.js';
+import WinterDeals from '../components/WinterDeals.jsx';
 
 // ============================================================
 // /fashion — circular category tiles, the benefits strip, the hero (image
@@ -160,6 +161,8 @@ export default function FashionHome() {
     <div className="fs-home">
       <Hero config={config.hero} />
       <CategoryChips />
+      {/* Winter deals (owner, 2026-11-20: "lga do"): the homepage's seasonal band, here too (WinterDeals.jsx). */}
+      <WinterDeals />
       {/* Taj Leather (partner, 2026-11-11): their campaign posters right under the hero (TajLeather.jsx). */}
       <TajLeatherPosters />
       {/* Ansari Fashion (partner, 2026-11-13): their category posters (AnsariFashion.jsx). */}

@@ -51,5 +51,15 @@ test('on the homepage under the store circles; motion stops for reduced-motion; 
   assert.ok(!/Math\.random/.test(c.replace(/\/\/.*$/gm, '')));
   assert.match(c, /aria-label="Winter deals"/);
 });
+test('round 25: on the Fashion home under the category chips; ornaments, twinkles, near snow and a pom-pom hem', () => {
+  assert.match(read('src/fashion/FashionHome.jsx'), /<CategoryChips \/>\n.*\n      <WinterDeals \/>/);
+  const c = read('src/components/WinterDeals.jsx');
+  for (const k of ['sora-winter__orn', 'sora-winter__twinkle', 'sora-winter__snow--near', 'sora-winter__hem']) assert.ok(c.includes(k), k);
+  const css = read('src/styles/sora-ds.css');
+  assert.match(css, /@keyframes sw-swing/);
+  assert.match(css, /\.fs \.sora-winter__snow i, \.fs \.sora-winter__hem i \{ border-radius: 50% !important; \}/);
+  assert.match(css, /\.fs a\.sora-winter__all \{ color: var\(--w-ink\); \}/);
+  assert.match(css, /prefers-reduced-motion: reduce\) \{ \.sora-winter__deco, \.sora-winter__hem i \{ animation: none !important; \}/);
+});
 if (failed) { console.log(`\n${failed} failed`); process.exit(1); }
 console.log('\nall passed');
