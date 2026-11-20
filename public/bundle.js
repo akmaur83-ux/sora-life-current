@@ -77388,8 +77388,36 @@ function useFashionDetails(id) {
 }
 const countryName = c => String(c || '').trim().toUpperCase() === 'IN' ? 'India' : String(c || '').trim();
 
-const LETTER_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL'];
-const hasLetterSizes = (sizes = []) => sizes.some(s => LETTER_SIZES.includes(String(s).trim().toUpperCase()));
+const LETTER_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', '4XL', '5XL'];
+/**
+ * A size's letter, however the brand writes it (2026-11-20): "M", "S (42)", "M-44",
+ * "2XL-50" → M, S, M, XXL; '' when it is not a letter size. Pure.
+ */
+function letterOf(size) {
+  const t = String(size || '').trim().toUpperCase().replace(/\s*\([^)]*\)\s*$/, '').replace(/[\s-]+\d+(\.\d+)?$/, '');
+  const l = t === '2XL' ? 'XXL' : t;
+  return LETTER_SIZES.includes(l) ? l : '';
+}
+const hasLetterSizes = (sizes = []) => sizes.some(s => letterOf(s));
+
+/**
+ * A brand's own size chart (2026-11-20), used in place of the general one on that
+ * brand's products — copied from the chart on the brand's own shop. Body measurements
+ * in inches. `inclusive`: the brand's rule is "chest 34–35 → S", so a measurement at a
+ * row's top end stays in that row.
+ */
+const BRAND_CHARTS = Object.freeze({
+  'diamond leather': {
+    title: 'Diamond Leather size chart',
+    measure: 'chest',
+    inclusive: true,
+    head: ['Size', 'Chest', 'Waist', 'Hips', 'Shoulder', 'Sleeve', 'Length'],
+    rows: [['XS', '32–33', '30–31', '32–33', '16', '24', '25'], ['S', '34–35', '32–33', '34–35', '16', '24', '25'], ['M', '36–37', '34–35', '36–37', '17', '24.5', '26.5'], ['L', '38–39', '36–37', '38–39', '18', '25', '27'], ['XL', '40–41', '38–39', '40–41', '18.5', '25.5', '28'], ['XXL', '42–43', '40–41', '42–43', '18.5', '26', '28'], ['3XL', '44–45', '42–43', '44–45', '19', '26.5', '28'], ['4XL', '46–47', '44–45', '46–47', '19.5', '26.5', '28.5'], ['5XL', '48–49', '46–47', '48–49', '20', '26.5', '29.5']],
+    how: [['Chest', 'take it over bare skin or a thin layer, around the fullest part, tape level under the arms — not over a heavy layer.'], ['Choose by chest', 'the brand sizes by your chest measurement: chest 34–35 in is an S, 36–37 in an M, and so on.']],
+    note: "Diamond Leather's own chart. The number in a size's name on this page (S (42), M (44)…) is the brand's label; choose your size by your chest measurement in this chart."
+  }
+});
+const brandChart = brand => BRAND_CHARTS[String(brand || '').trim().toLowerCase()] || null;
 const SIZE_CHART = Object.freeze({
   women: {
     head: ['Size', 'Bust', 'Waist', 'Hip'],
@@ -77418,12 +77446,14 @@ function suggestSize(chart, inches) {
     };
   });
   if (n < rows[0].lo - 2 || n > rows[rows.length - 1].hi + 1) return '';
-  const hit = rows.find(r => n < r.hi);
+  // A brand chart's rows run 34–35, 36–37…: 35.5 is past the S row and in no row, so the next size up.
+  const hit = chart.inclusive ? rows.find(r => n <= r.hi) : rows.find(r => n < r.hi);
   return (hit || rows[rows.length - 1]).size;
 }
 function SizeGuide({
   sizes,
-  department = 'women'
+  department = 'women',
+  brand = ''
 }) {
   const [open, setOpen] = reactExports.useState(false);
   const [tab, setTab] = reactExports.useState(department === 'men' ? 'men' : 'women');
@@ -77444,9 +77474,11 @@ function SizeGuide({
     };
   }, [open]);
   if (!hasLetterSizes(sizes)) return null;
-  const chart = SIZE_CHART[tab];
+  const own = brandChart(brand);
+  const chart = own || SIZE_CHART[tab];
   const pick = suggestSize(chart, inches);
-  const sold = sizes.map(x => String(x).trim().toUpperCase());
+  const sold = sizes.map(letterOf).filter(Boolean);
+  const chest = own ? own.measure === 'chest' : tab === 'men';
   const pickSold = pick && sold.includes(pick);
   return /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
     children: [/*#__PURE__*/jsxRuntimeExports.jsxs("button", {
@@ -77483,7 +77515,10 @@ function SizeGuide({
               size: 20
             })
           })]
-        }), /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+        }), own ? /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "fs-sizeguide__brand",
+          children: own.title
+        }) : /*#__PURE__*/jsxRuntimeExports.jsx("div", {
           className: "fs-sizeguide__tabs",
           role: "tablist",
           children: [['women', 'Women'], ['men', 'Men']].map(([id, label]) => /*#__PURE__*/jsxRuntimeExports.jsx("button", {
@@ -77498,7 +77533,7 @@ function SizeGuide({
           className: "fs-sizeguide__find",
           children: [/*#__PURE__*/jsxRuntimeExports.jsxs("label", {
             htmlFor: "fs-sizeguide-in",
-            children: ["Find my size: your ", tab === 'men' ? 'chest' : 'bust', " in inches"]
+            children: ["Find my size: your ", chest ? 'chest' : 'bust', " in inches"]
           }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
             id: "fs-sizeguide-in",
             type: "number",
@@ -77506,7 +77541,7 @@ function SizeGuide({
             min: "20",
             max: "60",
             step: "0.5",
-            placeholder: tab === 'men' ? 'e.g. 40' : 'e.g. 35',
+            placeholder: chest ? 'e.g. 38' : 'e.g. 35',
             value: inches,
             onChange: e => setInches(e.target.value)
           }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
@@ -77519,7 +77554,7 @@ function SizeGuide({
             })
           })]
         }), /*#__PURE__*/jsxRuntimeExports.jsxs("table", {
-          className: "fs-sizeguide__table",
+          className: `fs-sizeguide__table${own ? ' is-wide' : ''}`,
           children: [/*#__PURE__*/jsxRuntimeExports.jsx("caption", {
             children: "Body measurements in inches"
           }), /*#__PURE__*/jsxRuntimeExports.jsx("thead", {
@@ -77540,7 +77575,14 @@ function SizeGuide({
               }, i))
             }, r[0]))
           })]
-        }), /*#__PURE__*/jsxRuntimeExports.jsxs("ul", {
+        }), own ? /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+          className: "fs-sizeguide__how",
+          children: own.how.map(([b, t]) => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+            children: [/*#__PURE__*/jsxRuntimeExports.jsxs("b", {
+              children: [b, ":"]
+            }), " ", t]
+          }, b))
+        }) : /*#__PURE__*/jsxRuntimeExports.jsxs("ul", {
           className: "fs-sizeguide__how",
           children: [/*#__PURE__*/jsxRuntimeExports.jsxs("li", {
             children: [/*#__PURE__*/jsxRuntimeExports.jsx("b", {
@@ -77557,7 +77599,10 @@ function SizeGuide({
           }), /*#__PURE__*/jsxRuntimeExports.jsx("li", {
             children: "Between two sizes? Choose the larger for a relaxed fit."
           })]
-        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        }), own ? /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+          className: "fs-sizeguide__note",
+          children: [own.note, " Highlighted rows are the sizes this product comes in."]
+        }) : /*#__PURE__*/jsxRuntimeExports.jsx("p", {
           className: "fs-sizeguide__note",
           children: "A general guide. Where a product lists its own measurements in its details, follow those. Highlighted rows are the sizes this product comes in."
         })]
@@ -77857,7 +77902,8 @@ function FashionProductPage() {
           onChange: setSel
         }), /*#__PURE__*/jsxRuntimeExports.jsx(SizeGuide, {
           sizes: view.sizes,
-          department: node && tree.ancestors(node.id).some(a => /^men/i.test(a.slug)) ? 'men' : 'women'
+          department: node && tree.ancestors(node.id).some(a => /^men/i.test(a.slug)) ? 'men' : 'women',
+          brand: view.brand
         }), /*#__PURE__*/jsxRuntimeExports.jsx(PdpFactTable, {
           rows: factRows
         }), /*#__PURE__*/jsxRuntimeExports.jsx(PdpAbout, {
@@ -81715,6 +81761,22 @@ async function buildStamp() {
     return '';
   }
 }
+
+/** Whether a key press lands in something the visitor is typing into (2026-11-20). Pure. */
+function isTypingTarget(el) {
+  if (!el) return false;
+  const tag = String(el.tagName || '').toUpperCase();
+  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable === true;
+}
+
+/** The page's search box on screen: the first visible input inside a role="search" (each store's header has one). */
+function visibleSearchInput(doc = typeof document !== 'undefined' ? document : null) {
+  if (!doc) return null;
+  return [...doc.querySelectorAll('[role="search"] input')].find(i => {
+    const r = i.getBoundingClientRect();
+    return r.width > 0 && r.height > 0;
+  }) || null;
+}
 function registerServiceWorker(win = typeof window !== 'undefined' ? window : null) {
   if (!win || !('serviceWorker' in win.navigator)) return;
   const local = /^(localhost|127\.0\.0\.1)$/.test(win.location.hostname);
@@ -81828,6 +81890,22 @@ function AppShell() {
     }, 3500);
     return () => clearTimeout(t);
   }, [pathname, search]);
+
+  // "/" jumps to the search box (2026-11-20), as on most big shops — never while typing,
+  // never with a modifier key, and not in the admin.
+  reactExports.useEffect(() => {
+    const onKey = e => {
+      if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented || isTypingTarget(e.target)) return;
+      if (/^\/admin(\/|$)/.test(window.location.pathname)) return;
+      const input = visibleSearchInput();
+      if (!input) return;
+      e.preventDefault();
+      input.focus();
+      input.select?.();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   // Product page views for "Popular this week" (round 9, 2026-11-16): the store and the slug,
   // once a day per browser, after the page has been open a moment (lib/popular.js).

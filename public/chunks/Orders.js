@@ -1,4 +1,5 @@
 import { r as reactExports, y as adminListOrders, j as jsxRuntimeExports, q as money, z as fulfillmentStatusLabel, c as Link, F as FULFILLMENT_STATUSES, A as adminListOrderEvents, B as adminMarkCodCollected, D as validateFulfillmentInput, E as adminUpdateOrderFulfillment } from '../bundle.js';
+import { t as toCsv, d as downloadCsv } from './csv.js';
 
 const STATUS_BADGE = {
   paid: 'badge-best',
@@ -38,6 +39,14 @@ function hasAddress(c = {}) {
   return Boolean(c.address || c.city || c.pin);
 }
 const dt = iso => iso ? new Date(iso).toLocaleString('en-IN') : null;
+
+/**
+ * Orders as CSV (2026-11-20: for the accounts). One row per order; the items as one
+ * readable cell. Where it went (name, city, state, PIN) but no street, phone or email:
+ * a spreadsheet gets passed around, and those stay in the admin. Pure.
+ */
+const ORDER_CSV_COLUMNS = [['Order', o => o.order_number], ['Date', o => o.created_at ? new Date(o.created_at).toISOString().slice(0, 10) : ''], ['Payment', o => o.payment_status || ''], ['Method', o => o.payment_method || ''], ['Status', o => o.fulfillment_status || o.status || ''], ['Amount (INR)', o => Number.isFinite(Number(o.amount_paise)) ? Number(o.amount_paise) / 100 : ''], ['Units', o => Array.isArray(o.items) ? o.items.reduce((n, l) => n + (Number(l?.qty) || 0), 0) : 0], ['Items', o => Array.isArray(o.items) ? o.items.map(l => `${l?.name || 'Item'}${l?.variant ? ` (${l.variant})` : ''} × ${Number(l?.qty) || 1}`).join('; ') : ''], ['Customer', o => [o.customer?.firstName, o.customer?.lastName].filter(Boolean).join(' ')], ['City', o => o.customer?.city || ''], ['State', o => o.customer?.state || ''], ['PIN', o => o.customer?.pin || '']];
+const ordersCsv = orders => toCsv(orders, ORDER_CSV_COLUMNS);
 
 // The audit trail an order can prove from its own columns. Steps with no
 // timestamp are not shown — nothing here is inferred or back-dated.
@@ -90,6 +99,18 @@ function Orders() {
     adminListOrders().then(setOrders).catch(e => setErr(e.message || String(e))).finally(() => setLoading(false));
   }, []);
   const paidCount = orders.filter(o => o.payment_status === 'paid').length;
+  const [exporting, setExporting] = reactExports.useState(false);
+  async function exportCsv() {
+    setExporting(true);
+    try {
+      const all = await adminListOrders(5000);
+      downloadCsv(`sora-orders-${new Date().toISOString().slice(0, 10)}.csv`, ordersCsv(all));
+    } catch (e) {
+      setErr(e.message || String(e));
+    } finally {
+      setExporting(false);
+    }
+  }
   async function copyAddress(order) {
     const text = formatAddress(order.customer);
     try {
@@ -117,15 +138,22 @@ function Orders() {
     if (patch.payment_status === 'paid') loadEvents(patch.id);
   }
   return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
-    children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
       className: "adm__head",
-      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
         children: [/*#__PURE__*/jsxRuntimeExports.jsx("h1", {
           children: "Orders"
         }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
           children: loading ? 'Loading…' : `${orders.length} orders · ${paidCount} paid`
         })]
-      })
+      }), orders.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        type: "button",
+        className: "btn btn-sm btn-ghost",
+        onClick: exportCsv,
+        disabled: exporting,
+        title: "Every order as a spreadsheet (no street, phone or email)",
+        children: exporting ? 'Preparing…' : 'Download CSV'
+      })]
     }), err && /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
       className: "adm-banner err",
       children: [err, /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
@@ -723,5 +751,5 @@ function FulfillmentEditor({
   });
 }
 
-export { Orders as default };
+export { ORDER_CSV_COLUMNS, Orders as default, ordersCsv };
 //# sourceMappingURL=Orders.js.map

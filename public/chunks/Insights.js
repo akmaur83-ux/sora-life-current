@@ -1,6 +1,7 @@
 import { r as reactExports, bA as supabase, j as jsxRuntimeExports, q as money } from '../bundle.js';
+import { d as downloadCsv, t as toCsv } from './csv.js';
 
-const RANGES = [[7, 'Last 7 days'], [30, 'Last 30 days']];
+const RANGES = [[7, 'Last 7 days'], [30, 'Last 30 days'], [90, 'Last 90 days']];
 
 /** search_log rows → { top, zero }: each { q, store, n }, most searched first. Pure. */
 function summariseSearches(rows) {
@@ -43,6 +44,59 @@ function bestSellers(orders) {
     }
   }
   return [...m.values()].sort((a, b) => b.units - a.units || b.revenue - a.revenue);
+}
+
+/**
+ * Paid orders → sales by brand: { brand, units, revenue, orders }, biggest takings first.
+ * `brandOf(line)` names a line's brand ('' when unknown → "Other"). Pure.
+ */
+function salesByBrand(orders, brandOf) {
+  const m = new Map();
+  for (const o of Array.isArray(orders) ? orders : []) {
+    if (o.payment_status !== 'paid') continue;
+    const seen = new Set();
+    for (const l of Array.isArray(o.items) ? o.items : []) {
+      const brand = String(brandOf(l) || '').trim() || 'Other';
+      const cur = m.get(brand) || {
+        brand,
+        units: 0,
+        revenue: 0,
+        orders: 0
+      };
+      cur.units += Number(l.qty) || 0;
+      cur.revenue += Number(l.line_total) || (Number(l.unit_price) || 0) * (Number(l.qty) || 0);
+      if (!seen.has(brand)) {
+        cur.orders += 1;
+        seen.add(brand);
+      }
+      m.set(brand, cur);
+    }
+  }
+  return [...m.values()].sort((a, b) => b.revenue - a.revenue || a.brand.localeCompare(b.brand));
+}
+
+/** The brand lookup for order lines: catalogue lines by their product, wellness lines by theirs, Biosash lines by their id. Pure. */
+function lineBrand(catalogueBrands, wellnessBrands) {
+  return l => {
+    const id = String(l?.product_id ?? '');
+    if (l?.catalogue) return catalogueBrands[id] || '';
+    return wellnessBrands[id] || (l?.biosash_id ? 'Biosash' : '');
+  };
+}
+
+/** Live products out of stock or at 1–`low` left → { out, low }, each { name, store, brand, stock }. Pure. */
+function stockWatch(rows, low = 3) {
+  const live = (Array.isArray(rows) ? rows : []).filter(r => r && r.is_active !== false);
+  const pick = r => ({
+    name: r.name,
+    store: r.store || 'wellness',
+    brand: r.brand || '',
+    stock: Number(r.stock) || 0
+  });
+  return {
+    out: live.filter(r => (Number(r.stock) || 0) <= 0).map(pick).sort((a, b) => a.name.localeCompare(b.name)),
+    low: live.filter(r => Number(r.stock) >= 1 && Number(r.stock) <= low).map(pick).sort((a, b) => a.stock - b.stock || a.name.localeCompare(b.name))
+  };
 }
 const STORE = {
   wellness: 'Wellness',
@@ -96,11 +150,14 @@ function Insights() {
   const [days, setDays] = reactExports.useState(7);
   const [searches, setSearches] = reactExports.useState(null);
   const [sellers, setSellers] = reactExports.useState(null);
+  const [brands, setBrands] = reactExports.useState(null);
+  const [stock, setStock] = reactExports.useState(null);
   const [error, setError] = reactExports.useState('');
   reactExports.useEffect(() => {
     let live = true;
     setSearches(null);
     setSellers(null);
+    setBrands(null);
     setError('');
     const since = new Date(Date.now() - days * 86400e3).toISOString();
     supabase.from('search_log').select('q, store, results').gte('created_at', since).order('created_at', {
@@ -118,7 +175,7 @@ function Insights() {
         });
       } else setSearches(summariseSearches(data));
     });
-    supabase.from('orders').select('items, payment_status, created_at').eq('payment_status', 'paid').gte('created_at', since).limit(2000).then(({
+    supabase.from('orders').select('items, payment_status, created_at').eq('payment_status', 'paid').gte('created_at', since).limit(2000).then(async ({
       data,
       error: e
     }) => {
@@ -126,12 +183,49 @@ function Insights() {
       if (e) {
         setError(e.message);
         setSellers([]);
-      } else setSellers(bestSellers(data));
+        setBrands([]);
+        return;
+      }
+      setSellers(bestSellers(data));
+      // Each line's brand, from the product it was (catalogue or wellness).
+      const lines = (data || []).flatMap(o => Array.isArray(o.items) ? o.items : []);
+      const cat = [...new Set(lines.filter(l => l.catalogue && l.product_id).map(l => String(l.product_id)))];
+      const well = [...new Set(lines.filter(l => !l.catalogue && l.product_id).map(l => String(l.product_id)))];
+      const [c, w] = await Promise.all([cat.length ? supabase.from('catalogue_products').select('id, brand').in('id', cat) : {
+        data: []
+      }, well.length ? supabase.from('products').select('id, brand').in('id', well) : {
+        data: []
+      }]);
+      if (!live) return;
+      const map = r => Object.fromEntries((r?.data || []).map(x => [String(x.id), x.brand || '']));
+      setBrands(salesByBrand(data, lineBrand(map(c), map(w))));
     });
     return () => {
       live = false;
     };
   }, [days]);
+
+  // Stock watch: every store, live products only; the same whatever the period.
+  reactExports.useEffect(() => {
+    let live = true;
+    Promise.all([supabase.from('catalogue_products').select('name, store, brand, stock, is_active').eq('is_active', true).lte('stock', 3).limit(1000), supabase.from('products').select('name, brand, stock, is_active').lte('stock', 3).limit(1000)]).then(([c, w]) => {
+      if (!live) return;
+      const rows = [...(c.data || []), ...(w.data || []).map(r => ({
+        ...r,
+        store: 'wellness'
+      }))];
+      setStock(stockWatch(rows));
+    }, () => {
+      if (live) setStock({
+        out: [],
+        low: []
+      });
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+  const saveBrands = () => downloadCsv(`sora-sales-by-brand-${days}-days.csv`, toCsv(brands || [], [['Brand', r => r.brand], ['Orders', r => r.orders], ['Units', r => r.units], ['Takings (INR)', r => Math.round(r.revenue * 100) / 100]]));
   return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
     children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
       className: "adm__head",
@@ -207,10 +301,105 @@ function Insights() {
             children: ["\xB7 ", r.units, " sold \xB7 ", money(r.revenue)]
           })]
         }, r.name)
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+        style: box,
+        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          style: {
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'baseline',
+            gap: 8
+          },
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+            style: {
+              margin: '0 0 4px',
+              fontSize: 16
+            },
+            children: "Sales by brand"
+          }), brands?.length > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+            type: "button",
+            className: "btn btn-sm btn-ghost",
+            onClick: saveBrands,
+            children: "Download CSV"
+          })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "adm-hint",
+          style: {
+            margin: '0 0 10px'
+          },
+          children: "Paid orders in the period, by the brand of each item: for settling with partners. Takings at the price charged, after discounts."
+        }), brands === null ? /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          children: "Loading\u2026"
+        }) : brands.length === 0 ? /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "adm-hint",
+          children: "No paid orders in this period."
+        }) : /*#__PURE__*/jsxRuntimeExports.jsxs("table", {
+          className: "adm-table",
+          style: {
+            fontSize: 14
+          },
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("thead", {
+            children: /*#__PURE__*/jsxRuntimeExports.jsxs("tr", {
+              children: [/*#__PURE__*/jsxRuntimeExports.jsx("th", {
+                children: "Brand"
+              }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
+                children: "Orders"
+              }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
+                children: "Units"
+              }), /*#__PURE__*/jsxRuntimeExports.jsx("th", {
+                children: "Takings"
+              })]
+            })
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("tbody", {
+            children: brands.map(r => /*#__PURE__*/jsxRuntimeExports.jsxs("tr", {
+              children: [/*#__PURE__*/jsxRuntimeExports.jsx("td", {
+                children: /*#__PURE__*/jsxRuntimeExports.jsx("b", {
+                  children: r.brand
+                })
+              }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
+                children: r.orders
+              }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
+                children: r.units
+              }), /*#__PURE__*/jsxRuntimeExports.jsx("td", {
+                children: money(r.revenue)
+              })]
+            }, r.brand))
+          })]
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(List, {
+        title: `Out of stock${stock ? ` (${stock.out.length})` : ''}`,
+        hint: "Live products with none left: restock them, or hide them from the shop.",
+        rows: stock?.out ?? null,
+        empty: "Nothing is out of stock.",
+        render: (r, i) => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("b", {
+            children: r.name
+          }), " ", /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+            style: {
+              color: '#5F6D64'
+            },
+            children: ["\xB7 ", STORE[r.store] || r.store, r.brand ? ` · ${r.brand}` : '']
+          })]
+        }, `${r.store}|${r.name}|${i}`)
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(List, {
+        title: `Running low${stock ? ` (${stock.low.length})` : ''}`,
+        hint: "Live products with 1\u20133 left, fewest first.",
+        rows: stock?.low ?? null,
+        empty: "Nothing is running low.",
+        render: (r, i) => /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx("b", {
+            children: r.name
+          }), " ", /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+            style: {
+              color: '#5F6D64'
+            },
+            children: ["\xB7 ", r.stock, " left \xB7 ", STORE[r.store] || r.store, r.brand ? ` · ${r.brand}` : '']
+          })]
+        }, `${r.store}|${r.name}|${i}`)
       })]
     })]
   });
 }
 
-export { RANGES, bestSellers, Insights as default, summariseSearches };
+export { RANGES, bestSellers, Insights as default, lineBrand, salesByBrand, stockWatch, summariseSearches };
 //# sourceMappingURL=Insights.js.map
