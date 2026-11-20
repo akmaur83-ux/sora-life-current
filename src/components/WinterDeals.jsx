@@ -65,55 +65,58 @@ function Wind() {
   );
 }
 
-// The muffler's path round the heading: the back half over the top, the front half under.
-const BACK = 'M14 92 A186 36 0 0 1 386 92';
-const FRONT = 'M386 92 A186 36 0 0 1 14 92';
-function MufflerBand({ d, part }) {
+// The muffler (round 28, owner 2026-11-21: "muffler smoothly text ke andr bahr se slide kre"):
+// a knitted band in a wave that threads through the letters — over one, under the next —
+// slides in from the left, rests and ripples, then slides out to the right and comes again.
+// Over/under is two copies of the band: one under the letters, one over them shown only in
+// alternate columns, so as the band moves it goes in and out of the words.
+const WAVE = 'M-6 104 Q 19 90 44 104 T 94 104 T 144 104 T 194 104 T 244 104 T 294 104 T 344 104 T 394 104 T 420 100';
+const OVER_COLUMNS = [0, 100, 200, 300];   // x of the 50-wide columns where the band crosses in front (low on the letters, so the words still read)
+
+function Muffler({ over }) {
   return (
-    <g className={`sora-muffler sora-muffler--${part}`} mask={`url(#sw-wrap-${part})`}>
-      <path d={d} className="sora-muffler__base" />
-      <path d={d} className="sora-muffler__stripe" />
-      <path d={d} className="sora-muffler__knit" />
+    <g className="sora-muffler" mask={over ? 'url(#sw-over)' : undefined}>
+      <g className="sora-muffler__slide">
+        <g className="sora-muffler__ripple">
+          <path d={WAVE} className="sora-muffler__base" />
+          <path d={WAVE} className="sora-muffler__stripe" />
+          <path d={WAVE} className="sora-muffler__knit" />
+          {!over && (
+            <>
+              <path d="M-6 97 l-10 -3 M-6 101 l-11 -1 M-6 105 l-11 1 M-6 109 l-10 3" className="sora-muffler__fringe" />
+              <path d="M420 93 l10 -4 M420 97 l11 -2 M420 101 l11 0 M420 105 l11 2" className="sora-muffler__fringe" />
+            </>
+          )}
+        </g>
+      </g>
     </g>
   );
 }
 
-/** The heading: knitted lettering inside a muffler that wraps round it and keeps turning. */
+/** The heading: big round lettering with a dark rim, a muffler threading through it. */
 function Title() {
+  const words = (cls, extra = {}) => (
+    <text x="200" y="104" textAnchor="middle" textLength="352" lengthAdjust="spacingAndGlyphs" className={cls} {...extra}>winter deals</text>
+  );
   return (
     <h2 className="sora-winter__title" aria-label="Winter deals">
-      <svg viewBox="0 0 400 178" aria-hidden="true" overflow="visible">
+      <svg viewBox="0 0 400 150" aria-hidden="true" overflow="visible">
         <defs>
-          {/* A knit: rows of small V stitches over cream — the letters' own texture. */}
-          <pattern id="sw-knit" width="7" height="6" patternUnits="userSpaceOnUse">
-            <rect width="7" height="6" fill="#FBF3E4" />
-            <path d="M0.5 0.5 L3.5 4.5 L6.5 0.5" fill="none" stroke="#E4D2AC" strokeWidth="1.1" strokeLinecap="round" />
+          {/* A faint knit on the letters: light enough that the words read first. */}
+          <pattern id="sw-knit" width="8" height="7" patternUnits="userSpaceOnUse">
+            <rect width="8" height="7" fill="#FFF7E6" />
+            <path d="M1 1 L4 5 L7 1" fill="none" stroke="#F1E4C6" strokeWidth=".9" strokeLinecap="round" />
           </pattern>
-          {['back', 'front'].map((part) => (
-            <mask key={part} id={`sw-wrap-${part}`} maskUnits="userSpaceOnUse" x="-20" y="0" width="440" height="200">
-              <path d={part === 'back' ? BACK : FRONT} pathLength="100" className={`sora-muffler__reveal sora-muffler__reveal--${part}`} />
-            </mask>
-          ))}
+          <mask id="sw-over" maskUnits="userSpaceOnUse" x="-40" y="0" width="480" height="150">
+            {OVER_COLUMNS.map((x) => <rect key={x} x={x} y="0" width="50" height="150" fill="#fff" />)}
+          </mask>
         </defs>
-        <MufflerBand d={BACK} part="back" />
+        <Muffler over={false} />
         <g className="sora-winter__letters">
-          <text x="200" y="98" textAnchor="middle" textLength="334" lengthAdjust="spacingAndGlyphs" className="sora-winter__puff" fill="url(#sw-knit)">winter deals</text>
-          <text x="199" y="96" textAnchor="middle" textLength="334" lengthAdjust="spacingAndGlyphs" className="sora-winter__shine">winter deals</text>
+          {words('sora-winter__halo')}
+          {words('sora-winter__puff', { fill: 'url(#sw-knit)' })}
         </g>
-        <MufflerBand d={FRONT} part="front" />
-        {/* The two ends, hanging from the front and flapping in the wind. */}
-        <g className="sora-muffler__ends">
-          <g className="sora-muffler__end sora-muffler__end--a">
-            <path d="M300 118 l10 44 l18 -3 l-6 -44 z" className="sora-muffler__tail" />
-            <path d="M304 134 l18 -3 M307 148 l18 -3" className="sora-muffler__tailstripe" />
-            <path d="M310 162 l-1 8 M314 161 l-1 8 M318 161 l0 8 M322 160 l0 8 M326 159 l1 8" className="sora-muffler__fringe" />
-          </g>
-          <g className="sora-muffler__end sora-muffler__end--b">
-            <path d="M318 116 l22 38 l16 -8 l-20 -36 z" className="sora-muffler__tail" />
-            <path d="M326 128 l16 -8 M333 141 l16 -8" className="sora-muffler__tailstripe" />
-            <path d="M341 154 l2 8 M345 152 l3 7 M349 150 l3 7 M353 148 l3 7" className="sora-muffler__fringe" />
-          </g>
-        </g>
+        <Muffler over />
       </svg>
     </h2>
   );

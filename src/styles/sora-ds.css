@@ -729,3 +729,28 @@ html.sora-wintertop .v2-hdr__bar, html.sora-wintertop .sora-stickycats > * { pos
 }
 /* The delivery line and the category row, under the product (owner, 2026-11-20). */
 .fs-pdp__more { margin: 28px 0 8px; display: grid; gap: 14px; }
+
+/* Winter heading, round 28 (owner, 2026-11-21: "winter deals clear nhi dikh rha"): bigger,
+   solid cream letters with a dark rim so every letter reads, and the muffler threading
+   through them — sliding in, rippling, sliding out. */
+.sora-winter__halo, .sora-winter__puff { font-family: 'Pacifico', 'Playfair Display', cursive; font-size: 72px; }
+.sora-winter__halo { fill: #0B1D40; stroke: #0B1D40; stroke-width: 11; stroke-linejoin: round; filter: drop-shadow(0 10px 10px rgba(0, 0, 0, .35)); }
+.sora-winter__puff { stroke: #E7D4A8; stroke-width: 2.5; stroke-linejoin: round; paint-order: stroke; filter: drop-shadow(0 3px 0 #C4A671); }
+.sora-winter__shine { display: none; }
+.sora-muffler__base { stroke: #C0392B; stroke-width: 14; stroke-linecap: round; }
+.sora-muffler__stripe { stroke: #F4E6C8; stroke-width: 14; stroke-dasharray: 5 11; animation: sw-turn 1.6s linear infinite; }
+.sora-muffler__knit { stroke: rgba(70, 8, 6, .3); stroke-width: 10; stroke-dasharray: 1.4 2.4; animation: sw-turn 1.6s linear infinite; }
+@keyframes sw-turn { to { stroke-dashoffset: -32; } }
+.sora-muffler__fringe { stroke: #F4E6C8; stroke-width: 2; }
+/* In from the left, rest, out to the right — one smooth loop. */
+.sora-muffler__slide { animation: sw-slide 7s cubic-bezier(.45, 0, .25, 1) infinite; }
+@keyframes sw-slide {
+  0% { transform: translateX(-470px); }
+  22% { transform: translateX(0); }
+  80% { transform: translateX(0); }
+  100% { transform: translateX(470px); }
+}
+.sora-muffler__ripple { animation: sw-ripple 2.4s ease-in-out infinite; transform-box: view-box; transform-origin: 50% 69%; }
+@keyframes sw-ripple { 0%, 100% { transform: translateY(0) scaleY(1); } 50% { transform: translateY(-2px) scaleY(1.12); } }
+.sora-winter__letters { animation: sw-floaty 3.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .sora-muffler__slide, .sora-muffler__ripple { transform: none; } }

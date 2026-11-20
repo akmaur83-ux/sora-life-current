@@ -89,13 +89,15 @@ test('round 27: the hero turns through cheapest-first deals, one picture each, e
   assert.match(c, /window\.setInterval\(\(\) => \{ if \(!document\.hidden\) setI\(\(v\) => \(v \+ 1\) % n\); \}, HERO_EVERY_MS\)/);
   assert.match(c, /if \(n < 2 \|\| paused \|\| reducedMotion\(\)\) return undefined;/);
 });
-test('round 27: knitted lettering inside a muffler that wraps and turns; wind; three snow layers', () => {
+test('round 28: big readable lettering with a dark rim; a muffler threading over and under it, sliding in and out; wind; three snow layers', () => {
   const c = read('src/components/WinterDeals.jsx');
-  for (const k of ['sw-knit', 'sora-muffler--${part}', 'part="back"', 'part="front"', 'sora-muffler__ends', 'sora-winter__wind', 'sora-winter__snow--far', 'sora-winter__snow--near']) assert.ok(c.includes(k), k);
+  for (const k of ['sw-knit', 'sora-winter__halo', 'sora-winter__puff', "mask={over ? 'url(#sw-over)' : undefined}", '<Muffler over={false} />', '<Muffler over />', 'sora-winter__wind', 'sora-winter__snow--far', 'sora-winter__snow--near']) assert.ok(c.includes(k), k);
+  assert.ok(c.indexOf('<Muffler over={false} />') < c.indexOf('sora-winter__letters') && c.indexOf('sora-winter__letters') < c.indexOf('<Muffler over />'), 'under, letters, over');
   assert.match(read('index.html'), /&family=Pacifico&display=swap/, 'in the one font request; the file loads only where the heading uses it');
   const css = read('src/styles/sora-ds.css');
-  for (const k of ['@keyframes sw-turn', '@keyframes sw-wrapin', '@keyframes sw-flap', '@keyframes sw-gust', '@keyframes sw-fall-sway']) assert.ok(css.includes(k), k);
-  assert.match(css, /\.sora-muffler__reveal \{ stroke-dashoffset: 0; \}/, 'reduced motion: the muffler shows, wrapped');
+  for (const k of ['@keyframes sw-turn', '@keyframes sw-slide', '@keyframes sw-ripple', '@keyframes sw-gust', '@keyframes sw-fall-sway']) assert.ok(css.includes(k), k);
+  assert.match(css, /\.sora-winter__halo \{ fill: #0B1D40; stroke: #0B1D40; stroke-width: 11;/);
+  assert.match(css, /prefers-reduced-motion: reduce\) \{ \.sora-muffler__slide, \.sora-muffler__ripple \{ transform: none; \} \}/);
 });
 test('round 27: no COD strip on the homepage; on a product page the delivery line and categories sit under the product', () => {
   assert.match(read('src/components/Header.jsx'), /\{location\.pathname !== '\/' && <AnnouncementBar \/>\}/);
