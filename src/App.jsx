@@ -43,6 +43,7 @@ import FashionCategory, { FashionSearch, FashionWishlistPage } from './fashion/F
 import FashionProductPage from './fashion/FashionProductPage.jsx';
 import GroceryLayout from './grocery/GroceryLayout.jsx';
 import GroceryHome from './grocery/GroceryHome.jsx';
+import GroceryCategory from './grocery/GroceryCategory.jsx';
 import HomeLivingLayout from './homeliving/HomeLivingLayout.jsx';
 import HomeLivingHome from './homeliving/HomeLivingHome.jsx';
 import HomeLivingCategory from './homeliving/HomeLivingCategory.jsx';
@@ -249,6 +250,8 @@ export default function App() {
           is the shared one. Categories and products follow with the catalogue. */}
       <Route path="/grocery" element={<GroceryLayout />}>
         <Route index element={<GroceryHome />} />
+        {/* Bug audit 2026-11-21: the homepage's ten category links had no page. */}
+        <Route path="category/:slug" element={<GroceryCategory />} />
       </Route>
 
       {/* The Home & Living store: its own shell and homepage; the cart it

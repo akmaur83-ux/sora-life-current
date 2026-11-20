@@ -22,6 +22,7 @@ import { getHomepageSnapshot, subscribeHomepage } from '../lib/settings.js';
 import { DEFAULT_FASHION_STOREFRONT, normalizeFashionStorefront } from '../lib/storefrontCustomization.js';
 import { useStorefrontSection } from '../lib/storefrontSections.js';
 import WinterDeals from '../components/WinterDeals.jsx';
+import LoadMore, { useRememberedShowMore } from '../components/LoadMore.jsx';
 
 // ============================================================
 // /fashion — circular category tiles, the benefits strip, the hero (image
@@ -157,6 +158,8 @@ export default function FashionHome() {
   const homepage = useSyncExternalStore(subscribeHomepage, getHomepageSnapshot, getHomepageSnapshot);
   const config = normalizeFashionStorefront(homepage.fashion_storefront);
   const grid = sortViews(views, 'featured');
+  // Speed (2026-11-21): the whole catalogue (~2,100 styles, 27,000 elements) was drawn here at once.
+  const paging = useRememberedShowMore(grid.length, '/fashion#grid');
   return (
     <div className="fs-home">
       <Hero config={config.hero} />
@@ -199,9 +202,12 @@ export default function FashionHome() {
         {grid.length === 0 ? (
           <p className="fs-empty">{status === 'loading' ? 'Loading the catalogue…' : status === 'error' ? 'The fashion catalogue could not be loaded. Please try again shortly.' : 'The fashion store is being stocked — styles appear here as they go live.'}</p>
         ) : (
-          <div className="fs-grid">
-            {grid.map((v, i) => <FashionProductCard key={v.id} view={v} mediaLoading={i < 2 ? 'eager' : 'lazy'} />)}
-          </div>
+          <>
+            <div className="fs-grid">
+              {grid.slice(0, paging.shown).map((v, i) => <FashionProductCard key={v.id} view={v} mediaLoading={i < 2 ? 'eager' : 'lazy'} />)}
+            </div>
+            <LoadMore shown={paging.shown} total={grid.length} onMore={paging.more} />
+          </>
         )}
       </section>
     </div>

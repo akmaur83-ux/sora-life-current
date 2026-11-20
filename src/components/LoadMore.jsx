@@ -7,6 +7,22 @@ import { useEffect, useState } from 'react';
 // ============================================================
 export const PAGE = 24;
 
+/**
+ * A page at a time, remembered for this list in the tab (2026-11-21, speed): `key` names the
+ * list (its path and filters), so back from a product shows as many as were open before.
+ */
+export function useRememberedShowMore(total, key) {
+  const read = () => { try { return Math.max(PAGE, Number(window.sessionStorage.getItem(`sora.shown:${key}`)) || PAGE); } catch { return PAGE; } };
+  const [shown, setShown] = useState(read);
+  useEffect(() => { setShown(read()); }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
+  const more = () => setShown((n) => {
+    const next = n + PAGE;
+    try { window.sessionStorage.setItem(`sora.shown:${key}`, String(next)); } catch { /* storage blocked */ }
+    return next;
+  });
+  return { shown: Math.min(shown, total), more, left: Math.max(0, total - shown) };
+}
+
 export function useShowMore(total, resetKey) {
   const [shown, setShown] = useState(PAGE);
   useEffect(() => { setShown(PAGE); }, [resetKey]);

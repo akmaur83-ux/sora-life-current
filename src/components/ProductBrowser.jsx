@@ -1,8 +1,9 @@
 import { useMemo, useState, useEffect } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams, useLocation, Link } from 'react-router-dom';
 import Icon from './Icon.jsx';
 import ProductCard from './ProductCard.jsx';
 import PromoRail from './promo/PromoRail.jsx';
+import LoadMore, { useRememberedShowMore } from './LoadMore.jsx';
 import { categories } from '../data/categories.js';
 import { searchProducts } from '../data/products.js';
 import { lockScroll, unlockScroll } from '../lib/scrollLock.js';
@@ -79,6 +80,12 @@ export default function ProductBrowser({ baseProducts, lockCategory = false, sho
     }
     return s;
   }, [searched, priceBand, selCats, inStock, flags, sort]);
+
+  // Speed (owner, 2026-11-21): the grid shows a page of products at a time — all ~280 at once
+  // meant 7,000+ elements and every picture requested on arrival. How many were shown is kept
+  // for this exact list (path + filters) in the tab, so back from a product lands on it again.
+  const location = useLocation();
+  const { shown, more: showMore } = useRememberedShowMore(filtered.length, `${location.pathname}${location.search}`);
 
   const activeCount = selCats.size + flags.size + (inStock ? 1 : 0) + (priceBand ? 1 : 0);
   const clearAll = () => setUrlState({ categories: [], highlights: [], inStock: false, priceBand: null });
@@ -215,7 +222,7 @@ export default function ProductBrowser({ baseProducts, lockCategory = false, sho
         <div>
           {filtered.length ? (
             <div className="v2-shop__grid">
-              {filtered.map((p, index) => (
+              {filtered.slice(0, shown).map((p, index) => (
                 <ProductCard
                   key={p.id}
                   product={p}
@@ -224,7 +231,9 @@ export default function ProductBrowser({ baseProducts, lockCategory = false, sho
                 />
               ))}
             </div>
-          ) : (
+          ) : null}
+          {filtered.length > 0 && <LoadMore shown={Math.min(shown, filtered.length)} total={filtered.length} onMore={showMore} />}
+          {filtered.length ? null : (
             <div className="v2-shop__empty">
               <Icon name="search" size={30} stroke={1.4} />
               <h2>Nothing matched</h2>

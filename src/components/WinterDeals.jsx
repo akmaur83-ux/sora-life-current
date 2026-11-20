@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useWinterDeals, HERO_EVERY_MS } from '../lib/winterDeals.js';
 
@@ -27,9 +27,10 @@ const layer = (n, size, secs, drift, seed) => Object.freeze(Array.from({ length:
   (k * 1.7 + seed) % secs[1],
   (k % 2 ? -1 : 1) * (drift[0] + ((k * 13) % (drift[1] - drift[0] + 1))),
 ]));
-export const FAR_FLAKES = layer(26, [2, 3], [13, 18], [10, 30], 3);
-export const FLAKES = layer(22, [4, 7], [9, 13], [20, 50], 5);
-export const NEAR_FLAKES = layer(9, [9, 13], [6, 8], [40, 80], 7);
+// Counts kept low for phones (2026-11-21, speed): enough to read as snowfall, no more.
+export const FAR_FLAKES = layer(12, [2, 3], [13, 18], [10, 30], 3);
+export const FLAKES = layer(13, [4, 7], [9, 13], [20, 50], 5);
+export const NEAR_FLAKES = layer(5, [9, 13], [6, 8], [40, 80], 7);
 // Gusts of wind: [top %, seconds, delay s, curl].
 export const GUSTS = Object.freeze([[18, 4.5, 0, 1], [46, 5.5, 1.8, -1], [70, 5, 3.2, 1], [32, 6, 4.4, -1]]);
 
@@ -52,16 +53,15 @@ function Snow({ flakes, className }) {
 }
 
 function Wind() {
+  // Gusts as small streaks sliding across (transform + opacity only: no repainting).
   return (
-    <svg className="sora-winter__wind" viewBox="0 0 400 300" preserveAspectRatio="none" aria-hidden="true">
-      {GUSTS.map(([top, d, delay, curl], k) => {
-        const y = (top / 100) * 300;
-        return (
-          <path key={k} pathLength="100" style={{ '--d': `${d}s`, '--delay': `${delay}s` }}
-            d={`M-20 ${y} C 80 ${y - 18 * curl}, 150 ${y + 14 * curl}, 220 ${y} S 330 ${y - 26 * curl}, 300 ${y - 8 * curl} S 360 ${y + 10 * curl}, 420 ${y - 4 * curl}`} />
-        );
-      })}
-    </svg>
+    <div className="sora-winter__wind" aria-hidden="true">
+      {GUSTS.map(([top, d, delay, curl], k) => (
+        <span key={k} style={{ '--top': `${top}%`, '--d': `${d}s`, '--delay': `${delay}s` }}>
+          <svg viewBox="0 0 120 20" width="120" height="20"><path d={curl > 0 ? 'M2 12 C 30 2, 55 18, 80 9 S 112 4, 118 10' : 'M2 8 C 30 18, 55 2, 80 11 S 112 16, 118 10'} /></svg>
+        </span>
+      ))}
+    </div>
   );
 }
 
@@ -71,53 +71,46 @@ function Wind() {
 // Over/under is two copies of the band: one under the letters, one over them shown only in
 // alternate columns, so as the band moves it goes in and out of the words.
 const WAVE = 'M-6 104 Q 19 90 44 104 T 94 104 T 144 104 T 194 104 T 244 104 T 294 104 T 344 104 T 394 104 T 420 100';
-const OVER_COLUMNS = [0, 100, 200, 300];   // x of the 50-wide columns where the band crosses in front (low on the letters, so the words still read)
 
-function Muffler({ over }) {
+/** One copy of the knitted band (static drawing; it moves as a whole layer — cheap to animate). */
+function Band({ ends }) {
   return (
-    <g className="sora-muffler" mask={over ? 'url(#sw-over)' : undefined}>
-      <g className="sora-muffler__slide">
-        <g className="sora-muffler__ripple">
-          <path d={WAVE} className="sora-muffler__base" />
-          <path d={WAVE} className="sora-muffler__stripe" />
-          <path d={WAVE} className="sora-muffler__knit" />
-          {!over && (
-            <>
-              <path d="M-6 97 l-10 -3 M-6 101 l-11 -1 M-6 105 l-11 1 M-6 109 l-10 3" className="sora-muffler__fringe" />
-              <path d="M420 93 l10 -4 M420 97 l11 -2 M420 101 l11 0 M420 105 l11 2" className="sora-muffler__fringe" />
-            </>
-          )}
-        </g>
-      </g>
-    </g>
+    <svg viewBox="0 26 400 106" aria-hidden="true" overflow="visible">
+      <path d={WAVE} className="sora-muffler__base" />
+      <path d={WAVE} className="sora-muffler__stripe" />
+      <path d={WAVE} className="sora-muffler__knit" />
+      {ends && (
+        <>
+          <path d="M-6 97 l-10 -3 M-6 101 l-11 -1 M-6 105 l-11 1 M-6 109 l-10 3" className="sora-muffler__fringe" />
+          <path d="M420 93 l10 -4 M420 97 l11 -2 M420 101 l11 0 M420 105 l11 2" className="sora-muffler__fringe" />
+        </>
+      )}
+    </svg>
   );
 }
 
-/** The heading: big round lettering with a dark rim, a muffler threading through it. */
+/**
+ * The heading: big round lettering with a dark rim, a muffler threading through it.
+ * Speed (2026-11-21, measured 11 fps on the homepage): three stacked layers instead of one
+ * animated SVG — the band under the words, the words (never repainted), and the band over
+ * them seen through fixed columns. Only whole layers slide, which the GPU does for free.
+ */
 function Title() {
-  const words = (cls, extra = {}) => (
-    <text x="200" y="104" textAnchor="middle" textLength="352" lengthAdjust="spacingAndGlyphs" className={cls} {...extra}>winter deals</text>
-  );
   return (
     <h2 className="sora-winter__title" aria-label="Winter deals">
-      <svg viewBox="0 26 400 106" aria-hidden="true" overflow="visible">
+      <span className="sora-muffler sora-muffler--under" aria-hidden="true"><span className="sora-muffler__slide"><Band ends /></span></span>
+      <svg className="sora-winter__words" viewBox="0 26 400 106" aria-hidden="true" overflow="visible">
         <defs>
           {/* A faint knit on the letters: light enough that the words read first. */}
           <pattern id="sw-knit" width="8" height="7" patternUnits="userSpaceOnUse">
             <rect width="8" height="7" fill="#FFF7E6" />
             <path d="M1 1 L4 5 L7 1" fill="none" stroke="#F1E4C6" strokeWidth=".9" strokeLinecap="round" />
           </pattern>
-          <mask id="sw-over" maskUnits="userSpaceOnUse" x="-40" y="0" width="480" height="150">
-            {OVER_COLUMNS.map((x) => <rect key={x} x={x} y="0" width="50" height="150" fill="#fff" />)}
-          </mask>
         </defs>
-        <Muffler over={false} />
-        <g className="sora-winter__letters">
-          {words('sora-winter__halo')}
-          {words('sora-winter__puff', { fill: 'url(#sw-knit)' })}
-        </g>
-        <Muffler over />
+        <text x="200" y="104" textAnchor="middle" textLength="352" lengthAdjust="spacingAndGlyphs" className="sora-winter__halo">winter deals</text>
+        <text x="200" y="104" textAnchor="middle" textLength="352" lengthAdjust="spacingAndGlyphs" className="sora-winter__puff" fill="url(#sw-knit)">winter deals</text>
       </svg>
+      <span className="sora-muffler sora-muffler--over" aria-hidden="true"><span className="sora-muffler__slide"><Band /></span></span>
     </h2>
   );
 }
@@ -161,13 +154,31 @@ function HeroDeal({ heroes }) {
   );
 }
 
+/**
+ * The band sleeps off screen (2026-11-21, speed): its animations pause once it has scrolled
+ * out of view and wake when it comes back, so the rest of the page scrolls at full speed.
+ */
+function useAwake() {
+  const ref = useRef(null);
+  const [awake, setAwake] = useState(true);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof IntersectionObserver !== 'function') return undefined;
+    const io = new IntersectionObserver(([e]) => setAwake(e.isIntersecting), { rootMargin: '80px 0px' });
+    io.observe(el);
+    return () => io.disconnect();
+  });
+  return [ref, awake];
+}
+
 export default function WinterDeals() {
   const deals = useWinterDeals();
+  const [ref, awake] = useAwake();
   if (!deals) return null;
   const { tiles } = deals;
   const heroes = deals.heroes?.length ? deals.heroes : deals.hero ? [deals.hero] : [];
   return (
-    <section className="sora-winter" aria-label="Winter deals">
+    <section ref={ref} className={`sora-winter${awake ? '' : ' is-asleep'}`} aria-label="Winter deals">
       <Snow flakes={FAR_FLAKES} className="sora-winter__snow--far" />
       <Snow flakes={FLAKES} className="" />
       <Wind />

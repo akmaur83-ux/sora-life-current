@@ -91,13 +91,13 @@ test('round 27: the hero turns through cheapest-first deals, one picture each, e
 });
 test('round 28: big readable lettering with a dark rim; a muffler threading over and under it, sliding in and out; wind; three snow layers', () => {
   const c = read('src/components/WinterDeals.jsx');
-  for (const k of ['sw-knit', 'sora-winter__halo', 'sora-winter__puff', "mask={over ? 'url(#sw-over)' : undefined}", '<Muffler over={false} />', '<Muffler over />', 'sora-winter__wind', 'sora-winter__snow--far', 'sora-winter__snow--near']) assert.ok(c.includes(k), k);
-  assert.ok(c.indexOf('<Muffler over={false} />') < c.indexOf('sora-winter__letters') && c.indexOf('sora-winter__letters') < c.indexOf('<Muffler over />'), 'under, letters, over');
+  for (const k of ['sw-knit', 'sora-winter__halo', 'sora-winter__puff', 'sora-muffler--under', 'sora-muffler--over', 'sora-winter__wind', 'sora-winter__snow--far', 'sora-winter__snow--near']) assert.ok(c.includes(k), k);
+  assert.ok(c.indexOf('sora-muffler--under') < c.indexOf('sora-winter__words') && c.indexOf('sora-winter__words') < c.indexOf('sora-muffler--over'), 'under, letters, over');
   assert.match(read('index.html'), /&family=Pacifico&display=swap/, 'in the one font request; the file loads only where the heading uses it');
   const css = read('src/styles/sora-ds.css');
-  for (const k of ['@keyframes sw-turn', '@keyframes sw-slide', '@keyframes sw-ripple', '@keyframes sw-gust', '@keyframes sw-fall-sway']) assert.ok(css.includes(k), k);
+  for (const k of ['@keyframes sw-slide2', '@keyframes sw-gust2', '@keyframes sw-fall-sway']) assert.ok(css.includes(k), k);
   assert.match(css, /\.sora-winter__halo \{ fill: #0B1D40; stroke: #0B1D40; stroke-width: 11;/);
-  assert.match(css, /prefers-reduced-motion: reduce\) \{ \.sora-muffler__slide, \.sora-muffler__ripple \{ transform: none; \} \}/);
+  assert.match(css, /prefers-reduced-motion: reduce\) \{ \.sora-muffler__slide, \.sora-winter__wind span \{ animation: none !important; transform: none; \}/);
 });
 test('round 27: no COD strip on the homepage; on a product page the delivery line and categories sit under the product', () => {
   assert.match(read('src/components/Header.jsx'), /\{location\.pathname !== '\/' && <AnnouncementBar \/>\}/);
@@ -144,6 +144,43 @@ test('round 32: the winter bottom bar — sliding glow under the lit tab, hop an
   const css = read('src/styles/sora-ds.css');
   for (const k of ['@keyframes tw-hop', '@keyframes tw-flake', '@keyframes tw-snow', '@keyframes tw-pulse', '.tabbar__glide {']) assert.ok(css.includes(k), k);
   assert.match(css, /\.tabbar--winter \.tabbar__item\.active::after \{ display: none; \}/, 'reduced motion: no rising flake');
+});
+test('speed (2026-11-21): only transform/opacity animate in the band; it sleeps off screen; fewer flakes; no blur, mask or animated backgrounds', () => {
+  const c = read('src/components/WinterDeals.jsx');
+  assert.match(c, /className=\{`sora-winter\$\{awake \? '' : ' is-asleep'\}`\}/);
+  assert.match(c, /new IntersectionObserver/);
+  const w = loadModule('src/components/WinterDeals.jsx', { useEffect: () => {}, useRef: () => ({}), useState: (v) => [v, () => {}], Link: () => null, useWinterDeals: () => null, HERO_EVERY_MS: 1500 });
+  assert.ok(w.FAR_FLAKES.length + w.FLAKES.length + w.NEAR_FLAKES.length <= 30, 'at most 30 flakes');
+  const css = read('src/styles/sora-ds.css');
+  assert.match(css, /\.sora-winter\.is-asleep \*, \.sora-winter\.is-asleep \*::before, \.sora-winter\.is-asleep \*::after \{ animation-play-state: paused !important; \}/);
+  assert.match(css, /\.sora-winter__hero, \.sora-winter__tile \{ -webkit-backdrop-filter: none; backdrop-filter: none;/);
+  assert.match(css, /\.sora-winter__wind path \{ animation: none !important;/);
+  assert.match(css, /\.tabbar\.tabbar--winter \{ animation: none; -webkit-backdrop-filter: none; backdrop-filter: none; \}/);
+  assert.match(css, /\.v2-home \.nl__card::before, \.v2-home \.nl__deco \{ animation: none !important; \}/);
+  assert.ok(!/\.sora-winter \{[^}]*mask:/.test(css), 'no mask over the whole band');
+});
+test('speed: the shop grid pages 24 at a time and remembers how many were shown for back', () => {
+  const b = read('src/components/ProductBrowser.jsx');
+  assert.match(b, /\{filtered\.slice\(0, shown\)\.map/);
+  assert.match(b, /<LoadMore shown=\{Math\.min\(shown, filtered\.length\)\} total=\{filtered\.length\} onMore=\{showMore\} \/>/);
+  assert.match(b, /useRememberedShowMore\(filtered\.length, `\$\{location\.pathname\}\$\{location\.search\}`\)/);
+  const h = read('src/fashion/FashionHome.jsx');
+  assert.match(h, /const paging = useRememberedShowMore\(grid\.length, '\/fashion#grid'\);/);
+  assert.match(h, /\{grid\.slice\(0, paging\.shown\)\.map/);
+  assert.match(read('src/components/LoadMore.jsx'), /window\.sessionStorage\.setItem\(`sora\.shown:\$\{key\}`, String\(next\)\)/);
+});
+test('bug audit 2026-11-21: grocery category links open a page (no 404); demo items never listed', () => {
+  assert.match(read('src/App.jsx'), /<Route path="category\/:slug" element=\{<GroceryCategory \/>\} \/>/);
+  const g = loadModule('src/grocery/GroceryCategory.jsx', { Link: () => null, useParams: () => ({}), Icon: () => null, RequestProduct: () => null, useGroceryCatalogue: () => ({}), usePageMeta: () => {}, GroceryProductCard: () => null });
+  const cats = [{ id: 1, slug: 'atta-rice', name: 'Atta & Rice' }, { id: 2, slug: 'basmati', parent_id: 1 }, { id: 3, slug: 'oils' }];
+  const prods = [{ id: 'a', category_id: 1 }, { id: 'b', category_id: 2 }, { id: 'c', category_id: 1, is_demo: true }, { id: 'd', category_id: 3 }];
+  assert.deepEqual(g.groceryCategoryView(cats, prods, 'atta-rice').items.map((p) => p.id), ['a', 'b']);
+  assert.equal(g.groceryCategoryView(cats, prods, 'nope').cat, null);
+});
+test('bug audit 2026-11-21: dark-green link buttons keep light text', () => {
+  const css = read('src/styles/sora-ds.css');
+  assert.match(css, /\.state a\.btn, \.state a\.btn:hover, \.state a\.btn:focus-visible \{ color: var\(--btn-fg, #fff\); \}/);
+  assert.match(css, /\.hl a\.hl-btn, \.hl a\.hl-btn:hover \{ color: var\(--slv2-ivory, #FBF8F1\); \}/);
 });
 if (failed) { console.log(`\n${failed} failed`); process.exit(1); }
 console.log('\nall passed');

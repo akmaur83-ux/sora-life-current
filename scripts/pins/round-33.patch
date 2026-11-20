@@ -1,0 +1,445 @@
+diff --git a/src/App.jsx b/src/App.jsx
+index 47c5da3..c34dfe2 100644
+--- a/src/App.jsx
++++ b/src/App.jsx
+@@ -43,6 +43,7 @@ import FashionCategory, { FashionSearch, FashionWishlistPage } from './fashion/F
+ import FashionProductPage from './fashion/FashionProductPage.jsx';
+ import GroceryLayout from './grocery/GroceryLayout.jsx';
+ import GroceryHome from './grocery/GroceryHome.jsx';
++import GroceryCategory from './grocery/GroceryCategory.jsx';
+ import HomeLivingLayout from './homeliving/HomeLivingLayout.jsx';
+ import HomeLivingHome from './homeliving/HomeLivingHome.jsx';
+ import HomeLivingCategory from './homeliving/HomeLivingCategory.jsx';
+@@ -249,6 +250,8 @@ export default function App() {
+           is the shared one. Categories and products follow with the catalogue. */}
+       <Route path="/grocery" element={<GroceryLayout />}>
+         <Route index element={<GroceryHome />} />
++        {/* Bug audit 2026-11-21: the homepage's ten category links had no page. */}
++        <Route path="category/:slug" element={<GroceryCategory />} />
+       </Route>
+ 
+       {/* The Home & Living store: its own shell and homepage; the cart it
+diff --git a/src/components/LoadMore.jsx b/src/components/LoadMore.jsx
+index 2844006..0594240 100644
+--- a/src/components/LoadMore.jsx
++++ b/src/components/LoadMore.jsx
+@@ -7,6 +7,22 @@ import { useEffect, useState } from 'react';
+ // ============================================================
+ export const PAGE = 24;
+ 
++/**
++ * A page at a time, remembered for this list in the tab (2026-11-21, speed): `key` names the
++ * list (its path and filters), so back from a product shows as many as were open before.
++ */
++export function useRememberedShowMore(total, key) {
++  const read = () => { try { return Math.max(PAGE, Number(window.sessionStorage.getItem(`sora.shown:${key}`)) || PAGE); } catch { return PAGE; } };
++  const [shown, setShown] = useState(read);
++  useEffect(() => { setShown(read()); }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
++  const more = () => setShown((n) => {
++    const next = n + PAGE;
++    try { window.sessionStorage.setItem(`sora.shown:${key}`, String(next)); } catch { /* storage blocked */ }
++    return next;
++  });
++  return { shown: Math.min(shown, total), more, left: Math.max(0, total - shown) };
++}
++
+ export function useShowMore(total, resetKey) {
+   const [shown, setShown] = useState(PAGE);
+   useEffect(() => { setShown(PAGE); }, [resetKey]);
+diff --git a/src/components/ProductBrowser.jsx b/src/components/ProductBrowser.jsx
+index d2ebad6..2dba973 100644
+--- a/src/components/ProductBrowser.jsx
++++ b/src/components/ProductBrowser.jsx
+@@ -1,8 +1,9 @@
+ import { useMemo, useState, useEffect } from 'react';
+-import { useSearchParams, Link } from 'react-router-dom';
++import { useSearchParams, useLocation, Link } from 'react-router-dom';
+ import Icon from './Icon.jsx';
+ import ProductCard from './ProductCard.jsx';
+ import PromoRail from './promo/PromoRail.jsx';
++import LoadMore, { useRememberedShowMore } from './LoadMore.jsx';
+ import { categories } from '../data/categories.js';
+ import { searchProducts } from '../data/products.js';
+ import { lockScroll, unlockScroll } from '../lib/scrollLock.js';
+@@ -80,6 +81,12 @@ export default function ProductBrowser({ baseProducts, lockCategory = false, sho
+     return s;
+   }, [searched, priceBand, selCats, inStock, flags, sort]);
+ 
++  // Speed (owner, 2026-11-21): the grid shows a page of products at a time — all ~280 at once
++  // meant 7,000+ elements and every picture requested on arrival. How many were shown is kept
++  // for this exact list (path + filters) in the tab, so back from a product lands on it again.
++  const location = useLocation();
++  const { shown, more: showMore } = useRememberedShowMore(filtered.length, `${location.pathname}${location.search}`);
++
+   const activeCount = selCats.size + flags.size + (inStock ? 1 : 0) + (priceBand ? 1 : 0);
+   const clearAll = () => setUrlState({ categories: [], highlights: [], inStock: false, priceBand: null });
+ 
+@@ -215,7 +222,7 @@ export default function ProductBrowser({ baseProducts, lockCategory = false, sho
+         <div>
+           {filtered.length ? (
+             <div className="v2-shop__grid">
+-              {filtered.map((p, index) => (
++              {filtered.slice(0, shown).map((p, index) => (
+                 <ProductCard
+                   key={p.id}
+                   product={p}
+@@ -224,7 +231,9 @@ export default function ProductBrowser({ baseProducts, lockCategory = false, sho
+                 />
+               ))}
+             </div>
+-          ) : (
++          ) : null}
++          {filtered.length > 0 && <LoadMore shown={Math.min(shown, filtered.length)} total={filtered.length} onMore={showMore} />}
++          {filtered.length ? null : (
+             <div className="v2-shop__empty">
+               <Icon name="search" size={30} stroke={1.4} />
+               <h2>Nothing matched</h2>
+diff --git a/src/components/WinterDeals.jsx b/src/components/WinterDeals.jsx
+index 78d557c..c61a39f 100644
+--- a/src/components/WinterDeals.jsx
++++ b/src/components/WinterDeals.jsx
+@@ -1,4 +1,4 @@
+-import { useEffect, useState } from 'react';
++import { useEffect, useRef, useState } from 'react';
+ import { Link } from 'react-router-dom';
+ import { useWinterDeals, HERO_EVERY_MS } from '../lib/winterDeals.js';
+ 
+@@ -27,9 +27,10 @@ const layer = (n, size, secs, drift, seed) => Object.freeze(Array.from({ length:
+   (k * 1.7 + seed) % secs[1],
+   (k % 2 ? -1 : 1) * (drift[0] + ((k * 13) % (drift[1] - drift[0] + 1))),
+ ]));
+-export const FAR_FLAKES = layer(26, [2, 3], [13, 18], [10, 30], 3);
+-export const FLAKES = layer(22, [4, 7], [9, 13], [20, 50], 5);
+-export const NEAR_FLAKES = layer(9, [9, 13], [6, 8], [40, 80], 7);
++// Counts kept low for phones (2026-11-21, speed): enough to read as snowfall, no more.
++export const FAR_FLAKES = layer(12, [2, 3], [13, 18], [10, 30], 3);
++export const FLAKES = layer(13, [4, 7], [9, 13], [20, 50], 5);
++export const NEAR_FLAKES = layer(5, [9, 13], [6, 8], [40, 80], 7);
+ // Gusts of wind: [top %, seconds, delay s, curl].
+ export const GUSTS = Object.freeze([[18, 4.5, 0, 1], [46, 5.5, 1.8, -1], [70, 5, 3.2, 1], [32, 6, 4.4, -1]]);
+ 
+@@ -52,16 +53,15 @@ function Snow({ flakes, className }) {
+ }
+ 
+ function Wind() {
++  // Gusts as small streaks sliding across (transform + opacity only: no repainting).
+   return (
+-    <svg className="sora-winter__wind" viewBox="0 0 400 300" preserveAspectRatio="none" aria-hidden="true">
+-      {GUSTS.map(([top, d, delay, curl], k) => {
+-        const y = (top / 100) * 300;
+-        return (
+-          <path key={k} pathLength="100" style={{ '--d': `${d}s`, '--delay': `${delay}s` }}
+-            d={`M-20 ${y} C 80 ${y - 18 * curl}, 150 ${y + 14 * curl}, 220 ${y} S 330 ${y - 26 * curl}, 300 ${y - 8 * curl} S 360 ${y + 10 * curl}, 420 ${y - 4 * curl}`} />
+-        );
+-      })}
+-    </svg>
++    <div className="sora-winter__wind" aria-hidden="true">
++      {GUSTS.map(([top, d, delay, curl], k) => (
++        <span key={k} style={{ '--top': `${top}%`, '--d': `${d}s`, '--delay': `${delay}s` }}>
++          <svg viewBox="0 0 120 20" width="120" height="20"><path d={curl > 0 ? 'M2 12 C 30 2, 55 18, 80 9 S 112 4, 118 10' : 'M2 8 C 30 18, 55 2, 80 11 S 112 16, 118 10'} /></svg>
++        </span>
++      ))}
++    </div>
+   );
+ }
+ 
+@@ -71,53 +71,46 @@ function Wind() {
+ // Over/under is two copies of the band: one under the letters, one over them shown only in
+ // alternate columns, so as the band moves it goes in and out of the words.
+ const WAVE = 'M-6 104 Q 19 90 44 104 T 94 104 T 144 104 T 194 104 T 244 104 T 294 104 T 344 104 T 394 104 T 420 100';
+-const OVER_COLUMNS = [0, 100, 200, 300];   // x of the 50-wide columns where the band crosses in front (low on the letters, so the words still read)
+ 
+-function Muffler({ over }) {
++/** One copy of the knitted band (static drawing; it moves as a whole layer — cheap to animate). */
++function Band({ ends }) {
+   return (
+-    <g className="sora-muffler" mask={over ? 'url(#sw-over)' : undefined}>
+-      <g className="sora-muffler__slide">
+-        <g className="sora-muffler__ripple">
+-          <path d={WAVE} className="sora-muffler__base" />
+-          <path d={WAVE} className="sora-muffler__stripe" />
+-          <path d={WAVE} className="sora-muffler__knit" />
+-          {!over && (
+-            <>
+-              <path d="M-6 97 l-10 -3 M-6 101 l-11 -1 M-6 105 l-11 1 M-6 109 l-10 3" className="sora-muffler__fringe" />
+-              <path d="M420 93 l10 -4 M420 97 l11 -2 M420 101 l11 0 M420 105 l11 2" className="sora-muffler__fringe" />
+-            </>
+-          )}
+-        </g>
+-      </g>
+-    </g>
++    <svg viewBox="0 26 400 106" aria-hidden="true" overflow="visible">
++      <path d={WAVE} className="sora-muffler__base" />
++      <path d={WAVE} className="sora-muffler__stripe" />
++      <path d={WAVE} className="sora-muffler__knit" />
++      {ends && (
++        <>
++          <path d="M-6 97 l-10 -3 M-6 101 l-11 -1 M-6 105 l-11 1 M-6 109 l-10 3" className="sora-muffler__fringe" />
++          <path d="M420 93 l10 -4 M420 97 l11 -2 M420 101 l11 0 M420 105 l11 2" className="sora-muffler__fringe" />
++        </>
++      )}
++    </svg>
+   );
+ }
+ 
+-/** The heading: big round lettering with a dark rim, a muffler threading through it. */
++/**
++ * The heading: big round lettering with a dark rim, a muffler threading through it.
++ * Speed (2026-11-21, measured 11 fps on the homepage): three stacked layers instead of one
++ * animated SVG — the band under the words, the words (never repainted), and the band over
++ * them seen through fixed columns. Only whole layers slide, which the GPU does for free.
++ */
+ function Title() {
+-  const words = (cls, extra = {}) => (
+-    <text x="200" y="104" textAnchor="middle" textLength="352" lengthAdjust="spacingAndGlyphs" className={cls} {...extra}>winter deals</text>
+-  );
+   return (
+     <h2 className="sora-winter__title" aria-label="Winter deals">
+-      <svg viewBox="0 26 400 106" aria-hidden="true" overflow="visible">
++      <span className="sora-muffler sora-muffler--under" aria-hidden="true"><span className="sora-muffler__slide"><Band ends /></span></span>
++      <svg className="sora-winter__words" viewBox="0 26 400 106" aria-hidden="true" overflow="visible">
+         <defs>
+           {/* A faint knit on the letters: light enough that the words read first. */}
+           <pattern id="sw-knit" width="8" height="7" patternUnits="userSpaceOnUse">
+             <rect width="8" height="7" fill="#FFF7E6" />
+             <path d="M1 1 L4 5 L7 1" fill="none" stroke="#F1E4C6" strokeWidth=".9" strokeLinecap="round" />
+           </pattern>
+-          <mask id="sw-over" maskUnits="userSpaceOnUse" x="-40" y="0" width="480" height="150">
+-            {OVER_COLUMNS.map((x) => <rect key={x} x={x} y="0" width="50" height="150" fill="#fff" />)}
+-          </mask>
+         </defs>
+-        <Muffler over={false} />
+-        <g className="sora-winter__letters">
+-          {words('sora-winter__halo')}
+-          {words('sora-winter__puff', { fill: 'url(#sw-knit)' })}
+-        </g>
+-        <Muffler over />
++        <text x="200" y="104" textAnchor="middle" textLength="352" lengthAdjust="spacingAndGlyphs" className="sora-winter__halo">winter deals</text>
++        <text x="200" y="104" textAnchor="middle" textLength="352" lengthAdjust="spacingAndGlyphs" className="sora-winter__puff" fill="url(#sw-knit)">winter deals</text>
+       </svg>
++      <span className="sora-muffler sora-muffler--over" aria-hidden="true"><span className="sora-muffler__slide"><Band /></span></span>
+     </h2>
+   );
+ }
+@@ -161,13 +154,31 @@ function HeroDeal({ heroes }) {
+   );
+ }
+ 
++/**
++ * The band sleeps off screen (2026-11-21, speed): its animations pause once it has scrolled
++ * out of view and wake when it comes back, so the rest of the page scrolls at full speed.
++ */
++function useAwake() {
++  const ref = useRef(null);
++  const [awake, setAwake] = useState(true);
++  useEffect(() => {
++    const el = ref.current;
++    if (!el || typeof IntersectionObserver !== 'function') return undefined;
++    const io = new IntersectionObserver(([e]) => setAwake(e.isIntersecting), { rootMargin: '80px 0px' });
++    io.observe(el);
++    return () => io.disconnect();
++  });
++  return [ref, awake];
++}
++
+ export default function WinterDeals() {
+   const deals = useWinterDeals();
++  const [ref, awake] = useAwake();
+   if (!deals) return null;
+   const { tiles } = deals;
+   const heroes = deals.heroes?.length ? deals.heroes : deals.hero ? [deals.hero] : [];
+   return (
+-    <section className="sora-winter" aria-label="Winter deals">
++    <section ref={ref} className={`sora-winter${awake ? '' : ' is-asleep'}`} aria-label="Winter deals">
+       <Snow flakes={FAR_FLAKES} className="sora-winter__snow--far" />
+       <Snow flakes={FLAKES} className="" />
+       <Wind />
+diff --git a/src/fashion/FashionHome.jsx b/src/fashion/FashionHome.jsx
+index af30a11..f785cdc 100644
+--- a/src/fashion/FashionHome.jsx
++++ b/src/fashion/FashionHome.jsx
+@@ -22,6 +22,7 @@ import { getHomepageSnapshot, subscribeHomepage } from '../lib/settings.js';
+ import { DEFAULT_FASHION_STOREFRONT, normalizeFashionStorefront } from '../lib/storefrontCustomization.js';
+ import { useStorefrontSection } from '../lib/storefrontSections.js';
+ import WinterDeals from '../components/WinterDeals.jsx';
++import LoadMore, { useRememberedShowMore } from '../components/LoadMore.jsx';
+ 
+ // ============================================================
+ // /fashion — circular category tiles, the benefits strip, the hero (image
+@@ -157,6 +158,8 @@ export default function FashionHome() {
+   const homepage = useSyncExternalStore(subscribeHomepage, getHomepageSnapshot, getHomepageSnapshot);
+   const config = normalizeFashionStorefront(homepage.fashion_storefront);
+   const grid = sortViews(views, 'featured');
++  // Speed (2026-11-21): the whole catalogue (~2,100 styles, 27,000 elements) was drawn here at once.
++  const paging = useRememberedShowMore(grid.length, '/fashion#grid');
+   return (
+     <div className="fs-home">
+       <Hero config={config.hero} />
+@@ -199,9 +202,12 @@ export default function FashionHome() {
+         {grid.length === 0 ? (
+           <p className="fs-empty">{status === 'loading' ? 'Loading the catalogue…' : status === 'error' ? 'The fashion catalogue could not be loaded. Please try again shortly.' : 'The fashion store is being stocked — styles appear here as they go live.'}</p>
+         ) : (
+-          <div className="fs-grid">
+-            {grid.map((v, i) => <FashionProductCard key={v.id} view={v} mediaLoading={i < 2 ? 'eager' : 'lazy'} />)}
+-          </div>
++          <>
++            <div className="fs-grid">
++              {grid.slice(0, paging.shown).map((v, i) => <FashionProductCard key={v.id} view={v} mediaLoading={i < 2 ? 'eager' : 'lazy'} />)}
++            </div>
++            <LoadMore shown={paging.shown} total={grid.length} onMore={paging.more} />
++          </>
+         )}
+       </section>
+     </div>
+diff --git a/src/grocery/GroceryCategory.jsx b/src/grocery/GroceryCategory.jsx
+new file mode 100644
+index 0000000..49a4eec
+--- /dev/null
++++ b/src/grocery/GroceryCategory.jsx
+@@ -0,0 +1,54 @@
++import { Link, useParams } from 'react-router-dom';
++import Icon from '../components/Icon.jsx';
++import RequestProduct from '../components/RequestProduct.jsx';
++import { useGroceryCatalogue } from '../data/groceryHomepage.js';
++import { usePageMeta } from '../lib/pageMeta.js';
++import GroceryProductCard from './GroceryProductCard.jsx';
++
++// ============================================================
++// A grocery category (bug audit, 2026-11-21): the grocery homepage linked ten categories to
++// /grocery/category/<slug>, and every one was a 404 — the route had never been made. The
++// page lists the category's live products (its sub-categories' too); one with none yet says
++// so plainly, offers to note what the shopper wanted, and leads back to the grocery store.
++// ============================================================
++
++/** The category and its live products, sub-categories included. Pure. */
++export function groceryCategoryView(categories, products, slug) {
++  const cats = Array.isArray(categories) ? categories : [];
++  const cat = cats.find((c) => c && c.slug === slug) || null;
++  if (!cat) return { cat: null, items: [] };
++  const ids = new Set([cat.id, ...cats.filter((c) => c.parent_id === cat.id).map((c) => c.id)]);
++  const items = (Array.isArray(products) ? products : []).filter((p) => p && ids.has(p.category_id) && !p.is_demo);
++  return { cat, items };
++}
++
++export default function GroceryCategory() {
++  const { slug } = useParams();
++  const { status, categories, products } = useGroceryCatalogue();
++  const { cat, items } = groceryCategoryView(categories, products, slug);
++  usePageMeta({ title: cat ? `${cat.name} — Grocery` : 'Grocery', description: cat?.tagline || 'Groceries at SORA LIFESTYLE.' });
++  return (
++    <section className="gs-sec gs-cat" aria-labelledby="gs-cat-h">
++      <nav className="gs-cat__crumbs" aria-label="Breadcrumb"><Link to="/grocery">Grocery</Link> <span aria-hidden="true">›</span> <span>{cat?.name || 'Category'}</span></nav>
++      <header className="gs-sec__head">
++        <div>
++          <h1 className="gs-sec__h serif" id="gs-cat-h">{cat?.name || (status === 'loading' ? 'Loading…' : 'Category')}</h1>
++          {cat?.tagline && <p className="gs-sec__sub">{cat.tagline}</p>}
++        </div>
++      </header>
++      {status === 'loading' && !cat ? (
++        <p className="gs-empty">Loading the catalogue…</p>
++      ) : items.length ? (
++        <div className="gs-catgrid">
++          {items.map((p, i) => <GroceryProductCard key={p.id} product={p} mediaLoading={i < 4 ? 'eager' : 'lazy'} />)}
++        </div>
++      ) : (
++        <div className="gs-empty gs-cat__empty">
++          <p>{cat ? `${cat.name} is being stocked — products appear here as they go live.` : 'This grocery category is not in the store.'}</p>
++          <Link to="/grocery" className="gs-sec__link"><Icon name="chevronLeft" size={16} /> Back to Grocery</Link>
++          {cat && <RequestProduct q={cat.name} store="grocery" />}
++        </div>
++      )}
++    </section>
++  );
++}
+diff --git a/src/styles/sora-ds.css b/src/styles/sora-ds.css
+index 9aff3f1..f4d5f2e 100644
+--- a/src/styles/sora-ds.css
++++ b/src/styles/sora-ds.css
+@@ -473,9 +473,6 @@ body .fs .hx-ans .hx-ans__cta { background: #D9B26A; color: #121A16; }
+   background:
+     radial-gradient(120% 60% at 50% 0%, #2A5AA6 0%, rgba(42, 90, 166, 0) 60%),
+     linear-gradient(180deg, var(--w-blue) 0%, var(--w-night) 100%);
+-  /* A scalloped hem, like the edge of a knit. */
+-  -webkit-mask: radial-gradient(9px at 50% 100%, #0000 98%, #000) 50% / 22px 100% repeat-x;
+-          mask: radial-gradient(9px at 50% 100%, #0000 98%, #000) 50% / 22px 100% repeat-x;
+   padding-bottom: 12px;
+ }
+ .sora-winter__in { position: relative; z-index: 1; max-width: 1120px; margin: 0 auto; padding: 22px 16px 18px; }
+@@ -882,4 +879,75 @@ html.sora-wintertop .v2-hdr { position: sticky; }
+   .tabbar.tabbar--winter, .tabbar--winter .tabbar__item.active svg, .tabbar--winter .tabbar__badge { animation: none !important; }
+   .tabbar--winter .tabbar__item.active::after { display: none; }
+   .tabbar__glide { transition: none; }
+-}
+\ No newline at end of file
++}
++
++/* ============================================================
++   Speed (owner, 2026-11-21: "speed slow lag rhi hai"). Measured on a mid phone: the homepage
++   ran at 11 frames a second with the winter band on screen, every frame repainted. Now only
++   transform and opacity animate (the GPU's job), nothing animated sits behind a blur, a filter
++   or a mask, and the decorations that cannot be cheap are still pictures.
++   ============================================================ */
++/* The scalloped hem: drawn in the page's colour on the band's edge, not a mask over the band. */
++.sora-winter::after {
++  content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 10px; z-index: 3; pointer-events: none;
++  background: radial-gradient(9px at 50% 100%, var(--color-bg, #FBF8F1) 98%, transparent) 50% 0 / 22px 10px repeat-x;
++}
++.fs .sora-winter::after { background-image: radial-gradient(9px at 50% 100%, #fff 98%, transparent); }
++/* No blur behind the tiles (it was recomputed every frame with the snow moving behind). */
++.sora-winter__hero, .sora-winter__tile { -webkit-backdrop-filter: none; backdrop-filter: none; background: rgba(255, 255, 255, .1); }
++/* Snowflakes: soft by their own gradient, not a blur filter. */
++.sora-winter__snow i { filter: none !important; background: radial-gradient(circle, #fff 0 45%, rgba(255, 255, 255, .5) 60%, transparent 72%); will-change: transform; }
++.sora-winter__snow--near i { opacity: .55; }
++/* The heading's layers. */
++.sora-winter__title { position: relative; }
++.sora-winter__words { position: relative; z-index: 1; display: block; width: 100%; height: auto; overflow: visible; }
++.sora-muffler { position: absolute; inset: 0; pointer-events: none; }
++.sora-muffler--under { z-index: 0; }
++.sora-muffler--over { z-index: 2; -webkit-mask-image: repeating-linear-gradient(90deg, #000 0 12.5%, transparent 12.5% 25%); mask-image: repeating-linear-gradient(90deg, #000 0 12.5%, transparent 12.5% 25%); }
++.sora-muffler__slide { position: absolute; inset: 0; display: block; will-change: transform; animation: sw-slide2 7s cubic-bezier(.45, 0, .25, 1) infinite; }
++.sora-muffler__slide svg { display: block; width: 100%; height: auto; overflow: visible; }
++.sora-muffler__stripe, .sora-muffler__knit { animation: none; }
++.sora-winter__letters { animation: none; }
++@keyframes sw-slide2 {
++  0% { transform: translate3d(-118%, 0, 0); }
++  22% { transform: translate3d(0, 0, 0); }
++  36% { transform: translate3d(1.4%, -1px, 0); }
++  51% { transform: translate3d(-1.2%, 1px, 0); }
++  66% { transform: translate3d(1%, 0, 0); }
++  80% { transform: translate3d(0, 0, 0); }
++  100% { transform: translate3d(118%, 0, 0); }
++}
++/* Wind: streaks sliding across. */
++.sora-winter__wind { position: absolute; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
++.sora-winter__wind span { position: absolute; left: 0; top: var(--top); width: 120px; opacity: 0; will-change: transform, opacity; animation: sw-gust2 var(--d) ease-in-out var(--delay) infinite; }
++.sora-winter__wind svg { display: block; }
++.sora-winter__wind path { fill: none; stroke: rgba(255, 255, 255, .45); stroke-width: 1.5; stroke-linecap: round; }
++@keyframes sw-gust2 { 0% { transform: translate3d(-130px, 0, 0); opacity: 0; } 15% { opacity: .9; } 75% { opacity: .7; } 100% { transform: translate3d(110vw, -14px, 0); opacity: 0; } }
++/* The header's and the chips' snow: still dots (an animated background repainted the sticky header every frame). */
++html.sora-wintertop .v2-hdr::after, html.sora-wintertop .sora-stickycats::after { animation: none; }
++/* The bottom bar: no blur behind it (it is all but opaque), its snow a still pattern. */
++.tabbar.tabbar--winter { animation: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
++@media (prefers-reduced-motion: reduce) { .sora-muffler__slide, .sora-winter__wind span { animation: none !important; transform: none; } .sora-winter__wind { display: none; } }
++/* The old gust drawing animated its stroke (a repaint every frame): the streaks only slide now. */
++.sora-winter__wind path { animation: none !important; stroke-dasharray: none; }
++/* Asleep off screen: nothing in the band runs. */
++.sora-winter.is-asleep *, .sora-winter.is-asleep *::before, .sora-winter.is-asleep *::after { animation-play-state: paused !important; }
++/* The pom-pom hem: still (24 bobbing balls cost more than they gave). */
++.sora-winter__hem i { animation: none; }/* The newsletter card's drifting ring and floating picture: still (2026-11-21, speed). On their
++   own they took a phone from 60 to 41 frames a second, even with the card off screen. */
++.v2-home .nl__card::before, .v2-home .nl__deco { animation: none !important; }
++
++/* Bug audit 2026-11-21: link buttons that inherited dark or grey text on their dark green.
++   The empty checkout's "Browse products" read at 1.3:1, Home & Living's "Back to Home & Living"
++   and "Search for …" on a missing product at 2.3:1. */
++.state a.btn, .state a.btn:hover, .state a.btn:focus-visible { color: var(--btn-fg, #fff); }
++.hl a.hl-btn, .hl a.hl-btn:hover { color: var(--slv2-ivory, #FBF8F1); }
++
++/* Grocery category page (bug audit, 2026-11-21). */
++.gs-cat { padding-top: 8px; }
++.gs-cat__crumbs { display: flex; gap: 6px; align-items: center; margin: 4px 0 10px; font-size: 13px; color: #565959; }
++.gs-cat__crumbs a { color: inherit; }
++.gs-catgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
++@media (min-width: 760px) { .gs-catgrid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; } }
++.gs-cat__empty { display: grid; justify-items: start; gap: 12px; text-align: left; }
++.gs-cat__empty p { margin: 0; }
