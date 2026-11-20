@@ -5,6 +5,7 @@ import { money } from '../lib/format.js';
 import { FASHION_EDITS, useFashionEdit } from '../lib/fashionEdits.js';
 import { usePageMeta } from '../lib/pageMeta.js';
 import SkeletonGrid from '../components/Skeleton.jsx';
+import PageShare from '../components/PageShare.jsx';
 
 // /fashion/winter and /fashion/leather (round 12, 2026-11-20) — fashionEdits.js has what
 // is shown and why. The same page as the Wedding edit, with the edit's own sections.
@@ -28,6 +29,8 @@ export default function FashionEdit({ id }) {
           <p className="hx-wed__eyebrow">{edit.eyebrow}</p>
           <h1 className="hx-offers__h">{edit.title}</h1>
           <p className="hx-offers__lede">{edit.lede}</p>
+          {/* Send the edit to someone (round 15, 2026-11-20). */}
+          <PageShare title={edit.title} />
           {edit.care && <p className="hx-offers__lede"><Link to="/guides/leather-care" className="sora-origin__care">How to care for leather <Icon name="arrowRight" size={13} /></Link></p>}
           {sections && sections.length > 1 && (
             <ul className="hx-wed__jump">

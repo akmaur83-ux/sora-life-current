@@ -4,6 +4,7 @@ import { money } from '../lib/format.js';
 import { useWeddingEdit } from '../lib/weddingEdit.js';
 import { usePageMeta } from '../lib/pageMeta.js';
 import SkeletonGrid from '../components/Skeleton.jsx';
+import PageShare from '../components/PageShare.jsx';
 
 // /fashion/wedding — the Wedding & Festive edit (weddingEdit.js has what is shown and why).
 export default function WeddingEdit() {
@@ -17,6 +18,8 @@ export default function WeddingEdit() {
           <p className="hx-wed__eyebrow">Shaadi season</p>
           <h1 className="hx-offers__h">The Wedding &amp; Festive edit</h1>
           <p className="hx-offers__lede">Everything for the functions in one place: outfits, drapes, bags, something for him, and gifts for the couple.</p>
+          {/* Send the edit to someone (round 15, 2026-11-20). */}
+          <PageShare title="The Wedding & Festive edit" />
           {sections && sections.length > 1 && (
             <ul className="hx-wed__jump">
               {sections.map((s) => <li key={s.id}><a href={`#wed-${s.id}`}>{s.title}</a></li>)}

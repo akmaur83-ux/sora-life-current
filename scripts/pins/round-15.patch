@@ -1,0 +1,169 @@
+diff --git a/src/admin/pages/Insights.jsx b/src/admin/pages/Insights.jsx
+index 02380e8..fb18535 100644
+--- a/src/admin/pages/Insights.jsx
++++ b/src/admin/pages/Insights.jsx
+@@ -12,6 +12,8 @@ import { toCsv, downloadCsv } from '../lib/csv.js';
+ //   * Sales by brand (2026-11-20) — what each partner sold in the period, units and
+ //     takings at the price charged, to settle with them; downloadable as CSV.
+ //   * Stock watch (2026-11-20) — live products out of stock or down to 1–3, every store.
++//   * Most viewed (round 15, 2026-11-20) — product pages opened most in the period
++//     (product_views, 0046: one count per product per browser per day, nothing personal).
+ // Read-only. The search log holds the text only — no shopper, no address.
+ // ============================================================
+ export const RANGES = [[7, 'Last 7 days'], [30, 'Last 30 days'], [90, 'Last 90 days']];
+@@ -87,6 +89,18 @@ export function stockWatch(rows, low = 3) {
+   };
+ }
+ 
++/** product_views rows → { store, slug, n }, most viewed first. Pure. */
++export function topViewed(rows) {
++  const m = new Map();
++  for (const r of Array.isArray(rows) ? rows : []) {
++    if (!r?.slug || !r?.store) continue;
++    const k = `${r.store}/${r.slug}`;
++    m.set(k, { store: r.store, slug: r.slug, n: (m.get(k)?.n || 0) + 1 });
++  }
++  return [...m.values()].sort((a, b) => b.n - a.n || a.slug.localeCompare(b.slug));
++}
++export const productHref = (store, slug) => (store === 'fashion' ? `/fashion/p/${slug}` : store === 'homeliving' ? `/homeliving/p/${slug}` : `/product/${slug}`);
++
+ const STORE = { wellness: 'Wellness', fashion: 'Fashion', homeliving: 'Home & Living', grocery: 'Grocery' };
+ const box = { border: '1px solid #E4E8E1', background: '#fff', padding: 14 };
+ 
+@@ -108,10 +122,26 @@ export default function Insights() {
+   const [sellers, setSellers] = useState(null);
+   const [brands, setBrands] = useState(null);
+   const [stock, setStock] = useState(null);
++  const [viewed, setViewed] = useState(null);
+   const [error, setError] = useState('');
+   useEffect(() => {
+     let live = true;
+-    setSearches(null); setSellers(null); setBrands(null); setError('');
++    setSearches(null); setSellers(null); setBrands(null); setViewed(null); setError('');
++    supabase.from('product_views').select('store, slug').gte('created_at', since).limit(20000)
++      .then(async ({ data, error: e }) => {
++        if (!live) return;
++        if (e) { setViewed([]); return; }
++        const top = topViewed(data).slice(0, 25);
++        const cat = top.filter((t) => t.store !== 'wellness').map((t) => t.slug);
++        const well = top.filter((t) => t.store === 'wellness').map((t) => t.slug);
++        const [c, w] = await Promise.all([
++          cat.length ? supabase.from('catalogue_products').select('slug, store, name').in('slug', cat) : { data: [] },
++          well.length ? supabase.from('products').select('slug, name').in('slug', well) : { data: [] },
++        ]);
++        if (!live) return;
++        const names = new Map([...(c.data || []).map((r) => [`${r.store}/${r.slug}`, r.name]), ...(w.data || []).map((r) => [`wellness/${r.slug}`, r.name])]);
++        setViewed(top.map((t) => ({ ...t, name: names.get(`${t.store}/${t.slug}`) || t.slug })));
++      }, () => { if (live) setViewed([]); });
+     const since = new Date(Date.now() - days * 86400e3).toISOString();
+     supabase.from('search_log').select('q, store, results').gte('created_at', since).order('created_at', { ascending: false }).limit(5000)
+       .then(({ data, error: e }) => { if (!live) return; if (e) { setError(e.message); setSearches({ top: [], zero: [] }); } else setSearches(summariseSearches(data)); });
+@@ -179,6 +209,8 @@ export default function Insights() {
+             </table>
+           )}
+         </section>
++        <List title="Most viewed" hint="Product pages opened most in the period: once per product, per browser, per day." rows={viewed} empty="No product views recorded in this period yet."
++          render={(r) => <li key={`${r.store}/${r.slug}`}><a href={productHref(r.store, r.slug)} target="_blank" rel="noopener noreferrer"><b>{r.name}</b></a> <span style={{ color: '#5F6D64' }}>· {STORE[r.store] || r.store} · {r.n} views</span></li>} />
+         <List title={`Out of stock${stock ? ` (${stock.out.length})` : ''}`} hint="Live products with none left: restock them, or hide them from the shop." rows={stock?.out ?? null} empty="Nothing is out of stock."
+           render={(r, i) => <li key={`${r.store}|${r.name}|${i}`}><b>{r.name}</b> <span style={{ color: '#5F6D64' }}>· {STORE[r.store] || r.store}{r.brand ? ` · ${r.brand}` : ''}</span></li>} />
+         <List title={`Running low${stock ? ` (${stock.low.length})` : ''}`} hint="Live products with 1–3 left, fewest first." rows={stock?.low ?? null} empty="Nothing is running low."
+diff --git a/src/fashion/FashionEdit.jsx b/src/fashion/FashionEdit.jsx
+index a0e3b65..ecc465c 100644
+--- a/src/fashion/FashionEdit.jsx
++++ b/src/fashion/FashionEdit.jsx
+@@ -5,6 +5,7 @@ import { money } from '../lib/format.js';
+ import { FASHION_EDITS, useFashionEdit } from '../lib/fashionEdits.js';
+ import { usePageMeta } from '../lib/pageMeta.js';
+ import SkeletonGrid from '../components/Skeleton.jsx';
++import PageShare from '../components/PageShare.jsx';
+ 
+ // /fashion/winter and /fashion/leather (round 12, 2026-11-20) — fashionEdits.js has what
+ // is shown and why. The same page as the Wedding edit, with the edit's own sections.
+@@ -28,6 +29,8 @@ export default function FashionEdit({ id }) {
+           <p className="hx-wed__eyebrow">{edit.eyebrow}</p>
+           <h1 className="hx-offers__h">{edit.title}</h1>
+           <p className="hx-offers__lede">{edit.lede}</p>
++          {/* Send the edit to someone (round 15, 2026-11-20). */}
++          <PageShare title={edit.title} />
+           {edit.care && <p className="hx-offers__lede"><Link to="/guides/leather-care" className="sora-origin__care">How to care for leather <Icon name="arrowRight" size={13} /></Link></p>}
+           {sections && sections.length > 1 && (
+             <ul className="hx-wed__jump">
+diff --git a/src/fashion/WeddingEdit.jsx b/src/fashion/WeddingEdit.jsx
+index f819e3e..264c378 100644
+--- a/src/fashion/WeddingEdit.jsx
++++ b/src/fashion/WeddingEdit.jsx
+@@ -4,6 +4,7 @@ import { money } from '../lib/format.js';
+ import { useWeddingEdit } from '../lib/weddingEdit.js';
+ import { usePageMeta } from '../lib/pageMeta.js';
+ import SkeletonGrid from '../components/Skeleton.jsx';
++import PageShare from '../components/PageShare.jsx';
+ 
+ // /fashion/wedding — the Wedding & Festive edit (weddingEdit.js has what is shown and why).
+ export default function WeddingEdit() {
+@@ -17,6 +18,8 @@ export default function WeddingEdit() {
+           <p className="hx-wed__eyebrow">Shaadi season</p>
+           <h1 className="hx-offers__h">The Wedding &amp; Festive edit</h1>
+           <p className="hx-offers__lede">Everything for the functions in one place: outfits, drapes, bags, something for him, and gifts for the couple.</p>
++          {/* Send the edit to someone (round 15, 2026-11-20). */}
++          <PageShare title="The Wedding & Festive edit" />
+           {sections && sections.length > 1 && (
+             <ul className="hx-wed__jump">
+               {sections.map((s) => <li key={s.id}><a href={`#wed-${s.id}`}>{s.title}</a></li>)}
+diff --git a/src/pages/Gifts.jsx b/src/pages/Gifts.jsx
+index 702ba7b..9770709 100644
+--- a/src/pages/Gifts.jsx
++++ b/src/pages/Gifts.jsx
+@@ -4,6 +4,7 @@ import { money } from '../lib/format.js';
+ import { usePageMeta } from '../lib/pageMeta.js';
+ import { products } from '../data/products.js';
+ import SkeletonGrid from '../components/Skeleton.jsx';
++import PageShare from '../components/PageShare.jsx';
+ import { RECIPIENTS, BUDGETS, inBudget, budgetCounts, useGiftCards } from '../lib/giftFinder.js';
+ 
+ // /gifts — the gift finder (round 13, 2026-11-20); giftFinder.js has the rules.
+@@ -24,6 +25,8 @@ export default function Gifts() {
+           <p className="hx-wed__eyebrow">Gifting season</p>
+           <h1 className="hx-offers__h">Find a gift</h1>
+           <p className="hx-offers__lede">Who is it for, and what would you like to spend? Everything shown is in stock today.</p>
++          {/* Send these gift ideas, choices included (round 15, 2026-11-20). */}
++          <PageShare title={`Gift ideas ${(RECIPIENTS.find((r) => r.id === who) || {}).label?.toLowerCase() || ''}${budget ? `, ${(BUDGETS.find((b) => b.id === budget) || {}).label}` : ''}`} />
+         </header>
+         <div className="sora-gifts__pick" role="group" aria-label="Who is it for">
+           {RECIPIENTS.map((r) => <button key={r.id} type="button" aria-pressed={who === r.id} className={`hx-offers__chip${who === r.id ? ' is-on' : ''}`} onClick={() => set('for', r.id)}>{r.label}</button>)}
+diff --git a/src/pages/Home.jsx b/src/pages/Home.jsx
+index 3bb19c3..9a5a153 100644
+--- a/src/pages/Home.jsx
++++ b/src/pages/Home.jsx
+@@ -15,6 +15,7 @@ import { NewArrivals } from '../components/NewArrivals.jsx';
+ import PopularThisWeek from '../components/PopularThisWeek.jsx';
+ import { EditStrips } from '../fashion/FashionEdit.jsx';
+ import ShopByOccasion from '../components/ShopByOccasion.jsx';
++import ViewedLike from '../components/ViewedLike.jsx';
+ import { ShopByIngredient } from '../components/ShopExtras.jsx';
+ import { LuxuryBeds, Bedsheets } from '../components/HomeCategoryRails.jsx';
+ import RecentlyViewedHome from '../components/RecentlyViewedHome.jsx';
+@@ -126,6 +127,8 @@ export default function Home() {
+       <HomeGroup eyebrow="For you" title="Picked for you" />
+       {/* This visitor's recently viewed and saved products (this browser only). */}
+       <RecentlyViewedHome />
++      {/* More like what you viewed (round 15, 2026-11-20): this browser's own history only (ViewedLike.jsx). */}
++      <ViewedLike />
+       <WishlistRail />
+       {/* selectHomeMerchandising balances this across categories: an entry point, not a popularity claim. */}
+       <MarketplaceProductRail id="trending" eyebrow="Across the catalogue" title="Start here" products={merchandise.trending} />
+diff --git a/src/styles/sora-ds.css b/src/styles/sora-ds.css
+index 86551ec..d4edd9d 100644
+--- a/src/styles/sora-ds.css
++++ b/src/styles/sora-ds.css
+@@ -443,4 +443,8 @@ body .fs .hx-ans .hx-ans__cta { background: #D9B26A; color: #121A16; }
+ .sora-guides a:hover { border-color: #2C5341; }
+ .sora-guides b { font-size: 22px; font-weight: 500; color: #1E3A2F; }
+ .sora-guides span { font-size: 14.5px; line-height: 1.55; }
+-.sora-guides i { margin-top: auto; display: inline-flex; align-items: center; gap: 4px; font-style: normal; font-weight: 600; color: #2C5341; }
+\ No newline at end of file
++.sora-guides i { margin-top: auto; display: inline-flex; align-items: center; gap: 4px; font-style: normal; font-weight: 600; color: #2C5341; }
++/* Share this page (round 15, 2026-11-20). */
++.sora-pshare { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 0; }
++.sora-pshare a, .sora-pshare button { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 6px 12px; font: inherit; font-size: 13.5px; font-weight: 600; color: #1E3A2F; text-decoration: none; background: #fff; border: 1px solid rgba(30, 58, 47, .2); cursor: pointer; }
++.sora-pshare a:hover, .sora-pshare button:hover { border-color: #2C5341; }
+\ No newline at end of file

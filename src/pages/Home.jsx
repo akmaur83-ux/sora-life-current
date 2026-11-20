@@ -15,6 +15,7 @@ import { NewArrivals } from '../components/NewArrivals.jsx';
 import PopularThisWeek from '../components/PopularThisWeek.jsx';
 import { EditStrips } from '../fashion/FashionEdit.jsx';
 import ShopByOccasion from '../components/ShopByOccasion.jsx';
+import ViewedLike from '../components/ViewedLike.jsx';
 import { ShopByIngredient } from '../components/ShopExtras.jsx';
 import { LuxuryBeds, Bedsheets } from '../components/HomeCategoryRails.jsx';
 import RecentlyViewedHome from '../components/RecentlyViewedHome.jsx';
@@ -126,6 +127,8 @@ export default function Home() {
       <HomeGroup eyebrow="For you" title="Picked for you" />
       {/* This visitor's recently viewed and saved products (this browser only). */}
       <RecentlyViewedHome />
+      {/* More like what you viewed (round 15, 2026-11-20): this browser's own history only (ViewedLike.jsx). */}
+      <ViewedLike />
       <WishlistRail />
       {/* selectHomeMerchandising balances this across categories: an entry point, not a popularity claim. */}
       <MarketplaceProductRail id="trending" eyebrow="Across the catalogue" title="Start here" products={merchandise.trending} />

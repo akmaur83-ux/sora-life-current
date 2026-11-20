@@ -12,6 +12,8 @@ import { toCsv, downloadCsv } from '../lib/csv.js';
 //   * Sales by brand (2026-11-20) — what each partner sold in the period, units and
 //     takings at the price charged, to settle with them; downloadable as CSV.
 //   * Stock watch (2026-11-20) — live products out of stock or down to 1–3, every store.
+//   * Most viewed (round 15, 2026-11-20) — product pages opened most in the period
+//     (product_views, 0046: one count per product per browser per day, nothing personal).
 // Read-only. The search log holds the text only — no shopper, no address.
 // ============================================================
 export const RANGES = [[7, 'Last 7 days'], [30, 'Last 30 days'], [90, 'Last 90 days']];
@@ -87,6 +89,18 @@ export function stockWatch(rows, low = 3) {
   };
 }
 
+/** product_views rows → { store, slug, n }, most viewed first. Pure. */
+export function topViewed(rows) {
+  const m = new Map();
+  for (const r of Array.isArray(rows) ? rows : []) {
+    if (!r?.slug || !r?.store) continue;
+    const k = `${r.store}/${r.slug}`;
+    m.set(k, { store: r.store, slug: r.slug, n: (m.get(k)?.n || 0) + 1 });
+  }
+  return [...m.values()].sort((a, b) => b.n - a.n || a.slug.localeCompare(b.slug));
+}
+export const productHref = (store, slug) => (store === 'fashion' ? `/fashion/p/${slug}` : store === 'homeliving' ? `/homeliving/p/${slug}` : `/product/${slug}`);
+
 const STORE = { wellness: 'Wellness', fashion: 'Fashion', homeliving: 'Home & Living', grocery: 'Grocery' };
 const box = { border: '1px solid #E4E8E1', background: '#fff', padding: 14 };
 
@@ -108,10 +122,26 @@ export default function Insights() {
   const [sellers, setSellers] = useState(null);
   const [brands, setBrands] = useState(null);
   const [stock, setStock] = useState(null);
+  const [viewed, setViewed] = useState(null);
   const [error, setError] = useState('');
   useEffect(() => {
     let live = true;
-    setSearches(null); setSellers(null); setBrands(null); setError('');
+    setSearches(null); setSellers(null); setBrands(null); setViewed(null); setError('');
+    supabase.from('product_views').select('store, slug').gte('created_at', since).limit(20000)
+      .then(async ({ data, error: e }) => {
+        if (!live) return;
+        if (e) { setViewed([]); return; }
+        const top = topViewed(data).slice(0, 25);
+        const cat = top.filter((t) => t.store !== 'wellness').map((t) => t.slug);
+        const well = top.filter((t) => t.store === 'wellness').map((t) => t.slug);
+        const [c, w] = await Promise.all([
+          cat.length ? supabase.from('catalogue_products').select('slug, store, name').in('slug', cat) : { data: [] },
+          well.length ? supabase.from('products').select('slug, name').in('slug', well) : { data: [] },
+        ]);
+        if (!live) return;
+        const names = new Map([...(c.data || []).map((r) => [`${r.store}/${r.slug}`, r.name]), ...(w.data || []).map((r) => [`wellness/${r.slug}`, r.name])]);
+        setViewed(top.map((t) => ({ ...t, name: names.get(`${t.store}/${t.slug}`) || t.slug })));
+      }, () => { if (live) setViewed([]); });
     const since = new Date(Date.now() - days * 86400e3).toISOString();
     supabase.from('search_log').select('q, store, results').gte('created_at', since).order('created_at', { ascending: false }).limit(5000)
       .then(({ data, error: e }) => { if (!live) return; if (e) { setError(e.message); setSearches({ top: [], zero: [] }); } else setSearches(summariseSearches(data)); });
@@ -179,6 +209,8 @@ export default function Insights() {
             </table>
           )}
         </section>
+        <List title="Most viewed" hint="Product pages opened most in the period: once per product, per browser, per day." rows={viewed} empty="No product views recorded in this period yet."
+          render={(r) => <li key={`${r.store}/${r.slug}`}><a href={productHref(r.store, r.slug)} target="_blank" rel="noopener noreferrer"><b>{r.name}</b></a> <span style={{ color: '#5F6D64' }}>· {STORE[r.store] || r.store} · {r.n} views</span></li>} />
         <List title={`Out of stock${stock ? ` (${stock.out.length})` : ''}`} hint="Live products with none left: restock them, or hide them from the shop." rows={stock?.out ?? null} empty="Nothing is out of stock."
           render={(r, i) => <li key={`${r.store}|${r.name}|${i}`}><b>{r.name}</b> <span style={{ color: '#5F6D64' }}>· {STORE[r.store] || r.store}{r.brand ? ` · ${r.brand}` : ''}</span></li>} />
         <List title={`Running low${stock ? ` (${stock.low.length})` : ''}`} hint="Live products with 1–3 left, fewest first." rows={stock?.low ?? null} empty="Nothing is running low."

@@ -4,6 +4,7 @@ import { money } from '../lib/format.js';
 import { usePageMeta } from '../lib/pageMeta.js';
 import { products } from '../data/products.js';
 import SkeletonGrid from '../components/Skeleton.jsx';
+import PageShare from '../components/PageShare.jsx';
 import { RECIPIENTS, BUDGETS, inBudget, budgetCounts, useGiftCards } from '../lib/giftFinder.js';
 
 // /gifts — the gift finder (round 13, 2026-11-20); giftFinder.js has the rules.
@@ -24,6 +25,8 @@ export default function Gifts() {
           <p className="hx-wed__eyebrow">Gifting season</p>
           <h1 className="hx-offers__h">Find a gift</h1>
           <p className="hx-offers__lede">Who is it for, and what would you like to spend? Everything shown is in stock today.</p>
+          {/* Send these gift ideas, choices included (round 15, 2026-11-20). */}
+          <PageShare title={`Gift ideas ${(RECIPIENTS.find((r) => r.id === who) || {}).label?.toLowerCase() || ''}${budget ? `, ${(BUDGETS.find((b) => b.id === budget) || {}).label}` : ''}`} />
         </header>
         <div className="sora-gifts__pick" role="group" aria-label="Who is it for">
           {RECIPIENTS.map((r) => <button key={r.id} type="button" aria-pressed={who === r.id} className={`hx-offers__chip${who === r.id ? ' is-on' : ''}`} onClick={() => set('for', r.id)}>{r.label}</button>)}
