@@ -9,6 +9,7 @@ import FashionProductCard from './FashionProductCard.jsx';
 import RecentlyViewedHome from '../components/RecentlyViewedHome.jsx';
 import BudgetChips from '../components/BudgetChips.jsx';
 import { WeddingStrip } from './WeddingEdit.jsx';
+import { EditStrips } from './FashionEdit.jsx';
 import { ShopByColour, LastChance } from '../components/ShopExtras.jsx';
 import OfferBanner from '../components/OfferBanner.jsx';
 import { BagReminder } from '../components/HomeExtras.jsx';
@@ -169,6 +170,8 @@ export default function FashionHome() {
       <BudgetChips base="/fashion/search" wrap="fs-sec" />
       {/* The Wedding & Festive edit (WeddingEdit.jsx, 2026-11-13). */}
       <WeddingStrip />
+      {/* The Winter and Leather edits (round 12, 2026-11-20). */}
+      <EditStrips />
       {/* Colour swatches and the pieces almost gone (ShopExtras.jsx, 2026-11-13). */}
       <ShopByColour />
       <LastChance wrap="fs-sec" />

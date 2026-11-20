@@ -1,4 +1,6 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { supabase } from '../lib/supabase.js';
 import { useAdminAuth } from '../lib/adminAuth.jsx';
 import { branding } from '../lib/settings.js';
 
@@ -34,8 +36,22 @@ const NAV = [
   ...[['privacy', 'Privacy Policy'], ['terms', 'Terms & Conditions'], ['returns', 'Returns & Refunds'], ['contact', 'Contact & help'], ['grievance', 'Grievance Redressal']].map(([id, label]) => ({ to: '/admin/legal-pages/' + id, label })),
 ];
 
+/** New enquiries waiting (round 12, 2026-11-20): the count beside "Enquiries"; 0 on any failure. Re-read on each admin page change. */
+function useNewEnquiries(pathname) {
+  const [n, setN] = useState(0);
+  useEffect(() => {
+    let live = true;
+    supabase.from('enquiries').select('id', { count: 'exact', head: true }).eq('status', 'new')
+      .then(({ count, error }) => { if (live) setN(error ? 0 : Number(count) || 0); }, () => { if (live) setN(0); });
+    return () => { live = false; };
+  }, [pathname]);
+  return n;
+}
+
 export default function AdminLayout() {
   const { signOut, session } = useAdminAuth();
+  const { pathname } = useLocation();
+  const newEnquiries = useNewEnquiries(pathname);
   return (
     <div className="adm">
       <aside className="adm__side">
@@ -50,6 +66,7 @@ export default function AdminLayout() {
           {NAV.map((n) => (
             <NavLink key={n.to} to={n.to} end={n.end} className={({ isActive }) => `adm__navitem ${isActive ? 'active' : ''}`}>
               {n.label}
+              {n.to === '/admin/enquiries' && newEnquiries > 0 && <span className="adm__navcount" aria-label={`${newEnquiries} new`}>{newEnquiries}</span>}
             </NavLink>
           ))}
         </nav>

@@ -23,8 +23,8 @@ const inStock = (r) => {
   return vs.length ? vs.some((v) => Number(v.stock) > 0) : Number(r.stock) > 0;
 };
 
-/** Rows → sections of cards; categories inside a section take turns. Pure. */
-export function weddingSections(rows, per = WEDDING_PER_SECTION) {
+/** Rows → sections of cards; categories inside a section take turns. `sections` defaults to the wedding edit's (the Winter and Leather edits pass theirs, 2026-11-20). Pure. */
+export function weddingSections(rows, per = WEDDING_PER_SECTION, sections = WEDDING_SECTIONS) {
   const bySlug = new Map();
   for (const r of Array.isArray(rows) ? rows : []) {
     const slug = r?.category?.slug;
@@ -34,7 +34,7 @@ export function weddingSections(rows, per = WEDDING_PER_SECTION) {
     if (!bySlug.has(slug)) bySlug.set(slug, []);
     bySlug.get(slug).push({ key: `fashion-${r.id}`, name: String(r.name || '').trim(), href: `/fashion/p/${r.slug}`, image, price });
   }
-  return WEDDING_SECTIONS.map((s) => {
+  return sections.map((s) => {
     const lanes = s.slugs.map((slug) => bySlug.get(slug) || []);
     const items = [];
     for (let i = 0; items.length < per && lanes.some((l) => l.length > i); i += 1) for (const l of lanes) if (l[i] && items.length < per) items.push(l[i]);

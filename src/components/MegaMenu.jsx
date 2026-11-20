@@ -37,6 +37,8 @@ export function fashionMenu(rows, covers) {
   }).filter((g) => g.image || g.children.length);
 }
 
+export const FASHION_EDIT_LINKS = Object.freeze([['/fashion/winter', 'The Winter edit'], ['/fashion/leather', 'Everything leather'], ['/fashion/wedding', 'Wedding & festive']]);
+
 export default function MegaMenu({ store, onClose }) {
   const [data, setData] = useState(catalogueCache);
   useEffect(() => { if (!data && store !== 'wellness') loadCatalogueCategories().then(setData, () => setData({ rows: [], covers: {} })); }, [store, data]);
@@ -55,6 +57,11 @@ export default function MegaMenu({ store, onClose }) {
             <ul>{g.children.map((c) => <li key={c.id}><Link to={c.href} onClick={onClose}>{c.name}</Link></li>)}</ul>
           </div>
         ))}
+        {/* The edits (round 12, 2026-11-20): curated pages across categories. */}
+        <div className="sora-mega__col sora-mega__edits">
+          <b className="sora-mega__label">Edits</b>
+          <ul>{FASHION_EDIT_LINKS.map(([href, label]) => <li key={href}><Link to={href} onClick={onClose}>{label}</Link></li>)}</ul>
+        </div>
       </div>
     );
   } else {

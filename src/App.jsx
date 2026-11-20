@@ -15,6 +15,7 @@ import Help from './pages/Help.jsx';
 import DeleteAccount from './pages/DeleteAccount.jsx';
 import NewArrivalsPage from './pages/NewArrivalsPage.jsx';
 import WeddingEdit from './fashion/WeddingEdit.jsx';
+import FashionEdit from './fashion/FashionEdit.jsx';
 import AllCategories from './pages/AllCategories.jsx';
 import BrandPage from './pages/BrandPage.jsx';
 import Hamper from './pages/Hamper.jsx';
@@ -235,6 +236,8 @@ export default function App() {
         <Route path="search" element={<FashionSearch />} />
         <Route path="wishlist" element={<FashionWishlistPage />} />
         <Route path="wedding" element={<WeddingEdit />} />
+        <Route path="winter" element={<FashionEdit id="winter" />} />
+        <Route path="leather" element={<FashionEdit id="leather" />} />
       </Route>
 
       {/* The grocery store: its own shell and homepage; the cart it links to

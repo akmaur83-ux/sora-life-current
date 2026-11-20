@@ -1,0 +1,169 @@
+diff --git a/src/App.jsx b/src/App.jsx
+index 3d43c88..da96c95 100644
+--- a/src/App.jsx
++++ b/src/App.jsx
+@@ -15,6 +15,7 @@ import Help from './pages/Help.jsx';
+ import DeleteAccount from './pages/DeleteAccount.jsx';
+ import NewArrivalsPage from './pages/NewArrivalsPage.jsx';
+ import WeddingEdit from './fashion/WeddingEdit.jsx';
++import FashionEdit from './fashion/FashionEdit.jsx';
+ import AllCategories from './pages/AllCategories.jsx';
+ import BrandPage from './pages/BrandPage.jsx';
+ import Hamper from './pages/Hamper.jsx';
+@@ -235,6 +236,8 @@ export default function App() {
+         <Route path="search" element={<FashionSearch />} />
+         <Route path="wishlist" element={<FashionWishlistPage />} />
+         <Route path="wedding" element={<WeddingEdit />} />
++        <Route path="winter" element={<FashionEdit id="winter" />} />
++        <Route path="leather" element={<FashionEdit id="leather" />} />
+       </Route>
+ 
+       {/* The grocery store: its own shell and homepage; the cart it links to
+diff --git a/src/admin/AdminLayout.jsx b/src/admin/AdminLayout.jsx
+index 3ceadd2..a7dc8ff 100644
+--- a/src/admin/AdminLayout.jsx
++++ b/src/admin/AdminLayout.jsx
+@@ -1,4 +1,6 @@
+-import { NavLink, Outlet } from 'react-router-dom';
++import { useEffect, useState } from 'react';
++import { NavLink, Outlet, useLocation } from 'react-router-dom';
++import { supabase } from '../lib/supabase.js';
+ import { useAdminAuth } from '../lib/adminAuth.jsx';
+ import { branding } from '../lib/settings.js';
+ 
+@@ -34,8 +36,22 @@ const NAV = [
+   ...[['privacy', 'Privacy Policy'], ['terms', 'Terms & Conditions'], ['returns', 'Returns & Refunds'], ['contact', 'Contact & help'], ['grievance', 'Grievance Redressal']].map(([id, label]) => ({ to: '/admin/legal-pages/' + id, label })),
+ ];
+ 
++/** New enquiries waiting (round 12, 2026-11-20): the count beside "Enquiries"; 0 on any failure. Re-read on each admin page change. */
++function useNewEnquiries(pathname) {
++  const [n, setN] = useState(0);
++  useEffect(() => {
++    let live = true;
++    supabase.from('enquiries').select('id', { count: 'exact', head: true }).eq('status', 'new')
++      .then(({ count, error }) => { if (live) setN(error ? 0 : Number(count) || 0); }, () => { if (live) setN(0); });
++    return () => { live = false; };
++  }, [pathname]);
++  return n;
++}
++
+ export default function AdminLayout() {
+   const { signOut, session } = useAdminAuth();
++  const { pathname } = useLocation();
++  const newEnquiries = useNewEnquiries(pathname);
+   return (
+     <div className="adm">
+       <aside className="adm__side">
+@@ -50,6 +66,7 @@ export default function AdminLayout() {
+           {NAV.map((n) => (
+             <NavLink key={n.to} to={n.to} end={n.end} className={({ isActive }) => `adm__navitem ${isActive ? 'active' : ''}`}>
+               {n.label}
++              {n.to === '/admin/enquiries' && newEnquiries > 0 && <span className="adm__navcount" aria-label={`${newEnquiries} new`}>{newEnquiries}</span>}
+             </NavLink>
+           ))}
+         </nav>
+diff --git a/src/components/Footer.jsx b/src/components/Footer.jsx
+index a51f3ab..431a0cc 100644
+--- a/src/components/Footer.jsx
++++ b/src/components/Footer.jsx
+@@ -75,6 +75,8 @@ export default function Footer() {
+             <Link to="/sell">Sell on SORA</Link>
+             <Link to="/sell#bulk">Bulk &amp; corporate gifts</Link>
+             <Link to="/guides/leather-care">Leather care guide</Link>
++            <Link to="/fashion/winter">The Winter edit</Link>
++            <Link to="/fashion/leather">Everything leather</Link>
+             {categories.slice(0, 3).map((c) => (
+               <Link key={c.slug} to={`/category/${c.slug}`}>{c.name}</Link>
+             ))}
+diff --git a/src/components/MegaMenu.jsx b/src/components/MegaMenu.jsx
+index 39ef76e..20747d6 100644
+--- a/src/components/MegaMenu.jsx
++++ b/src/components/MegaMenu.jsx
+@@ -37,6 +37,8 @@ export function fashionMenu(rows, covers) {
+   }).filter((g) => g.image || g.children.length);
+ }
+ 
++export const FASHION_EDIT_LINKS = Object.freeze([['/fashion/winter', 'The Winter edit'], ['/fashion/leather', 'Everything leather'], ['/fashion/wedding', 'Wedding & festive']]);
++
+ export default function MegaMenu({ store, onClose }) {
+   const [data, setData] = useState(catalogueCache);
+   useEffect(() => { if (!data && store !== 'wellness') loadCatalogueCategories().then(setData, () => setData({ rows: [], covers: {} })); }, [store, data]);
+@@ -55,6 +57,11 @@ export default function MegaMenu({ store, onClose }) {
+             <ul>{g.children.map((c) => <li key={c.id}><Link to={c.href} onClick={onClose}>{c.name}</Link></li>)}</ul>
+           </div>
+         ))}
++        {/* The edits (round 12, 2026-11-20): curated pages across categories. */}
++        <div className="sora-mega__col sora-mega__edits">
++          <b className="sora-mega__label">Edits</b>
++          <ul>{FASHION_EDIT_LINKS.map(([href, label]) => <li key={href}><Link to={href} onClick={onClose}>{label}</Link></li>)}</ul>
++        </div>
+       </div>
+     );
+   } else {
+diff --git a/src/fashion/FashionHome.jsx b/src/fashion/FashionHome.jsx
+index 53502ad..0e8f2ba 100644
+--- a/src/fashion/FashionHome.jsx
++++ b/src/fashion/FashionHome.jsx
+@@ -9,6 +9,7 @@ import FashionProductCard from './FashionProductCard.jsx';
+ import RecentlyViewedHome from '../components/RecentlyViewedHome.jsx';
+ import BudgetChips from '../components/BudgetChips.jsx';
+ import { WeddingStrip } from './WeddingEdit.jsx';
++import { EditStrips } from './FashionEdit.jsx';
+ import { ShopByColour, LastChance } from '../components/ShopExtras.jsx';
+ import OfferBanner from '../components/OfferBanner.jsx';
+ import { BagReminder } from '../components/HomeExtras.jsx';
+@@ -169,6 +170,8 @@ export default function FashionHome() {
+       <BudgetChips base="/fashion/search" wrap="fs-sec" />
+       {/* The Wedding & Festive edit (WeddingEdit.jsx, 2026-11-13). */}
+       <WeddingStrip />
++      {/* The Winter and Leather edits (round 12, 2026-11-20). */}
++      <EditStrips />
+       {/* Colour swatches and the pieces almost gone (ShopExtras.jsx, 2026-11-13). */}
+       <ShopByColour />
+       <LastChance wrap="fs-sec" />
+diff --git a/src/lib/weddingEdit.js b/src/lib/weddingEdit.js
+index 5ef177d..27b5500 100644
+--- a/src/lib/weddingEdit.js
++++ b/src/lib/weddingEdit.js
+@@ -23,8 +23,8 @@ const inStock = (r) => {
+   return vs.length ? vs.some((v) => Number(v.stock) > 0) : Number(r.stock) > 0;
+ };
+ 
+-/** Rows → sections of cards; categories inside a section take turns. Pure. */
+-export function weddingSections(rows, per = WEDDING_PER_SECTION) {
++/** Rows → sections of cards; categories inside a section take turns. `sections` defaults to the wedding edit's (the Winter and Leather edits pass theirs, 2026-11-20). Pure. */
++export function weddingSections(rows, per = WEDDING_PER_SECTION, sections = WEDDING_SECTIONS) {
+   const bySlug = new Map();
+   for (const r of Array.isArray(rows) ? rows : []) {
+     const slug = r?.category?.slug;
+@@ -34,7 +34,7 @@ export function weddingSections(rows, per = WEDDING_PER_SECTION) {
+     if (!bySlug.has(slug)) bySlug.set(slug, []);
+     bySlug.get(slug).push({ key: `fashion-${r.id}`, name: String(r.name || '').trim(), href: `/fashion/p/${r.slug}`, image, price });
+   }
+-  return WEDDING_SECTIONS.map((s) => {
++  return sections.map((s) => {
+     const lanes = s.slugs.map((slug) => bySlug.get(slug) || []);
+     const items = [];
+     for (let i = 0; items.length < per && lanes.some((l) => l.length > i); i += 1) for (const l of lanes) if (l[i] && items.length < per) items.push(l[i]);
+diff --git a/src/styles/sora-ds.css b/src/styles/sora-ds.css
+index f4c96aa..1999dc4 100644
+--- a/src/styles/sora-ds.css
++++ b/src/styles/sora-ds.css
+@@ -398,4 +398,14 @@ body .fs .hx-ans .hx-ans__cta { background: #D9B26A; color: #121A16; }
+ .sora-guide__sec { margin: 26px 0 0; padding-top: 18px; border-top: 1px solid rgba(30, 58, 47, .1); }
+ .sora-guide__sec h2 { margin: 0 0 10px; font-size: 22px; font-weight: 500; color: #1E3A2F; }
+ .sora-guide__sec ul { margin: 0; padding-left: 20px; display: grid; gap: 8px; font-size: 15px; line-height: 1.6; color: #3d4a43; }
+-.sora-guide__more { margin: 32px 0 0; }
+\ No newline at end of file
++.sora-guide__more { margin: 32px 0 0; }
++/* The Winter and Leather edits' ways in (round 12, 2026-11-20). */
++.sora-editstrips { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
++.sora-editstrips .hx-wedstrip:first-child { background: linear-gradient(100deg, #12263A, #1F4767 55%, #3D7299); }
++.sora-editstrips .hx-wedstrip:first-child em { color: #CFE3F5; }
++.sora-editstrips .hx-wedstrip:last-child { background: linear-gradient(100deg, #2A1A10, #4E2F1A 55%, #7A4B26); }
++@media (max-width: 760px) { .sora-editstrips { grid-template-columns: 1fr; } }
++.sora-mega__edits { padding-left: 14px; border-left: 1px solid var(--sora-line, #E4E1D8); }
++.sora-mega__label { display: block; margin: 0 0 8px; font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #8A5A12; }
++/* New enquiries beside Admin → Enquiries (round 12, 2026-11-20). */
++.adm__navcount { display: inline-block; min-width: 20px; margin-left: 8px; padding: 1px 6px; font-size: 11px; font-weight: 700; line-height: 16px; text-align: center; color: #fff; background: #B4532A; border-radius: 10px; }
+\ No newline at end of file
