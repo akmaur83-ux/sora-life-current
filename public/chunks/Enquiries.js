@@ -21,9 +21,18 @@ function requestTally(rows) {
   }
   return [...m.values()].sort((a, b) => b.n - a.n || a.query.localeCompare(b.query));
 }
-const waHref = p => {
+
+/** A polite first line to reply with (round 16, 2026-11-20), by kind; the admin edits it before sending. Pure. */
+function replyText(r) {
+  const hi = `Hi${r?.name ? ` ${String(r.name).split(' ')[0]}` : ''}, this is SORA LIFESTYLE.`;
+  if (r?.kind === 'partner') return `${hi} Thank you for your interest in selling${r.business ? ` ${r.business}` : ''} on SORA. Could you share a few product photos and your price list? We'd be glad to talk it through.`;
+  if (r?.kind === 'bulk') return `${hi} Thank you for your gifting enquiry. Could you tell us the quantity, budget per gift and the date you need them by? We'll put options together for you.`;
+  if (r?.kind === 'request') return `${hi} You asked us for “${r.query || 'a product'}”. We're checking with our makers and will let you know what we find.`;
+  return hi;
+}
+const waHref = (p, text = '') => {
   const d = String(p || '').replace(/\D/g, '');
-  return d ? `https://wa.me/${d.length === 10 ? `91${d}` : d}` : '';
+  return d ? `https://wa.me/${d.length === 10 ? `91${d}` : d}${text ? `?text=${encodeURIComponent(text)}` : ''}` : '';
 };
 const when = iso => iso ? new Date(iso).toLocaleString('en-IN', {
   day: 'numeric',
@@ -219,13 +228,13 @@ function Enquiries() {
             children: ["Call ", r.phone]
           }), r.phone && /*#__PURE__*/jsxRuntimeExports.jsx("a", {
             className: "btn btn-sm btn-ghost",
-            href: waHref(r.phone),
+            href: waHref(r.phone, replyText(r)),
             target: "_blank",
             rel: "noopener noreferrer",
             children: "WhatsApp"
           }), r.email && /*#__PURE__*/jsxRuntimeExports.jsx("a", {
             className: "btn btn-sm btn-ghost",
-            href: `mailto:${r.email}`,
+            href: `mailto:${r.email}?subject=${encodeURIComponent(`Your enquiry at SORA LIFESTYLE`)}&body=${encodeURIComponent(replyText(r))}`,
             children: r.email
           }), r.website && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
             className: "adm-hint",
@@ -246,5 +255,5 @@ function Enquiries() {
   });
 }
 
-export { STATUSES, Enquiries as default, filterEnquiries, requestTally };
+export { STATUSES, Enquiries as default, filterEnquiries, replyText, requestTally };
 //# sourceMappingURL=Enquiries.js.map

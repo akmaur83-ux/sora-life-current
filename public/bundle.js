@@ -44983,6 +44983,54 @@ function ShopByColour() {
     })]
   });
 }
+
+// ---- Shop by fabric & craft (round 16, 2026-11-20) --------------------------------
+// The materials and weaves named on the Fashion store's own products, with how many
+// live pieces carry each name, opening the search for it. Names only — the words the
+// makers use — and an entry with fewer than three pieces is left out.
+const FABRICS = Object.freeze(['Leather', 'Banarasi', 'Cotton', 'Silk', 'Wool', 'Jamdani', 'Suede', 'Viscose', 'Kullu', 'Phulkari', 'Lambskin']);
+const FABRIC_MIN = 3;
+
+/** Fashion views → [{ name, count, href }], most pieces first. A word must stand alone ("silk", not "silky"). Pure. */
+function fabricChips(views, min = FABRIC_MIN) {
+  const texts = (Array.isArray(views) ? views : []).map(v => ` ${String(`${v?.name || ''} ${v?.description || ''}`).toLowerCase()} `);
+  return FABRICS.map(name => {
+    const re = new RegExp(`[^a-z]${name.toLowerCase()}[^a-z]`);
+    return {
+      name,
+      count: texts.filter(t => re.test(t)).length,
+      href: `/fashion/search?q=${encodeURIComponent(name.toLowerCase())}`
+    };
+  }).filter(c => c.count >= min).sort((a, b) => b.count - a.count);
+}
+function ShopByFabric({
+  views
+}) {
+  const chips = fabricChips(views);
+  if (chips.length < 3) return null;
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+    className: "fs-sec sora-ingr",
+    "aria-labelledby": "sora-fabric-h",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+      className: "fs-sec__head",
+      children: /*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+        className: "fs-sec__h serif",
+        id: "sora-fabric-h",
+        children: "Shop by fabric & craft"
+      })
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+      className: "sora-ingr__list",
+      children: chips.map(c => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+        children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: c.href,
+          children: [c.name, " ", /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            children: c.count
+          })]
+        })
+      }, c.name))
+    })]
+  });
+}
 const STYLING_TIPS = Object.freeze([[/suit|dress-material|salwar|kurta/, ['Pair with a contrasting dupatta, or let a woven one carry the colour.', 'Juttis or block heels keep it festive; kolhapuris keep it easy.', 'Jhumkas or chandbalis suit a Banarasi neckline; keep the rest light.']], [/saree/, ['A plain blouse lets a woven saree speak; a brocade blouse lifts a plain one.', 'Pleat the pallu for a day function, leave it open in the evening.', 'A potli or a clutch in the border’s colour ties the look together.']], [/leather-jacket|leather-coat/, ['Over a plain tee and dark jeans is the classic; add boots for winter.', 'Leave it open over a knit, or belt a coat for a sharper line.', 'Match the belt and shoes to the leather’s tone, brown with brown, black with black.']], [/shawl|stole|dupatta|muffler/, ['Drape over one shoulder on a plain outfit to let the weave lead.', 'Wrap it twice for warmth on a cold evening.', 'A woven shawl turns a simple kurta into a function look.']], [/handbag|clutch|sling|pouch|potli/, ['Pick a bag a shade apart from the outfit, not an exact match.', 'A clutch for the evening, a sling when you need your hands free.']], [/wallet|belt|card-holder|passport/, ['Match the belt to your shoes.', 'Leather mellows and darkens with use: that’s the character, not wear.']]]);
 
 /** The tips for a category slug; [] when none fit. Pure. */
@@ -52757,18 +52805,22 @@ function bulkText(name, href) {
   return `Hi SORA Lifestyle, I'd like to buy ${String(name || 'this product').trim()} in bulk (quantity: __). Could you share a bulk price and delivery time? ${href}`;
 }
 function AskWhatsApp({
-  productName
+  productName,
+  askChoice = ''
 }) {
   const care = useConsumerCare();
   const [href, setHref] = reactExports.useState('');
   const [bulk, setBulk] = reactExports.useState('');
   reactExports.useEffect(() => {
     const page = window.location.href.split('#')[0];
-    setHref(waLink(care?.phone, window.location.pathname, productName, page));
+    // The size and colour chosen go with the question (round 16, 2026-11-20): "will M fit…?"
+    // (waLink keeps a title up to its first " - ", so the choice follows the name as waLink would cut it.)
+    const base = String(productName || '').split(/\s[|–—-]\s/)[0].trim();
+    setHref(waLink(care?.phone, window.location.pathname, askChoice && base ? `${base} (${askChoice})` : productName, page));
     // Bulk orders (2026-11-13: more features): weddings, gifting, shops — the same number, its own message.
     const n = waNumber(care?.phone);
     setBulk(n ? `https://wa.me/${n}?text=${encodeURIComponent(bulkText(productName, page))}` : '');
-  }, [care?.phone, productName]);
+  }, [care?.phone, productName, askChoice]);
   if (!href) return null;
   return /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
     children: [/*#__PURE__*/jsxRuntimeExports.jsxs("a", {
@@ -52848,7 +52900,8 @@ function PdpDeliveryDate({
   out = false,
   productKey = '',
   productName = '',
-  choice = ''
+  choice = '',
+  askChoice = ''
 }) {
   const [win, setWin] = reactExports.useState(null);
   reactExports.useEffect(() => {
@@ -52862,7 +52915,8 @@ function PdpDeliveryDate({
       productName: productName,
       choice: named
     }), /*#__PURE__*/jsxRuntimeExports.jsx(AskWhatsApp, {
-      productName: productName
+      productName: productName,
+      askChoice: askChoice
     })]
   });
   if (!win) return null;
@@ -52880,7 +52934,8 @@ function PdpDeliveryDate({
         })]
       })]
     }), /*#__PURE__*/jsxRuntimeExports.jsx(AskWhatsApp, {
-      productName: productName
+      productName: productName,
+      askChoice: askChoice
     })]
   });
 }
@@ -73702,7 +73757,9 @@ function FashionHome() {
       wrap: "fs-sec"
     }), /*#__PURE__*/jsxRuntimeExports.jsx(WeddingStrip, {}), /*#__PURE__*/jsxRuntimeExports.jsx(EditStrips, {}), /*#__PURE__*/jsxRuntimeExports.jsx(ShopByOccasion, {
       className: "fs-sec"
-    }), /*#__PURE__*/jsxRuntimeExports.jsx(ShopByColour, {}), /*#__PURE__*/jsxRuntimeExports.jsx(LastChance, {
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(ShopByColour, {}), /*#__PURE__*/jsxRuntimeExports.jsx(ShopByFabric, {
+      views: views
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(LastChance, {
       wrap: "fs-sec"
     }), /*#__PURE__*/jsxRuntimeExports.jsx(CategoryTiles, {
       tree: tree
@@ -79567,7 +79624,8 @@ function FashionProductPage() {
           out: st.status === 'out' || !anyLive,
           productKey: `fashion:${view.id}`,
           productName: view.name,
-          choice: st.status === 'out' ? st.label || '' : ''
+          choice: st.status === 'out' ? st.label || '' : '',
+          askChoice: st.label || ''
         }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
           className: "fs-buybox__deliv",
           children: [/*#__PURE__*/jsxRuntimeExports.jsx("b", {
