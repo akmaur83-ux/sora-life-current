@@ -1,0 +1,35 @@
+diff --git a/src/components/WinterDeals.jsx b/src/components/WinterDeals.jsx
+index 5aa6f47..78d557c 100644
+--- a/src/components/WinterDeals.jsx
++++ b/src/components/WinterDeals.jsx
+@@ -100,7 +100,7 @@ function Title() {
+   );
+   return (
+     <h2 className="sora-winter__title" aria-label="Winter deals">
+-      <svg viewBox="0 0 400 150" aria-hidden="true" overflow="visible">
++      <svg viewBox="0 26 400 106" aria-hidden="true" overflow="visible">
+         <defs>
+           {/* A faint knit on the letters: light enough that the words read first. */}
+           <pattern id="sw-knit" width="8" height="7" patternUnits="userSpaceOnUse">
+diff --git a/src/styles/sora-ds.css b/src/styles/sora-ds.css
+index 203170c..72b80a4 100644
+--- a/src/styles/sora-ds.css
++++ b/src/styles/sora-ds.css
+@@ -753,4 +753,15 @@ html.sora-wintertop .v2-hdr__bar, html.sora-wintertop .sora-stickycats > * { pos
+ .sora-muffler__ripple { animation: sw-ripple 2.4s ease-in-out infinite; transform-box: view-box; transform-origin: 50% 69%; }
+ @keyframes sw-ripple { 0%, 100% { transform: translateY(0) scaleY(1); } 50% { transform: translateY(-2px) scaleY(1.12); } }
+ .sora-winter__letters { animation: sw-floaty 3.4s ease-in-out infinite; }
+-@media (prefers-reduced-motion: reduce) { .sora-muffler__slide, .sora-muffler__ripple { transform: none; } }
+\ No newline at end of file
++@media (prefers-reduced-motion: reduce) { .sora-muffler__slide, .sora-muffler__ripple { transform: none; } }
++/* Less air above the heading (owner, 2026-11-21: "winter deals ke uper thoda zayda khali space");
++   "Up to" never breaks onto two lines on a narrow phone. */
++.sora-winter__in { padding-top: 10px; }
++.sora-winter__title { margin-top: 0; }
++.sora-winter__sub { margin-top: 2px; }
++.sora-winter__badge > span { white-space: nowrap; }
++@media (max-width: 400px) {
++  .sora-winter__badge > span { padding: 4px 5px; font-size: 10px; }
++  .sora-winter__badge b { padding: 3px 5px; font-size: 14px; }
++}
++@media (min-width: 760px) { .sora-winter__in { padding-top: 16px; } }

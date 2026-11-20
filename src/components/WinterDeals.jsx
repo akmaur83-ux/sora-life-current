@@ -100,7 +100,7 @@ function Title() {
   );
   return (
     <h2 className="sora-winter__title" aria-label="Winter deals">
-      <svg viewBox="0 0 400 150" aria-hidden="true" overflow="visible">
+      <svg viewBox="0 26 400 106" aria-hidden="true" overflow="visible">
         <defs>
           {/* A faint knit on the letters: light enough that the words read first. */}
           <pattern id="sw-knit" width="8" height="7" patternUnits="userSpaceOnUse">

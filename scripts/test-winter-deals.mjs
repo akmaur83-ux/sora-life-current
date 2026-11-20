@@ -106,5 +106,11 @@ test('round 27: no COD strip on the homepage; on a product page the delivery lin
   assert.match(pdp, /<div className="fs-pdp__more">\n        <DeliveryStrip \/>\n        <CategoryChips \/>/);
   assert.match(read('src/fashion/FashionLayout.jsx'), /\{!\/\^\\\/fashion\\\/p\\\/\/\.test\(location\.pathname\) && <DeliveryStrip strip=\{strip\} \/>\}/);
 });
+test('round 29: less air above the heading; "Up to" on one line', () => {
+  assert.match(read('src/components/WinterDeals.jsx'), /<svg viewBox="0 26 400 106"/);
+  const css = read('src/styles/sora-ds.css');
+  assert.match(css, /\.sora-winter__in \{ padding-top: 10px; \}/);
+  assert.match(css, /\.sora-winter__badge > span \{ white-space: nowrap; \}/);
+});
 if (failed) { console.log(`\n${failed} failed`); process.exit(1); }
 console.log('\nall passed');
