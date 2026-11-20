@@ -29,6 +29,7 @@ import Invoice from './pages/Invoice.jsx';
 import GiftReceipt from './pages/GiftReceipt.jsx';
 import Sell from './pages/Sell.jsx';
 import LeatherCare from './pages/LeatherCare.jsx';
+import Gifts from './pages/Gifts.jsx';
 import CreatorPortal from './pages/CreatorPortal.jsx';
 import CreatorAttribution from './components/CreatorAttribution.jsx';
 import NotFound from './pages/NotFound.jsx';
@@ -220,6 +221,7 @@ export default function App() {
       <Route path="/gift-receipt/:orderNumber" element={<GiftReceipt />} />
       <Route path="/sell" element={<Sell />} />
       <Route path="/guides/leather-care" element={<LeatherCare />} />
+      <Route path="/gifts" element={<Gifts />} />
       {/* Creator Program portal. Standalone shell, own chrome. */}
       <Route path="/creator/:tab?" element={<CreatorPortal />} />
 

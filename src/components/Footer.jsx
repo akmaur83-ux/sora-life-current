@@ -72,6 +72,7 @@ export default function Footer() {
             <Link to="/fashion/wedding">Wedding edit</Link>
             <Link to="/categories">All categories</Link>
             <Link to="/hamper">Build a hamper</Link>
+            <Link to="/gifts">Gift finder</Link>
             <Link to="/sell">Sell on SORA</Link>
             <Link to="/sell#bulk">Bulk &amp; corporate gifts</Link>
             <Link to="/guides/leather-care">Leather care guide</Link>

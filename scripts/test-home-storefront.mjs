@@ -93,7 +93,7 @@ await test('the hero: two slides of the product lineup; the first is the page\'s
   assert.deepEqual(slides.map((m) => [m[1], m[2], m[3]]), [['everyday', 'false', '1'], ['homeliving', 'true', '2']]);
   const [one, two] = slides.map((m) => m[4]);
   assert.ok(one.includes('<p class="hx-eyebrow"><span>Wellness · Fashion · Home</span><span><span class="hx-eyebrow__dot" aria-hidden="true"> · </span>Personal care · More</span></p><h1 class="hx-hero__title"><span>Everything for</span> <span class="hx-hl">everyday wellbeing.</span></h1><a class="hx-btn" href="/shop">Shop now <svg'), 'slide 1, in order');
-  assert.ok(two.includes('<p class="hx-eyebrow"><span>Home &amp; Living</span></p><h2 class="hx-hero__title"><span>Dress your home</span> <span class="hx-hl">for Diwali.</span></h2><a class="hx-btn" tabindex="-1" href="/homeliving/category/bedsheets">Shop bedsheets <svg'), 'slide 2, in order, its button out of the tab order while hidden');
+  assert.ok(two.includes('<p class="hx-eyebrow"><span>Home &amp; Living</span></p><h2 class="hx-hero__title"><span>Dress your home</span> <span class="hx-hl">for the season.</span></h2><a class="hx-btn" tabindex="-1" href="/homeliving">Shop Home &amp; Living <svg'), 'slide 2, in order, its button out of the tab order while hidden');
   assert.equal((hero.match(/<h1/g) || []).length, 1, 'one h1');
   assert.match(one, /<picture><source media="\(max-width: 700px\)" srcSet="\/img\/home-hero-2-800\.webp"\/><img alt="Biosash sea buckthorn juices, Berry Veda[^"]+" width="1600" height="900" class="hx-hero__image" src="\/img\/home-hero-2\.webp" loading="eager" decoding="async" fetchPriority="high"\/><\/picture>/, 'slide 1 is the wide lineup, the page\'s largest paint: eager, high priority');
   assert.match(two, /<picture><source media="\(max-width: 700px\)"\/><img alt="A bed in printed bedsheets[^"]+" width="1280" height="720" class="hx-hero__image" loading="lazy" decoding="async"\/><\/picture>/, 'slide 2 the Diwali bedroom, waiting until it is near');
@@ -217,8 +217,8 @@ await test('the Jewellery circle is the jewellery page\'s rings shot (the neckla
   assert.ok(diff / n < 4, `the rings shot, as it was (mean difference ${(diff / n).toFixed(2)})`);
 });
 
-await test('the promo strip: "Festive gifting" / "Wellness, beauty and home picks to give this season" / "Shop gifts" to /shop, over the gift-and-diya photograph', () => {
-  assert.match(promo, /<a class="hx-promo__card" aria-labelledby="hx-promo-h hx-promo-cta" href="\/shop"><picture><source media="\(max-width: 700px\)"\/><img alt="[^"]{30,}" width="1600" height="533" class="hx-promo__image" loading="lazy" decoding="async"\/><\/picture><div class="hx-promo__copy"><h2 class="hx-promo__h" id="hx-promo-h">Festive gifting<\/h2><p class="hx-promo__text">Wellness, beauty and home picks to give this season<\/p><span class="hx-btn" id="hx-promo-cta">Shop gifts <svg/);
+await test('the promo strip: "Festive gifting" / "Wellness, beauty and home picks to give this season" / "Shop gifts" to /gifts (the gift finder, 2026-11-20), over the gift-and-diya photograph', () => {
+  assert.match(promo, /<a class="hx-promo__card" aria-labelledby="hx-promo-h hx-promo-cta" href="\/gifts"><picture><source media="\(max-width: 700px\)"\/><img alt="[^"]{30,}" width="1600" height="533" class="hx-promo__image" loading="lazy" decoding="async"\/><\/picture><div class="hx-promo__copy"><h2 class="hx-promo__h" id="hx-promo-h">Festive gifting<\/h2><p class="hx-promo__text">Wellness, beauty and home picks to give this season<\/p><span class="hx-btn" id="hx-promo-cta">Shop gifts <svg/);
 });
 
 await test('the copy is true: no free-shipping threshold, no round-the-clock support, no percentage or offer, no health outcome — in the component and in the render', () => {

@@ -1,0 +1,129 @@
+diff --git a/src/App.jsx b/src/App.jsx
+index da96c95..0574ed6 100644
+--- a/src/App.jsx
++++ b/src/App.jsx
+@@ -29,6 +29,7 @@ import Invoice from './pages/Invoice.jsx';
+ import GiftReceipt from './pages/GiftReceipt.jsx';
+ import Sell from './pages/Sell.jsx';
+ import LeatherCare from './pages/LeatherCare.jsx';
++import Gifts from './pages/Gifts.jsx';
+ import CreatorPortal from './pages/CreatorPortal.jsx';
+ import CreatorAttribution from './components/CreatorAttribution.jsx';
+ import NotFound from './pages/NotFound.jsx';
+@@ -220,6 +221,7 @@ export default function App() {
+       <Route path="/gift-receipt/:orderNumber" element={<GiftReceipt />} />
+       <Route path="/sell" element={<Sell />} />
+       <Route path="/guides/leather-care" element={<LeatherCare />} />
++      <Route path="/gifts" element={<Gifts />} />
+       {/* Creator Program portal. Standalone shell, own chrome. */}
+       <Route path="/creator/:tab?" element={<CreatorPortal />} />
+ 
+diff --git a/src/components/Footer.jsx b/src/components/Footer.jsx
+index 431a0cc..040f1ad 100644
+--- a/src/components/Footer.jsx
++++ b/src/components/Footer.jsx
+@@ -72,6 +72,7 @@ export default function Footer() {
+             <Link to="/fashion/wedding">Wedding edit</Link>
+             <Link to="/categories">All categories</Link>
+             <Link to="/hamper">Build a hamper</Link>
++            <Link to="/gifts">Gift finder</Link>
+             <Link to="/sell">Sell on SORA</Link>
+             <Link to="/sell#bulk">Bulk &amp; corporate gifts</Link>
+             <Link to="/guides/leather-care">Leather care guide</Link>
+diff --git a/src/components/GiftShop.jsx b/src/components/GiftShop.jsx
+index 91ff91b..53929a9 100644
+--- a/src/components/GiftShop.jsx
++++ b/src/components/GiftShop.jsx
+@@ -11,7 +11,8 @@ import { useStorefrontSection } from '../lib/storefrontSections.js';
+ // category. A category with nothing live is left out. Editable or hidden in
+ // Storefronts → Wellness → Gift shop.
+ // ============================================================
+-export const GIFT_SECTION = Object.freeze({ hidden: false, eyebrow: 'Festive gifting', title: 'The Diwali gift shop' });
++// Diwali has passed (2026-11-20): the season's name gives way to the wedding and year-end gifting.
++export const GIFT_SECTION = Object.freeze({ hidden: false, eyebrow: 'Gifting season', title: 'The gift shop' });
+ export const GIFT_TILES = Object.freeze([
+   { store: 'fashion', slug: 'shawl-gift-sets', label: 'Shawl gift boxes', href: '/fashion/c/shawl-gift-sets' },
+   { store: 'fashion', slug: 'leather-gift-sets', label: 'Leather gift sets', href: '/fashion/c/leather-gift-sets' },
+@@ -49,7 +50,11 @@ export default function GiftShop() {
+     <section className="hx hx-gifts" aria-labelledby="hx-gifts-h">
+       <div className="hx-wrap">
+         {s.eyebrow && <p className="hx-gifts__eyebrow">{s.eyebrow}</p>}
+-        <h2 className="hx-gifts__h" id="hx-gifts-h">{s.title}</h2>
++        <div className="hx-stores__head">
++          <h2 className="hx-gifts__h" id="hx-gifts-h">{s.title}</h2>
++          {/* The gift finder (round 13, 2026-11-20): by who it is for and budget. */}
++          <Link to="/gifts" className="hx-more">Find a gift by budget <Icon name="arrowRight" size={15} /></Link>
++        </div>
+         <ul className="hx-gifts__grid">
+           {tiles.map((t) => (
+             <li key={t.slug}>
+diff --git a/src/components/HomeStorefront.jsx b/src/components/HomeStorefront.jsx
+index c909cb5..217109c 100644
+--- a/src/components/HomeStorefront.jsx
++++ b/src/components/HomeStorefront.jsx
+@@ -46,10 +46,11 @@ export const HERO_SLIDES = [
+   },
+   {
+     // Home & Living for the festive season (owner, 2026-11-08): the Biosash lineup slide gave way.
++    // Diwali has passed (2026-11-20): the season's words, and the whole store, not one category.
+     key: 'homeliving',
+     eyebrow: ['Home & Living'],
+-    title: ['Dress your home', 'for Diwali.'],
+-    cta: { label: 'Shop bedsheets', to: '/homeliving/category/bedsheets' },
++    title: ['Dress your home', 'for the season.'],
++    cta: { label: 'Shop Home & Living', to: '/homeliving' },
+     image: '/img/home-hero-diwali.webp', phone: '/img/home-hero-diwali-800.webp', width: 1280, height: 720,
+     alt: 'A bed in printed bedsheets with folded sheets and printed doormats, lit by diyas, a lantern and marigold garlands',
+   },
+@@ -332,7 +333,8 @@ export function JewelleryBanner({ banner }) {
+ 
+ /** The festive promo's built-in content; its copy's built-in place is the centre. */
+ export const FESTIVE_SECTION = Object.freeze({
+-  hidden: false, title: 'Festive gifting', text: 'Wellness, beauty and home picks to give this season', cta: 'Shop gifts', link: '/shop',
++  // Its button opens the gift finder (round 13, 2026-11-20) rather than the whole wellness shop.
++  hidden: false, title: 'Festive gifting', text: 'Wellness, beauty and home picks to give this season', cta: 'Shop gifts', link: '/gifts',
+   picture: { phone: '/img/home-promo-festive-800.webp', desktop: '/img/home-promo-festive.webp' },
+   alt: 'A gift box tied with an orange ribbon beside a lit diya and marigolds', position: 'center',
+ });
+diff --git a/src/pages/Home.jsx b/src/pages/Home.jsx
+index 997ed5a..8f7738d 100644
+--- a/src/pages/Home.jsx
++++ b/src/pages/Home.jsx
+@@ -13,6 +13,7 @@ import { AnsariPosters } from '../components/AnsariFashion.jsx';
+ import HomeGroup from '../components/HomeGroup.jsx';
+ import { NewArrivals } from '../components/NewArrivals.jsx';
+ import PopularThisWeek from '../components/PopularThisWeek.jsx';
++import { EditStrips } from '../fashion/FashionEdit.jsx';
+ import { ShopByIngredient } from '../components/ShopExtras.jsx';
+ import { LuxuryBeds, Bedsheets } from '../components/HomeCategoryRails.jsx';
+ import RecentlyViewedHome from '../components/RecentlyViewedHome.jsx';
+@@ -90,6 +91,8 @@ export default function Home() {
+       {/* Popular this week (round 9, 2026-11-16): most-opened products, real counts only (PopularThisWeek.jsx). */}
+       <PopularThisWeek />
+       <FestivePromo />
++      {/* The Winter and Leather edits (round 13, 2026-11-20): the Fashion home's strips, here too. */}
++      <section className="hx sora-homeedits" aria-label="Edits"><div className="hx-wrap"><EditStrips /></div></section>
+       {/* Owner, 2026-11-13: "festive gifting ke niche shop by brand" — the brands row, then
+           Taj Leather's and Ansari Fashion's posters as they were ("ache lagte hain"). */}
+       <BrandCarousel />
+diff --git a/src/styles/sora-ds.css b/src/styles/sora-ds.css
+index 1999dc4..adc60e5 100644
+--- a/src/styles/sora-ds.css
++++ b/src/styles/sora-ds.css
+@@ -408,4 +408,13 @@ body .fs .hx-ans .hx-ans__cta { background: #D9B26A; color: #121A16; }
+ .sora-mega__edits { padding-left: 14px; border-left: 1px solid var(--sora-line, #E4E1D8); }
+ .sora-mega__label { display: block; margin: 0 0 8px; font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #8A5A12; }
+ /* New enquiries beside Admin → Enquiries (round 12, 2026-11-20). */
+-.adm__navcount { display: inline-block; min-width: 20px; margin-left: 8px; padding: 1px 6px; font-size: 11px; font-weight: 700; line-height: 16px; text-align: center; color: #fff; background: #B4532A; border-radius: 10px; }
+\ No newline at end of file
++.adm__navcount { display: inline-block; min-width: 20px; margin-left: 8px; padding: 1px 6px; font-size: 11px; font-weight: 700; line-height: 16px; text-align: center; color: #fff; background: #B4532A; border-radius: 10px; }
++/* Gift finder (round 13, 2026-11-20). */
++.sora-gifts__pick { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; }
++.sora-gifts__pick .hx-offers__chip em { margin-left: 6px; font-style: normal; font-size: 12px; opacity: .7; }
++.sora-gifts__pick .hx-offers__chip:disabled { opacity: .45; cursor: not-allowed; }
++.sora-gifts__count { margin: 6px 0 12px; font-size: 13.5px; color: #5c6a62; }
++.sora-gifts__more { margin: 26px 0 0; font-size: 14.5px; color: #3d4a43; }
++.sora-gifts__more a { font-weight: 600; color: #2C5341; }
++.sora-homeedits { padding: 8px 0 20px; }
++.sora-homeedits .sora-editstrips { margin: 0; }
+\ No newline at end of file

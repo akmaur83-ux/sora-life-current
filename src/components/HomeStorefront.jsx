@@ -46,10 +46,11 @@ export const HERO_SLIDES = [
   },
   {
     // Home & Living for the festive season (owner, 2026-11-08): the Biosash lineup slide gave way.
+    // Diwali has passed (2026-11-20): the season's words, and the whole store, not one category.
     key: 'homeliving',
     eyebrow: ['Home & Living'],
-    title: ['Dress your home', 'for Diwali.'],
-    cta: { label: 'Shop bedsheets', to: '/homeliving/category/bedsheets' },
+    title: ['Dress your home', 'for the season.'],
+    cta: { label: 'Shop Home & Living', to: '/homeliving' },
     image: '/img/home-hero-diwali.webp', phone: '/img/home-hero-diwali-800.webp', width: 1280, height: 720,
     alt: 'A bed in printed bedsheets with folded sheets and printed doormats, lit by diyas, a lantern and marigold garlands',
   },
@@ -332,7 +333,8 @@ export function JewelleryBanner({ banner }) {
 
 /** The festive promo's built-in content; its copy's built-in place is the centre. */
 export const FESTIVE_SECTION = Object.freeze({
-  hidden: false, title: 'Festive gifting', text: 'Wellness, beauty and home picks to give this season', cta: 'Shop gifts', link: '/shop',
+  // Its button opens the gift finder (round 13, 2026-11-20) rather than the whole wellness shop.
+  hidden: false, title: 'Festive gifting', text: 'Wellness, beauty and home picks to give this season', cta: 'Shop gifts', link: '/gifts',
   picture: { phone: '/img/home-promo-festive-800.webp', desktop: '/img/home-promo-festive.webp' },
   alt: 'A gift box tied with an orange ribbon beside a lit diya and marigolds', position: 'center',
 });

@@ -13,6 +13,7 @@ import { AnsariPosters } from '../components/AnsariFashion.jsx';
 import HomeGroup from '../components/HomeGroup.jsx';
 import { NewArrivals } from '../components/NewArrivals.jsx';
 import PopularThisWeek from '../components/PopularThisWeek.jsx';
+import { EditStrips } from '../fashion/FashionEdit.jsx';
 import { ShopByIngredient } from '../components/ShopExtras.jsx';
 import { LuxuryBeds, Bedsheets } from '../components/HomeCategoryRails.jsx';
 import RecentlyViewedHome from '../components/RecentlyViewedHome.jsx';
@@ -90,6 +91,8 @@ export default function Home() {
       {/* Popular this week (round 9, 2026-11-16): most-opened products, real counts only (PopularThisWeek.jsx). */}
       <PopularThisWeek />
       <FestivePromo />
+      {/* The Winter and Leather edits (round 13, 2026-11-20): the Fashion home's strips, here too. */}
+      <section className="hx sora-homeedits" aria-label="Edits"><div className="hx-wrap"><EditStrips /></div></section>
       {/* Owner, 2026-11-13: "festive gifting ke niche shop by brand" — the brands row, then
           Taj Leather's and Ansari Fashion's posters as they were ("ache lagte hain"). */}
       <BrandCarousel />

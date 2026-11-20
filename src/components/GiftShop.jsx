@@ -11,7 +11,8 @@ import { useStorefrontSection } from '../lib/storefrontSections.js';
 // category. A category with nothing live is left out. Editable or hidden in
 // Storefronts → Wellness → Gift shop.
 // ============================================================
-export const GIFT_SECTION = Object.freeze({ hidden: false, eyebrow: 'Festive gifting', title: 'The Diwali gift shop' });
+// Diwali has passed (2026-11-20): the season's name gives way to the wedding and year-end gifting.
+export const GIFT_SECTION = Object.freeze({ hidden: false, eyebrow: 'Gifting season', title: 'The gift shop' });
 export const GIFT_TILES = Object.freeze([
   { store: 'fashion', slug: 'shawl-gift-sets', label: 'Shawl gift boxes', href: '/fashion/c/shawl-gift-sets' },
   { store: 'fashion', slug: 'leather-gift-sets', label: 'Leather gift sets', href: '/fashion/c/leather-gift-sets' },
@@ -49,7 +50,11 @@ export default function GiftShop() {
     <section className="hx hx-gifts" aria-labelledby="hx-gifts-h">
       <div className="hx-wrap">
         {s.eyebrow && <p className="hx-gifts__eyebrow">{s.eyebrow}</p>}
-        <h2 className="hx-gifts__h" id="hx-gifts-h">{s.title}</h2>
+        <div className="hx-stores__head">
+          <h2 className="hx-gifts__h" id="hx-gifts-h">{s.title}</h2>
+          {/* The gift finder (round 13, 2026-11-20): by who it is for and budget. */}
+          <Link to="/gifts" className="hx-more">Find a gift by budget <Icon name="arrowRight" size={15} /></Link>
+        </div>
         <ul className="hx-gifts__grid">
           {tiles.map((t) => (
             <li key={t.slug}>
