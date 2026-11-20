@@ -1,0 +1,455 @@
+diff --git a/src/components/Header.jsx b/src/components/Header.jsx
+index e202d8d..55daefe 100644
+--- a/src/components/Header.jsx
++++ b/src/components/Header.jsx
+@@ -141,7 +141,8 @@ export default function Header() {
+ 
+   return (
+     <>
+-      <AnnouncementBar />
++      {/* Not on the homepage (owner, 2026-11-20: "uper cod wali patti hai na usko hta do"). */}
++      {location.pathname !== '/' && <AnnouncementBar />}
+ 
+       <header className={`v2-hdr ${scrolled ? 'is-scrolled' : ''}`}>
+         <div className="v2-hdr__bar">
+diff --git a/src/components/WinterDeals.jsx b/src/components/WinterDeals.jsx
+index c18bc11..ba3916c 100644
+--- a/src/components/WinterDeals.jsx
++++ b/src/components/WinterDeals.jsx
+@@ -1,10 +1,13 @@
++import { useEffect, useState } from 'react';
+ import { Link } from 'react-router-dom';
+-import { useWinterDeals } from '../lib/winterDeals.js';
++import { useWinterDeals, HERO_EVERY_MS } from '../lib/winterDeals.js';
+ 
+ // ============================================================
+-// The winter band (owner, 2026-11-20). Night-blue, falling snow, the heading's letters
+-// bobbing, tiles rising in one after another — and nothing moves for a shopper whose
+-// device asks for less motion (sora-ds.css). Numbers come from lib/winterDeals.js.
++// The winter band (owner, 2026-11-20). Night-blue; snow in three layers swaying in the
++// wind, gusts sweeping across; the heading in round, knitted lettering with a striped
++// muffler that wraps itself round it and keeps turning, its ends flapping; the hero tile
++// turning through the deals every 1.5 s. Nothing moves for a shopper whose device asks
++// for less motion (sora-ds.css). Every number comes from lib/winterDeals.js.
+ // ============================================================
+ const rupees = (n) => `₹${Math.round(Number(n) || 0).toLocaleString('en-IN')}`;
+ 
+@@ -13,16 +16,22 @@ const rupees = (n) => `₹${Math.round(Number(n) || 0).toLocaleString('en-IN')}`
+ export const ORNAMENTS = Object.freeze([[6, 34, 3.4, 0], [17, 18, 2.9, .6], [83, 22, 3.1, .3], [94, 38, 3.6, .9]]);
+ export const TWINKLES = Object.freeze([[12, 30, 10, 0], [30, 14, 7, 1.1], [70, 12, 8, .5], [88, 46, 9, 1.6], [50, 6, 6, 2.2], [4, 62, 7, .8]]);
+ export const POMPOMS = 24;
+-// The nearer layer of snow: bigger, softer, faster.
+-export const NEAR_FLAKES = Object.freeze([[9, 11, 7, 2, 30], [29, 9, 8, 5, -26], [52, 12, 6.5, 0, 24], [73, 10, 7.5, 4, -30], [90, 9, 8.5, 1, 20], [41, 8, 7, 6, -18]]);
+ 
+-// Fixed flakes (no Math.random: the same band every render): left %, size px, seconds, delay s, drift px.
+-export const FLAKES = Object.freeze([
+-  [4, 6, 9, 0, 18], [11, 4, 12, 3, -12], [18, 8, 10, 6, 22], [26, 5, 13, 1, -16], [33, 3, 8, 4, 10],
+-  [40, 7, 11, 7, -20], [47, 4, 14, 2, 14], [54, 6, 9, 5, -10], [61, 3, 12, 8, 16], [68, 8, 10, 1, -22],
+-  [74, 5, 13, 6, 12], [80, 4, 9, 3, -14], [86, 7, 11, 0, 20], [92, 3, 12, 5, -8], [97, 5, 10, 2, 12],
+-  [8, 3, 15, 9, 8], [36, 4, 16, 10, -6], [58, 5, 15, 11, 10], [77, 3, 16, 12, -10], [22, 6, 14, 13, 14],
+-]);
++// Snow in three layers (round 27): far (tiny, slow), mid, near (big, soft, fast). Spread by a
++// fixed rule, not Math.random, so the band is the same on every render:
++// [left %, size px, fall seconds, delay s, wind drift px].
++const layer = (n, size, secs, drift, seed) => Object.freeze(Array.from({ length: n }, (_, k) => [
++  (k * 37 + seed * 11) % 100,
++  size[0] + ((k * 7 + seed) % (size[1] - size[0] + 1)),
++  secs[0] + ((k * 5 + seed) % (secs[1] - secs[0] + 1)),
++  (k * 1.7 + seed) % secs[1],
++  (k % 2 ? -1 : 1) * (drift[0] + ((k * 13) % (drift[1] - drift[0] + 1))),
++]));
++export const FAR_FLAKES = layer(26, [2, 3], [13, 18], [10, 30], 3);
++export const FLAKES = layer(22, [4, 7], [9, 13], [20, 50], 5);
++export const NEAR_FLAKES = layer(9, [9, 13], [6, 8], [40, 80], 7);
++// Gusts of wind: [top %, seconds, delay s, curl].
++export const GUSTS = Object.freeze([[18, 4.5, 0, 1], [46, 5.5, 1.8, -1], [70, 5, 3.2, 1], [32, 6, 4.4, -1]]);
+ 
+ function Flake() {
+   return (
+@@ -32,36 +41,133 @@ function Flake() {
+   );
+ }
+ 
++function Snow({ flakes, className }) {
++  return (
++    <div className={`sora-winter__snow ${className}`} aria-hidden="true">
++      {flakes.map(([x, s, d, delay, drift], k) => (
++        <i key={k} style={{ '--x': `${x}%`, '--s': `${s}px`, '--d': `${d}s`, '--delay': `-${delay}s`, '--drift': `${drift}px` }} />
++      ))}
++    </div>
++  );
++}
++
++function Wind() {
++  return (
++    <svg className="sora-winter__wind" viewBox="0 0 400 300" preserveAspectRatio="none" aria-hidden="true">
++      {GUSTS.map(([top, d, delay, curl], k) => {
++        const y = (top / 100) * 300;
++        return (
++          <path key={k} pathLength="100" style={{ '--d': `${d}s`, '--delay': `${delay}s` }}
++            d={`M-20 ${y} C 80 ${y - 18 * curl}, 150 ${y + 14 * curl}, 220 ${y} S 330 ${y - 26 * curl}, 300 ${y - 8 * curl} S 360 ${y + 10 * curl}, 420 ${y - 4 * curl}`} />
++        );
++      })}
++    </svg>
++  );
++}
++
++// The muffler's path round the heading: the back half over the top, the front half under.
++const BACK = 'M14 92 A186 36 0 0 1 386 92';
++const FRONT = 'M386 92 A186 36 0 0 1 14 92';
++function MufflerBand({ d, part }) {
++  return (
++    <g className={`sora-muffler sora-muffler--${part}`} mask={`url(#sw-wrap-${part})`}>
++      <path d={d} className="sora-muffler__base" />
++      <path d={d} className="sora-muffler__stripe" />
++      <path d={d} className="sora-muffler__knit" />
++    </g>
++  );
++}
++
++/** The heading: knitted lettering inside a muffler that wraps round it and keeps turning. */
+ function Title() {
+-  const words = ['winter', 'deals'];
+-  let i = 0;
+   return (
+     <h2 className="sora-winter__title" aria-label="Winter deals">
+-      {words.map((w) => (
+-        <span key={w} className="sora-winter__word" aria-hidden="true">
+-          {[...w].map((ch) => { i += 1; return <span key={i} style={{ '--i': i }}>{ch}</span>; })}
+-        </span>
+-      ))}
++      <svg viewBox="0 0 400 178" aria-hidden="true" overflow="visible">
++        <defs>
++          {/* A knit: rows of small V stitches over cream — the letters' own texture. */}
++          <pattern id="sw-knit" width="7" height="6" patternUnits="userSpaceOnUse">
++            <rect width="7" height="6" fill="#FBF3E4" />
++            <path d="M0.5 0.5 L3.5 4.5 L6.5 0.5" fill="none" stroke="#E4D2AC" strokeWidth="1.1" strokeLinecap="round" />
++          </pattern>
++          {['back', 'front'].map((part) => (
++            <mask key={part} id={`sw-wrap-${part}`} maskUnits="userSpaceOnUse" x="-20" y="0" width="440" height="200">
++              <path d={part === 'back' ? BACK : FRONT} pathLength="100" className={`sora-muffler__reveal sora-muffler__reveal--${part}`} />
++            </mask>
++          ))}
++        </defs>
++        <MufflerBand d={BACK} part="back" />
++        <g className="sora-winter__letters">
++          <text x="200" y="98" textAnchor="middle" textLength="334" lengthAdjust="spacingAndGlyphs" className="sora-winter__puff" fill="url(#sw-knit)">winter deals</text>
++          <text x="199" y="96" textAnchor="middle" textLength="334" lengthAdjust="spacingAndGlyphs" className="sora-winter__shine">winter deals</text>
++        </g>
++        <MufflerBand d={FRONT} part="front" />
++        {/* The two ends, hanging from the front and flapping in the wind. */}
++        <g className="sora-muffler__ends">
++          <g className="sora-muffler__end sora-muffler__end--a">
++            <path d="M300 118 l10 44 l18 -3 l-6 -44 z" className="sora-muffler__tail" />
++            <path d="M304 134 l18 -3 M307 148 l18 -3" className="sora-muffler__tailstripe" />
++            <path d="M310 162 l-1 8 M314 161 l-1 8 M318 161 l0 8 M322 160 l0 8 M326 159 l1 8" className="sora-muffler__fringe" />
++          </g>
++          <g className="sora-muffler__end sora-muffler__end--b">
++            <path d="M318 116 l22 38 l16 -8 l-20 -36 z" className="sora-muffler__tail" />
++            <path d="M326 128 l16 -8 M333 141 l16 -8" className="sora-muffler__tailstripe" />
++            <path d="M341 154 l2 8 M345 152 l3 7 M349 150 l3 7 M353 148 l3 7" className="sora-muffler__fringe" />
++          </g>
++        </g>
++      </svg>
+     </h2>
+   );
+ }
+ 
++const reducedMotion = () => {
++  try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch { return false; }
++};
++
++/** The hero tile, turning through the deals (owner: "har 1.5 second mein product change"). */
++function HeroDeal({ heroes }) {
++  const [i, setI] = useState(0);
++  const [paused, setPaused] = useState(false);
++  const n = heroes.length;
++  useEffect(() => {
++    if (n < 2 || paused || reducedMotion()) return undefined;
++    const t = window.setInterval(() => { if (!document.hidden) setI((v) => (v + 1) % n); }, HERO_EVERY_MS);
++    return () => window.clearInterval(t);
++  }, [n, paused]);
++  // The next picture is fetched ahead, so the change never shows an empty frame.
++  useEffect(() => { if (n > 1) { const img = new Image(); img.src = heroes[(i + 1) % n].image; } }, [i, n, heroes]);
++  const h = heroes[i % n];
++  return (
++    <Link to={h.href} className="sora-winter__hero" style={{ '--n': 0 }}
++      onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)} onFocus={() => setPaused(true)} onBlur={() => setPaused(false)}>
++      <span className="sora-winter__eyebrow">Winter deal</span>
++      <span key={i} className="sora-winter__heroin">
++        <s className="sora-winter__mrp" aria-label={`MRP ${rupees(h.mrp)}`}>{rupees(h.mrp)}</s>
++        <strong className="sora-winter__price">{rupees(h.price)}</strong>
++        <span className="sora-winter__name">{h.name.split(' - ')[0]}</span>
++        <span className="sora-winter__heroimg">
++          <img src={h.image} alt="" width="160" height="160" decoding="async" />
++          <span className="sora-winter__save">{h.off}% off</span>
++        </span>
++      </span>
++      {n > 1 && (
++        <span className="sora-winter__dots" aria-hidden="true">
++          {heroes.map((x, k) => <i key={x.href} className={k === i % n ? 'is-on' : ''} />)}
++        </span>
++      )}
++    </Link>
++  );
++}
++
+ export default function WinterDeals() {
+   const deals = useWinterDeals();
+   if (!deals) return null;
+-  const { hero, tiles } = deals;
++  const { tiles } = deals;
++  const heroes = deals.heroes?.length ? deals.heroes : deals.hero ? [deals.hero] : [];
+   return (
+     <section className="sora-winter" aria-label="Winter deals">
+-      <div className="sora-winter__snow" aria-hidden="true">
+-        {FLAKES.map(([x, s, d, delay, drift], k) => (
+-          <i key={k} style={{ '--x': `${x}%`, '--s': `${s}px`, '--d': `${d}s`, '--delay': `-${delay}s`, '--drift': `${drift}px` }} />
+-        ))}
+-      </div>
+-      <div className="sora-winter__snow sora-winter__snow--near" aria-hidden="true">
+-        {NEAR_FLAKES.map(([x, s, d, delay, drift], k) => (
+-          <i key={k} style={{ '--x': `${x}%`, '--s': `${s}px`, '--d': `${d}s`, '--delay': `-${delay}s`, '--drift': `${drift}px` }} />
+-        ))}
+-      </div>
++      <Snow flakes={FAR_FLAKES} className="sora-winter__snow--far" />
++      <Snow flakes={FLAKES} className="" />
++      <Wind />
+       <div className="sora-winter__deco" aria-hidden="true">
+         {ORNAMENTS.map(([x, len, d, delay], k) => (
+           <span key={k} className="sora-winter__orn" style={{ '--x': `${x}%`, '--len': `${len}px`, '--d': `${d}s`, '--delay': `-${delay}s` }}><Flake /></span>
+@@ -72,22 +178,11 @@ export default function WinterDeals() {
+       </div>
+       <div className="sora-winter__in">
+         <div className="sora-winter__head">
+-          <Flake />
+           <Title />
+-          <Flake />
+         </div>
+         <p className="sora-winter__sub">Jackets, shawls and mufflers in stock, with the discount shown on every piece</p>
+-        <div className={`sora-winter__grid${hero ? '' : ' sora-winter__grid--nohero'}`}>
+-          {hero && (
+-            <Link to={hero.href} className="sora-winter__hero" style={{ '--n': 0 }}>
+-              <span className="sora-winter__eyebrow">Winter deal</span>
+-              <s className="sora-winter__mrp" aria-label={`MRP ${rupees(hero.mrp)}`}>{rupees(hero.mrp)}</s>
+-              <strong className="sora-winter__price">{rupees(hero.price)}</strong>
+-              <span className="sora-winter__name">{hero.name.split(' - ')[0]}</span>
+-              <img src={hero.image} alt="" width="160" height="160" decoding="async" />
+-              <span className="sora-winter__save">{hero.off}% off</span>
+-            </Link>
+-          )}
++        <div className={`sora-winter__grid${heroes.length ? '' : ' sora-winter__grid--nohero'}`}>
++          {heroes.length > 0 && <HeroDeal heroes={heroes} />}
+           {tiles.map((t, n) => (
+             <Link key={t.id} to={t.href} className="sora-winter__tile" style={{ '--n': n + 1 }}>
+               <span className="sora-winter__badge"><span>Up to</span><b>{t.upTo}%<small>OFF</small></b></span>
+@@ -103,6 +198,7 @@ export default function WinterDeals() {
+           <span aria-hidden="true">›</span>
+         </Link>
+       </div>
++      <Snow flakes={NEAR_FLAKES} className="sora-winter__snow--near" />
+       <div className="sora-winter__hem" aria-hidden="true">
+         {Array.from({ length: POMPOMS }, (_, k) => <i key={k} style={{ '--k': k }} />)}
+       </div>
+diff --git a/src/fashion/FashionLayout.jsx b/src/fashion/FashionLayout.jsx
+index 69898d3..25a9a05 100644
+--- a/src/fashion/FashionLayout.jsx
++++ b/src/fashion/FashionLayout.jsx
+@@ -143,15 +143,26 @@ export function FashionHeader({ onMenu }) {
+         {found && <SearchSuggest id="fs-suggest" items={found} query={term} active={active} allHref={`/fashion/search?q=${encodeURIComponent(term)}`} onPick={(e) => { if (e?.currentTarget?.closest?.('.hx-dym')) { setQ(fix); setOpen(false); setActive(-1); rememberSearch('fashion', fix); } else pick(); }} fix={fix} fixHref={`/fashion/search?q=${encodeURIComponent(fix)}`} />}
+         {open && !term && <RecentSearches id="fs-recent" terms={recent} popular={(tree.roots || []).map((c) => ({ name: c.name, href: `/fashion/c/${c.slug}` }))} hrefFor={(t) => `/fashion/search?q=${encodeURIComponent(t)}`} onPick={(e) => { if (e.currentTarget.classList.contains('hx-suggest__recent')) setQ(e.currentTarget.textContent); setOpen(false); }} onClear={() => { clearRecentSearches('fashion'); setRecent([]); }} />}
+       </form>
+-      {!strip.hidden && <div className="fs-strip" aria-label="Delivery">
+-        <span className="fs-strip__loc"><Icon name="mapPin" size={18} /> {strip.location}</span>
+-        <span className="fs-strip__sep" aria-hidden="true" />
+-        <span className="fs-strip__fast"><Icon name="truck" size={20} /> {strip.promise}</span>
+-      </div>}
++      {/* On a product page the strip sits below the product instead (owner, 2026-11-20): DeliveryStrip. */}
++      {!/^\/fashion\/p\//.test(location.pathname) && <DeliveryStrip strip={strip} />}
+     </header>
+   );
+ }
+ 
++/** The delivery line: under the search box, or under the product on a product page. */
++export function DeliveryStrip({ strip: given = null }) {
++  const own = useStorefrontSection('fashion', 'strips.delivery', DELIVERY_STRIP);
++  const strip = given || own;
++  if (strip.hidden) return null;
++  return (
++    <div className="fs-strip" aria-label="Delivery">
++      <span className="fs-strip__loc"><Icon name="mapPin" size={18} /> {strip.location}</span>
++      <span className="fs-strip__sep" aria-hidden="true" />
++      <span className="fs-strip__fast"><Icon name="truck" size={20} /> {strip.promise}</span>
++    </div>
++  );
++}
++
+ export function CategoryChips({ onFilters = null, filterCount = 0 }) {
+   const { tree } = useFashionCatalogue();
+   const { pathname } = useLocation();
+diff --git a/src/fashion/FashionProductPage.jsx b/src/fashion/FashionProductPage.jsx
+index 478f99d..7e70c2d 100644
+--- a/src/fashion/FashionProductPage.jsx
++++ b/src/fashion/FashionProductPage.jsx
+@@ -8,7 +8,7 @@ import { breadcrumbFor } from '../lib/fashion.js';
+ import { readSelection, writeSelection, selectionState, relatedFor } from '../lib/fashionPdp.js';
+ import { useFashionWishlist } from '../lib/fashionWishlist.js';
+ import { useFashionCatalogue } from './FashionCatalogue.jsx';
+-import { CategoryChips } from './FashionLayout.jsx';
++import { CategoryChips, DeliveryStrip } from './FashionLayout.jsx';
+ import { Breadcrumb } from './FashionListing.jsx';
+ import FashionProductCard, { Stars } from './FashionProductCard.jsx';
+ import { VariantPicker } from './FashionVariantPicker.jsx';
+@@ -203,7 +203,9 @@ export default function FashionProductPage() {
+ 
+   return (
+     <div className="fs-pdp fs-pdp--mk" data-product={view.slug}>
+-      <CategoryChips />
++      {/* The category row and the delivery line sit under the product now (owner, 2026-11-20:
++          "beauty clothing wali category wali line ... aur delivery wali bhi niche"), so the
++          picture is the first thing on a phone. */}
+       <Breadcrumb trail={trail} />
+       <div className="fs-pdp__grid">
+         <Gallery view={view} />
+@@ -296,6 +298,11 @@ export default function FashionProductPage() {
+         </section>
+       )}
+ 
++      <div className="fs-pdp__more">
++        <DeliveryStrip />
++        <CategoryChips />
++      </div>
++
+       {/* Phone: the price and the buy button stay in reach. */}
+       <div className="fs-pdp__bar" role="region" aria-label="Buy">
+         <span className="fs-pdp__bar-price"><b><span className="fs-price__cur">₹</span>{money(st.price).replace(/^₹\s?/, '')}</b>{st.label && <em>{st.label}</em>}</span>
+diff --git a/src/lib/winterDeals.js b/src/lib/winterDeals.js
+index f9ac5fb..71698a5 100644
+--- a/src/lib/winterDeals.js
++++ b/src/lib/winterDeals.js
+@@ -20,6 +20,8 @@ export const WINTER_TILES = Object.freeze([
+ const HERO_SLUGS = ['mufflers-caps', 'stoles', 'womens-shawls', 'mens-shawls'];
+ const ALL_SLUGS = [...new Set([...WINTER_TILES.flatMap((t) => t.slugs), ...HERO_SLUGS])];
+ export const WINTER_MIN_TILES = 3;
++export const HERO_MAX = 8;
++export const HERO_EVERY_MS = 1500;
+ 
+ /** Whether the band is in season on this date (India time): November to February. */
+ export function isWinterSeason(now = Date.now()) {
+@@ -53,12 +55,15 @@ export function winterDeals(rows) {
+     return items.length >= 2 ? { ...t, upTo: items[0].off, images: items.slice(0, 3).map((r) => r.image) } : null;
+   }).filter(Boolean);
+   if (tiles.length < WINTER_MIN_TILES) return null;
+-  const hero = live.filter((r) => HERO_SLUGS.includes(r.cat) && r.off >= 10)
+-    .sort((a, b) => a.price - b.price || b.off - a.off)[0] || null;
+-  return {
+-    tiles,
+-    hero: hero && { name: hero.name, href: `/fashion/p/${hero.slug}`, image: hero.image, price: hero.price, mrp: hero.mrp, off: hero.off },
+-  };
++  // The hero tile turns through up to HERO_MAX deals (owner, 2026-11-20: "har 1.5 second mein
++  // product change"): the cheapest discounted everyday pieces, one picture each, no repeats.
++  const seen = new Set();
++  const heroes = live.filter((r) => HERO_SLUGS.includes(r.cat) && r.off >= 10)
++    .sort((a, b) => a.price - b.price || b.off - a.off)
++    .filter((r) => (seen.has(r.image) ? false : (seen.add(r.image), true)))
++    .slice(0, HERO_MAX)
++    .map((r) => ({ name: r.name, href: `/fashion/p/${r.slug}`, image: r.image, price: r.price, mrp: r.mrp, off: r.off }));
++  return { tiles, hero: heroes[0] || null, heroes };
+ }
+ 
+ export async function fetchWinterRows(client = supabase) {
+diff --git a/src/styles/sora-ds.css b/src/styles/sora-ds.css
+index 67dffee..0f77f9c 100644
+--- a/src/styles/sora-ds.css
++++ b/src/styles/sora-ds.css
+@@ -644,4 +644,88 @@ html.sora-wintertop .v2-hdr::after, html.sora-wintertop .sora-stickycats::after
+ }
+ html.sora-wintertop .v2-hdr__bar, html.sora-wintertop .sora-stickycats > * { position: relative; z-index: 1; }
+ @keyframes sw-drift { from { background-position: 0 0, 0 0, 0 0, 0 0; } to { background-position: 30px 90px, -20px 90px, 20px 90px, -30px 90px; } }
+-@media (prefers-reduced-motion: reduce) { html.sora-wintertop .v2-hdr::after, html.sora-wintertop .sora-stickycats::after { animation: none; } }
+\ No newline at end of file
++@media (prefers-reduced-motion: reduce) { html.sora-wintertop .v2-hdr::after, html.sora-wintertop .sora-stickycats::after { animation: none; } }
++
++/* Winter band, round 27 (owner, 2026-11-20): knitted lettering, a muffler wrapping round it,
++   gusts of wind, snow swaying in three layers, snow settled on the tiles, the hero turning. */
++.sora-winter__title { display: block; width: min(100%, 540px); margin: 4px auto 0; text-shadow: none; font-size: 0; line-height: 0; }
++.sora-winter__title::after { content: none; }
++.sora-winter__title svg { display: block; width: 100%; height: auto; overflow: visible; }
++.sora-winter__head { gap: 0; }
++.sora-winter__letters { animation: sw-floaty 3.4s ease-in-out infinite; }
++@keyframes sw-floaty { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
++.sora-winter__puff, .sora-winter__shine { font-family: 'Pacifico', 'Playfair Display', cursive; font-size: 66px; }
++/* Round, puffy lettering: a knit fill, a soft cream rim, a deep shadow under it. */
++.sora-winter__puff {
++  stroke: #EADCBC; stroke-width: 5; stroke-linejoin: round; paint-order: stroke;
++  filter: drop-shadow(0 3px 0 #B59B6A) drop-shadow(0 5px 0 #8C7448) drop-shadow(0 12px 12px rgba(0, 0, 0, .4));
++}
++.sora-winter__shine { fill: none; stroke: rgba(255, 255, 255, .55); stroke-width: 1; }
++
++/* The muffler: a red knit with cream stripes that travel round (it turns), revealed as it wraps. */
++.sora-muffler path { fill: none; }
++.sora-muffler__base { stroke: #B3332B; stroke-width: 20; }
++.sora-muffler--back .sora-muffler__base { stroke: #7E211B; }
++.sora-muffler__stripe { stroke: #F1E3C6; stroke-width: 20; stroke-dasharray: 5 13; animation: sw-turn 2.2s linear infinite; }
++.sora-muffler--back .sora-muffler__stripe { stroke: #BFAE8E; }
++.sora-muffler__knit { stroke: rgba(60, 8, 6, .32); stroke-width: 14; stroke-dasharray: 1.4 2.6; animation: sw-turn 2.2s linear infinite; }
++@keyframes sw-turn { to { stroke-dashoffset: -36; } }
++.sora-muffler__reveal { fill: none; stroke: #fff; stroke-width: 34; stroke-dasharray: 100 100; stroke-dashoffset: 100; animation: sw-wrapin .75s cubic-bezier(.5, 0, .3, 1) forwards; }
++.sora-muffler__reveal--back { animation-delay: .25s; }
++.sora-muffler__reveal--front { animation-delay: .95s; }
++@keyframes sw-wrapin { to { stroke-dashoffset: 0; } }
++.sora-muffler__ends { opacity: 0; animation: sw-ends .4s ease-out 1.6s forwards; }
++@keyframes sw-ends { to { opacity: 1; } }
++.sora-muffler__end { transform-box: fill-box; transform-origin: 30% 0; animation: sw-flap 1.5s ease-in-out infinite alternate; }
++.sora-muffler__end--b { animation-duration: 1.15s; animation-delay: -.4s; }
++@keyframes sw-flap { from { transform: rotate(-6deg) skewY(-3deg); } to { transform: rotate(14deg) skewY(4deg); } }
++.sora-muffler__tail { fill: #B3332B; stroke: #7E211B; stroke-width: 1; stroke-linejoin: round; }
++.sora-muffler__tailstripe { fill: none; stroke: #F1E3C6; stroke-width: 4; }
++.sora-muffler__fringe { fill: none; stroke: #F1E3C6; stroke-width: 1.8; stroke-linecap: round; }
++
++/* Wind: streaks sweeping across, the snow pushed along with them. */
++.sora-winter__wind { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
++.sora-winter__wind path {
++  fill: none; stroke: rgba(255, 255, 255, .5); stroke-width: 1.6; stroke-linecap: round; vector-effect: non-scaling-stroke;
++  stroke-dasharray: 24 120; stroke-dashoffset: 24; animation: sw-gust var(--d) cubic-bezier(.4, 0, .6, 1) var(--delay) infinite;
++}
++@keyframes sw-gust { 0% { stroke-dashoffset: 24; opacity: 0; } 10% { opacity: 1; } 70% { opacity: .8; } 100% { stroke-dashoffset: -100; opacity: 0; } }
++.sora-winter__snow i { animation-name: sw-fall-sway; animation-timing-function: linear; }
++@keyframes sw-fall-sway {
++  0% { transform: translate3d(0, 0, 0); opacity: 0; }
++  8% { opacity: .9; }
++  25% { transform: translate3d(calc(var(--drift) * .7), 190px, 0); }
++  50% { transform: translate3d(calc(var(--drift) * -.2), 380px, 0); }
++  75% { transform: translate3d(var(--drift), 570px, 0); }
++  100% { transform: translate3d(calc(var(--drift) * .3), 780px, 0); opacity: .25; }
++}
++.sora-winter__snow--far i { opacity: .5; filter: none; }
++.sora-winter__snow--near { z-index: 2; }
++.sora-winter__snow--near i { opacity: .6; filter: blur(2px); animation-name: sw-fall-sway; }
++
++/* Snow settled on the top edge of every tile. */
++.sora-winter__hero::before, .sora-winter__tile::before {
++  content: ''; position: absolute; left: -2px; right: -2px; top: -1px; height: 9px; z-index: 1; pointer-events: none;
++  background: radial-gradient(circle at 8px 0, #fff 7px, rgba(255, 255, 255, 0) 8px) 0 0 / 16px 9px repeat-x;
++  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .15)); opacity: .95;
++}
++
++/* The hero turning through the deals. */
++.sora-winter__heroin { flex: 1; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 4px; animation: sw-heroin .45s cubic-bezier(.2, .8, .2, 1) both; }
++@keyframes sw-heroin { from { opacity: 0; transform: translateY(14px) scale(.95); } to { opacity: 1; transform: none; } }
++.sora-winter__heroin .sora-winter__name { min-height: 3.9em; }
++.sora-winter__heroimg { position: relative; margin-top: auto; width: 100%; max-width: 150px; }
++.sora-winter__heroimg img { display: block; width: 100%; margin: 0; }
++.sora-winter__heroimg .sora-winter__save { bottom: 8px; right: 8px; }
++.sora-winter__dots { display: flex; gap: 4px; margin-top: 8px; }
++.sora-winter__dots i { width: 5px; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, .35); transition: width .3s ease, background-color .3s ease; }
++.sora-winter__dots i.is-on { width: 14px; background: var(--w-gold); }
++.fs .sora-winter__dots i { border-radius: 3px !important; }
++@media (min-width: 760px) { .sora-winter__heroimg { max-width: 170px; } }
++@media (prefers-reduced-motion: reduce) {
++  .sora-winter__wind { display: none; }
++  .sora-muffler__reveal { stroke-dashoffset: 0; }
++  .sora-muffler__ends { opacity: 1; }
++}
++/* The delivery line and the category row, under the product (owner, 2026-11-20). */
++.fs-pdp__more { margin: 28px 0 8px; display: grid; gap: 14px; }

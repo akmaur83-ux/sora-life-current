@@ -37,7 +37,7 @@ const UNTOUCHED = ['src/styles/creator-dashboard.css', 'src/styles/creator-tier.
 
 await test('index.html: one Google Fonts request on the same host — Playfair Display wght 400..700 beside Inter — and the loading placeholder in the same face; no Fraunces request', () => {
   const html = read('index.html');
-  assert.match(html, /<link href="https:\/\/fonts\.googleapis\.com\/css2\?family=Playfair\+Display:wght@400\.\.700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" \/>/);
+  assert.match(html, /<link href="https:\/\/fonts\.googleapis\.com\/css2\?family=Playfair\+Display:wght@400\.\.700&family=Inter:wght@400;500;600;700;800(?:&family=Pacifico)?&display=swap" rel="stylesheet" \/>/, "Pacifico rides the same request for the winter heading (2026-11-20)");
   assert.equal((html.match(/fonts\.googleapis\.com\/css2/g) || []).length, 1, 'one font request');
   assert.match(html, /<link rel="preconnect" href="https:\/\/fonts\.gstatic\.com" crossorigin \/>/, 'the same preconnect');
   assert.match(html, /font-family:'Playfair Display',Georgia,serif;color:#1E3A2F;/, 'the pre-hydration placeholder');

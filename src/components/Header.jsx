@@ -141,7 +141,8 @@ export default function Header() {
 
   return (
     <>
-      <AnnouncementBar />
+      {/* Not on the homepage (owner, 2026-11-20: "uper cod wali patti hai na usko hta do"). */}
+      {location.pathname !== '/' && <AnnouncementBar />}
 
       <header className={`v2-hdr ${scrolled ? 'is-scrolled' : ''}`}>
         <div className="v2-hdr__bar">

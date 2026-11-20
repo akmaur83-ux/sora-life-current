@@ -143,12 +143,23 @@ export function FashionHeader({ onMenu }) {
         {found && <SearchSuggest id="fs-suggest" items={found} query={term} active={active} allHref={`/fashion/search?q=${encodeURIComponent(term)}`} onPick={(e) => { if (e?.currentTarget?.closest?.('.hx-dym')) { setQ(fix); setOpen(false); setActive(-1); rememberSearch('fashion', fix); } else pick(); }} fix={fix} fixHref={`/fashion/search?q=${encodeURIComponent(fix)}`} />}
         {open && !term && <RecentSearches id="fs-recent" terms={recent} popular={(tree.roots || []).map((c) => ({ name: c.name, href: `/fashion/c/${c.slug}` }))} hrefFor={(t) => `/fashion/search?q=${encodeURIComponent(t)}`} onPick={(e) => { if (e.currentTarget.classList.contains('hx-suggest__recent')) setQ(e.currentTarget.textContent); setOpen(false); }} onClear={() => { clearRecentSearches('fashion'); setRecent([]); }} />}
       </form>
-      {!strip.hidden && <div className="fs-strip" aria-label="Delivery">
-        <span className="fs-strip__loc"><Icon name="mapPin" size={18} /> {strip.location}</span>
-        <span className="fs-strip__sep" aria-hidden="true" />
-        <span className="fs-strip__fast"><Icon name="truck" size={20} /> {strip.promise}</span>
-      </div>}
+      {/* On a product page the strip sits below the product instead (owner, 2026-11-20): DeliveryStrip. */}
+      {!/^\/fashion\/p\//.test(location.pathname) && <DeliveryStrip strip={strip} />}
     </header>
+  );
+}
+
+/** The delivery line: under the search box, or under the product on a product page. */
+export function DeliveryStrip({ strip: given = null }) {
+  const own = useStorefrontSection('fashion', 'strips.delivery', DELIVERY_STRIP);
+  const strip = given || own;
+  if (strip.hidden) return null;
+  return (
+    <div className="fs-strip" aria-label="Delivery">
+      <span className="fs-strip__loc"><Icon name="mapPin" size={18} /> {strip.location}</span>
+      <span className="fs-strip__sep" aria-hidden="true" />
+      <span className="fs-strip__fast"><Icon name="truck" size={20} /> {strip.promise}</span>
+    </div>
   );
 }
 

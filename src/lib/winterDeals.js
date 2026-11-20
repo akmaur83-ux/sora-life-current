@@ -20,6 +20,8 @@ export const WINTER_TILES = Object.freeze([
 const HERO_SLUGS = ['mufflers-caps', 'stoles', 'womens-shawls', 'mens-shawls'];
 const ALL_SLUGS = [...new Set([...WINTER_TILES.flatMap((t) => t.slugs), ...HERO_SLUGS])];
 export const WINTER_MIN_TILES = 3;
+export const HERO_MAX = 8;
+export const HERO_EVERY_MS = 1500;
 
 /** Whether the band is in season on this date (India time): November to February. */
 export function isWinterSeason(now = Date.now()) {
@@ -53,12 +55,15 @@ export function winterDeals(rows) {
     return items.length >= 2 ? { ...t, upTo: items[0].off, images: items.slice(0, 3).map((r) => r.image) } : null;
   }).filter(Boolean);
   if (tiles.length < WINTER_MIN_TILES) return null;
-  const hero = live.filter((r) => HERO_SLUGS.includes(r.cat) && r.off >= 10)
-    .sort((a, b) => a.price - b.price || b.off - a.off)[0] || null;
-  return {
-    tiles,
-    hero: hero && { name: hero.name, href: `/fashion/p/${hero.slug}`, image: hero.image, price: hero.price, mrp: hero.mrp, off: hero.off },
-  };
+  // The hero tile turns through up to HERO_MAX deals (owner, 2026-11-20: "har 1.5 second mein
+  // product change"): the cheapest discounted everyday pieces, one picture each, no repeats.
+  const seen = new Set();
+  const heroes = live.filter((r) => HERO_SLUGS.includes(r.cat) && r.off >= 10)
+    .sort((a, b) => a.price - b.price || b.off - a.off)
+    .filter((r) => (seen.has(r.image) ? false : (seen.add(r.image), true)))
+    .slice(0, HERO_MAX)
+    .map((r) => ({ name: r.name, href: `/fashion/p/${r.slug}`, image: r.image, price: r.price, mrp: r.mrp, off: r.off }));
+  return { tiles, hero: heroes[0] || null, heroes };
 }
 
 export async function fetchWinterRows(client = supabase) {

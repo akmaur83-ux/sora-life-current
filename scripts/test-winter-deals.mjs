@@ -80,5 +80,29 @@ test('back returns to what was on screen: the element is noted on leaving and fo
   assert.match(m, /all\.length >= \(a\.of \|\| 0\)/);
   assert.match(m, /const ANCHOR_KEY = 'sora-scroll-anchors';/);
 });
+test('round 27: the hero turns through cheapest-first deals, one picture each, every 1.5 s', () => {
+  const d = w.winterDeals([...rows, row('m4', 'mufflers-caps', 799, 399), row('m5', 'stoles', 900, 450, { images: ['https://cdn/m1.jpg'] })]);
+  assert.deepEqual(d.heroes.map((h) => h.href), ['/fashion/p/m1', '/fashion/p/m4', '/fashion/p/s2', '/fashion/p/s1']);
+  assert.equal(d.hero.href, '/fashion/p/m1');
+  assert.equal(w.HERO_EVERY_MS, 1500);
+  const c = read('src/components/WinterDeals.jsx');
+  assert.match(c, /window\.setInterval\(\(\) => \{ if \(!document\.hidden\) setI\(\(v\) => \(v \+ 1\) % n\); \}, HERO_EVERY_MS\)/);
+  assert.match(c, /if \(n < 2 \|\| paused \|\| reducedMotion\(\)\) return undefined;/);
+});
+test('round 27: knitted lettering inside a muffler that wraps and turns; wind; three snow layers', () => {
+  const c = read('src/components/WinterDeals.jsx');
+  for (const k of ['sw-knit', 'sora-muffler--${part}', 'part="back"', 'part="front"', 'sora-muffler__ends', 'sora-winter__wind', 'sora-winter__snow--far', 'sora-winter__snow--near']) assert.ok(c.includes(k), k);
+  assert.match(read('index.html'), /&family=Pacifico&display=swap/, 'in the one font request; the file loads only where the heading uses it');
+  const css = read('src/styles/sora-ds.css');
+  for (const k of ['@keyframes sw-turn', '@keyframes sw-wrapin', '@keyframes sw-flap', '@keyframes sw-gust', '@keyframes sw-fall-sway']) assert.ok(css.includes(k), k);
+  assert.match(css, /\.sora-muffler__reveal \{ stroke-dashoffset: 0; \}/, 'reduced motion: the muffler shows, wrapped');
+});
+test('round 27: no COD strip on the homepage; on a product page the delivery line and categories sit under the product', () => {
+  assert.match(read('src/components/Header.jsx'), /\{location\.pathname !== '\/' && <AnnouncementBar \/>\}/);
+  const pdp = read('src/fashion/FashionProductPage.jsx');
+  assert.match(pdp, /<div className="fs-pdp fs-pdp--mk" data-product=\{view\.slug\}>\n(?:.*\n){3}      <Breadcrumb/);
+  assert.match(pdp, /<div className="fs-pdp__more">\n        <DeliveryStrip \/>\n        <CategoryChips \/>/);
+  assert.match(read('src/fashion/FashionLayout.jsx'), /\{!\/\^\\\/fashion\\\/p\\\/\/\.test\(location\.pathname\) && <DeliveryStrip strip=\{strip\} \/>\}/);
+});
 if (failed) { console.log(`\n${failed} failed`); process.exit(1); }
 console.log('\nall passed');

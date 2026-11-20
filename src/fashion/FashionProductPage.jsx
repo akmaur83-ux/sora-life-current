@@ -8,7 +8,7 @@ import { breadcrumbFor } from '../lib/fashion.js';
 import { readSelection, writeSelection, selectionState, relatedFor } from '../lib/fashionPdp.js';
 import { useFashionWishlist } from '../lib/fashionWishlist.js';
 import { useFashionCatalogue } from './FashionCatalogue.jsx';
-import { CategoryChips } from './FashionLayout.jsx';
+import { CategoryChips, DeliveryStrip } from './FashionLayout.jsx';
 import { Breadcrumb } from './FashionListing.jsx';
 import FashionProductCard, { Stars } from './FashionProductCard.jsx';
 import { VariantPicker } from './FashionVariantPicker.jsx';
@@ -203,7 +203,9 @@ export default function FashionProductPage() {
 
   return (
     <div className="fs-pdp fs-pdp--mk" data-product={view.slug}>
-      <CategoryChips />
+      {/* The category row and the delivery line sit under the product now (owner, 2026-11-20:
+          "beauty clothing wali category wali line ... aur delivery wali bhi niche"), so the
+          picture is the first thing on a phone. */}
       <Breadcrumb trail={trail} />
       <div className="fs-pdp__grid">
         <Gallery view={view} />
@@ -295,6 +297,11 @@ export default function FashionProductPage() {
           </div>
         </section>
       )}
+
+      <div className="fs-pdp__more">
+        <DeliveryStrip />
+        <CategoryChips />
+      </div>
 
       {/* Phone: the price and the buy button stay in reach. */}
       <div className="fs-pdp__bar" role="region" aria-label="Buy">
