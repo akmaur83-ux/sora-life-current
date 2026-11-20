@@ -10284,7 +10284,7 @@ html.sora-wintertop .sora-storebar { background: #10244C; border-color: rgba(255
 html.sora-wintertop .sora-storebar__store { color: #C9D6EE; }
 html.sora-wintertop .sora-storebar__store.is-on { background: #1B3F7C; color: #FBF3E4; }
 html.sora-wintertop .v2-ann { background: #0E2247; color: #FBF3E4; }
-html.sora-wintertop .v2-hdr { position: relative; background: #17366E; border-color: rgba(255, 255, 255, .08); box-shadow: none; }
+html.sora-wintertop .v2-hdr { background: #17366E; border-color: rgba(255, 255, 255, .08); box-shadow: none; }
 html.sora-wintertop .v2-hdr .v2-hdr__act, html.sora-wintertop .v2-hdr .v2-hdr__act svg { color: #FBF3E4; }
 html.sora-wintertop .v2-hdr .v2-hdr__count, html.sora-wintertop .v2-hdr [class*="badge"] { box-shadow: 0 0 0 2px #17366E; }
 html.sora-wintertop .v2-hdr .v2-hdr__search input { background: #fff; }
@@ -10425,6 +10425,31 @@ html.sora-wintertop .v2-hdr__bar, html.sora-wintertop .sora-stickycats > * { pos
   .sora-winter__badge b { padding: 3px 5px; font-size: 14px; }
 }
 @media (min-width: 760px) { .sora-winter__in { padding-top: 16px; } }
+/* The winter header stays sticky (owner, 2026-11-21: "category wali line scroll krne pe niche a
+   jati hai"): `position: relative` had unstuck it, leaving the chips stuck below an empty gap. */
+html.sora-wintertop .v2-hdr { position: sticky; }
+
+/* Edit banners with their own products' pictures, fanned on the right (owner, 2026-11-21). */
+.hx-wedstrip--art { position: relative; overflow: hidden; padding-right: calc(38% + 12px); min-height: 172px; }
+.hx-wedstrip__art { position: absolute; top: 0; right: 0; bottom: 0; width: 40%; pointer-events: none; }
+.hx-wedstrip__art img {
+  position: absolute; bottom: 14px; left: 50%; width: 46%; aspect-ratio: 4 / 5; height: auto; object-fit: cover;
+  border: 3px solid #fff; border-radius: 10px; box-shadow: 0 10px 22px rgba(0, 0, 0, .35); background: #fff;
+  transform: translateX(calc(-50% + var(--k) * 58%)) rotate(calc(var(--k) * 8deg)); transform-origin: 50% 100%;
+  transition: transform .35s cubic-bezier(.2, .8, .2, 1);
+}
+.hx-wedstrip__art img:nth-child(2) { z-index: 2; bottom: 22px; width: 52%; }
+.hx-wedstrip--art:hover .hx-wedstrip__art img { transform: translateX(calc(-50% + var(--k) * 66%)) rotate(calc(var(--k) * 11deg)) translateY(-4px); }
+.fs .hx-wedstrip__art img { border-radius: 0 !important; }
+@media (max-width: 600px) {
+  .hx-wedstrip--art { padding-right: calc(40% + 6px); }
+  .hx-wedstrip--art b { font-size: 19px; }
+  .hx-wedstrip--art i { font-size: 13px; }
+  .hx-wedstrip__art { width: 42%; }
+  .hx-wedstrip__art img { width: 50%; bottom: 16px; }
+  .hx-wedstrip__art img:nth-child(2) { width: 56%; }
+}
+@media (prefers-reduced-motion: reduce) { .hx-wedstrip__art img { transition: none; } }
 
 /* ═══ src/styles/storefront-sections.css ═══ */
 /* ============================================================
