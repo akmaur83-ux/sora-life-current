@@ -1,4 +1,4 @@
-import { bA as supabase, bD as safeVisualUrl, cw as validateImageUpload } from '../bundle.js';
+import { bA as supabase, bD as safeVisualUrl, cx as validateImageUpload } from '../bundle.js';
 
 async function validateHomepageImage(file) {
   const result = await validateImageUpload(file, {

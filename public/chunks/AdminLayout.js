@@ -56,6 +56,9 @@ const NAV = [{
   to: '/admin/insights',
   label: 'Insights'
 }, {
+  to: '/admin/enquiries',
+  label: 'Enquiries'
+}, {
   to: '/admin/storefronts',
   label: 'Storefronts'
 }, {

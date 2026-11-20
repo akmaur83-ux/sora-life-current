@@ -35714,6 +35714,15 @@ function Footer() {
           }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
             to: "/hamper",
             children: "Build a hamper"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+            to: "/sell",
+            children: "Sell on SORA"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+            to: "/sell#bulk",
+            children: "Bulk & corporate gifts"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+            to: "/guides/leather-care",
+            children: "Leather care guide"
           }), categories.slice(0, 3).map(c => /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
             to: `/category/${c.slug}`,
             children: c.name
@@ -49472,6 +49481,201 @@ function suggestKeys(e, {
   }
 }
 
+// ============================================================
+// Enquiries (owner, 2026-11-20: more features, round 11) — what visitors ask through
+// the site's own forms, into 0047_enquiries.sql:
+//   * partner — sell on SORA (/sell);  * bulk — corporate / bulk gifting (/sell#bulk);
+//   * request — a product a search did not find.
+// Checked here the way the table checks it, so a visitor sees what to fix before
+// sending. Only the admin reads them (Admin → Enquiries).
+// ============================================================
+const ENQUIRY_KINDS = Object.freeze({
+  partner: 'Sell on SORA',
+  bulk: 'Bulk / corporate gifting',
+  request: 'Product request'
+});
+const LIMITS = {
+  name: 80,
+  business: 120,
+  city: 60,
+  website: 200,
+  query: 120,
+  message: 1000
+};
+const tidy = (v, max) => {
+  const t = String(v ?? '').replace(/\s+/g, ' ').trim();
+  return t ? t.slice(0, max) : null;
+};
+
+/**
+ * The row to send, or { error } in plain words. Phone: Indian 10 digits (an optional
+ * +91/0 in front is dropped), or any 7–16 digits with + and spaces. Partner and bulk
+ * enquiries need a phone or an email to reply to; a product request needs only the
+ * product. Pure.
+ */
+function cleanEnquiry(kind, f = {}) {
+  if (!ENQUIRY_KINDS[kind]) return {
+    error: 'Unknown form.'
+  };
+  const row = {
+    kind
+  };
+  for (const [k, max] of Object.entries(LIMITS)) row[k] = k === 'message' ? String(f[k] ?? '').trim().slice(0, max) || null : tidy(f[k], max);
+  let phone = String(f.phone ?? '').replace(/[\s-]/g, '');
+  if (/^(\+91|0)?[6-9]\d{9}$/.test(phone)) phone = phone.slice(-10);
+  if (phone && !/^\+?[0-9]{7,15}$/.test(phone)) return {
+    error: 'Please check the phone number.'
+  };
+  row.phone = phone || null;
+  const email = String(f.email ?? '').trim();
+  if (email && (email.length > 120 || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))) return {
+    error: 'Please check the email address.'
+  };
+  row.email = email || null;
+  row.store = ['wellness', 'fashion', 'homeliving'].includes(f.store) ? f.store : null;
+  if (kind === 'request') {
+    if (!row.query) return {
+      error: 'Tell us what you are looking for.'
+    };
+  } else {
+    if (!row.name) return {
+      error: 'Please add your name.'
+    };
+    if (!row.phone && !row.email) return {
+      error: 'Add a phone number or an email so we can reply.'
+    };
+    if (kind === 'partner' && !row.business) return {
+      error: 'Please add your brand or business name.'
+    };
+  }
+  return {
+    row
+  };
+}
+
+/** Sends a checked enquiry. A filled-in honeypot (bots) is accepted silently and dropped. → { ok } or { error }. */
+async function sendEnquiry(kind, fields, client = supabase) {
+  if (String(fields?.company_url || '').trim()) return {
+    ok: true
+  };
+  const {
+    row,
+    error
+  } = cleanEnquiry(kind, fields);
+  if (error) return {
+    error
+  };
+  if (!client) return {
+    error: 'Could not send right now. Please try again.'
+  };
+  const res = await client.from('enquiries').insert(row);
+  return res.error ? {
+    error: 'Could not send right now. Please try again.'
+  } : {
+    ok: true
+  };
+}
+
+function RequestProduct({
+  q,
+  store
+}) {
+  const [f, setF] = reactExports.useState({
+    query: String(q || '').trim(),
+    phone: '',
+    company_url: ''
+  });
+  const [state, setState] = reactExports.useState({
+    busy: false,
+    done: false,
+    error: ''
+  });
+  if (!String(q || '').trim()) return null;
+  if (state.done) return /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+    className: "sora-req sora-req--done",
+    role: "status",
+    children: ["Thanks \u2014 we have noted \u201C", f.query, "\u201D. If you left a number or email, we will get back to you."]
+  });
+  const set = k => e => setF(x => ({
+    ...x,
+    [k]: e.target.value
+  }));
+  const submit = async e => {
+    e.preventDefault();
+    setState({
+      busy: true,
+      done: false,
+      error: ''
+    });
+    const r = await sendEnquiry('request', {
+      ...f,
+      store
+    });
+    setState({
+      busy: false,
+      done: Boolean(r.ok),
+      error: r.error || ''
+    });
+  };
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("form", {
+    className: "sora-req",
+    onSubmit: submit,
+    "aria-labelledby": "sora-req-h",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+      id: "sora-req-h",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("b", {
+        children: "Request it."
+      }), " Tell us what you wanted and we will look for it with our makers."]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "sora-req__row",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+        className: "sr-only",
+        htmlFor: "sora-req-q",
+        children: "What are you looking for?"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+        id: "sora-req-q",
+        className: "input",
+        value: f.query,
+        onChange: set('query'),
+        maxLength: 120,
+        required: true,
+        placeholder: "What are you looking for?"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("label", {
+        className: "sr-only",
+        htmlFor: "sora-req-p",
+        children: "Phone or WhatsApp (optional)"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+        id: "sora-req-p",
+        className: "input",
+        value: f.phone,
+        onChange: set('phone'),
+        inputMode: "tel",
+        autoComplete: "tel",
+        maxLength: 16,
+        placeholder: "Phone / WhatsApp (optional)"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+        type: "text",
+        name: "company_url",
+        tabIndex: -1,
+        autoComplete: "off",
+        "aria-hidden": "true",
+        className: "sora-hp",
+        value: f.company_url,
+        onChange: set('company_url')
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+        type: "submit",
+        className: "btn btn-sm",
+        disabled: state.busy,
+        children: state.busy ? 'Sending…' : 'Request'
+      })]
+    }), state.error && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+      className: "sora-req__err",
+      role: "alert",
+      children: state.error
+    })]
+  });
+}
+
 /** A wellness search that finds nothing: the corrected spelling, when it finds products (searchMatch.js). */
 function wellnessFix(q) {
   const t = String(q || '').trim();
@@ -49552,6 +49756,12 @@ function Shop() {
         baseProducts: products
       }), params.get('q') && /*#__PURE__*/jsxRuntimeExports.jsx(OtherStoreResults, {
         query: params.get('q')
+      }), params.get('q') && isCatalogHydrated() && searchProducts(params.get('q')).length === 0 && /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+        className: "v2-wrap",
+        children: /*#__PURE__*/jsxRuntimeExports.jsx(RequestProduct, {
+          q: params.get('q'),
+          store: "wellness"
+        })
       })]
     });
   }
@@ -63705,6 +63915,300 @@ function Shell$2({
   });
 }
 
+const PARTNER_FIELDS = [['name', 'Your name', {
+  autoComplete: 'name',
+  required: true
+}], ['business', 'Brand or business', {
+  autoComplete: 'organization',
+  required: true
+}], ['phone', 'Phone / WhatsApp', {
+  inputMode: 'tel',
+  autoComplete: 'tel'
+}], ['email', 'Email', {
+  type: 'email',
+  autoComplete: 'email'
+}], ['city', 'City', {
+  autoComplete: 'address-level2'
+}], ['website', 'Website or Instagram', {
+  placeholder: 'e.g. instagram.com/yourbrand'
+}]];
+const BULK_FIELDS = [['name', 'Your name', {
+  autoComplete: 'name',
+  required: true
+}], ['business', 'Company (optional)', {
+  autoComplete: 'organization'
+}], ['phone', 'Phone / WhatsApp', {
+  inputMode: 'tel',
+  autoComplete: 'tel'
+}], ['email', 'Email', {
+  type: 'email',
+  autoComplete: 'email'
+}], ['city', 'Delivery city', {
+  autoComplete: 'address-level2'
+}]];
+function EnquiryForm({
+  kind,
+  id,
+  fields,
+  messageLabel,
+  messageHint,
+  cta
+}) {
+  const [f, setF] = reactExports.useState({});
+  const [state, setState] = reactExports.useState({
+    busy: false,
+    done: false,
+    error: ''
+  });
+  const set = k => e => setF(x => ({
+    ...x,
+    [k]: e.target.value
+  }));
+  const submit = async e => {
+    e.preventDefault();
+    setState({
+      busy: true,
+      done: false,
+      error: ''
+    });
+    const r = await sendEnquiry(kind, f);
+    setState({
+      busy: false,
+      done: Boolean(r.ok),
+      error: r.error || ''
+    });
+  };
+  if (state.done) {
+    return /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+      className: "sora-sell__done",
+      role: "status",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: "check",
+        size: 18
+      }), " Thank you \u2014 we have your details and will get back to you on the phone or email you gave."]
+    });
+  }
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("form", {
+    className: "sora-sell__form",
+    onSubmit: submit,
+    noValidate: true,
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx("div", {
+      className: "sora-sell__grid",
+      children: fields.map(([k, label, attrs]) => /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "field",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+          className: "label",
+          htmlFor: `${id}-${k}`,
+          children: label
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+          id: `${id}-${k}`,
+          className: "input",
+          value: f[k] || '',
+          onChange: set(k),
+          maxLength: k === 'website' ? 200 : 120,
+          ...attrs
+        })]
+      }, k))
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "field",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("label", {
+        className: "label",
+        htmlFor: `${id}-message`,
+        children: messageLabel
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("textarea", {
+        id: `${id}-message`,
+        className: "input",
+        rows: 4,
+        maxLength: 1000,
+        value: f.message || '',
+        onChange: set('message'),
+        placeholder: messageHint
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+      type: "text",
+      name: "company_url",
+      tabIndex: -1,
+      autoComplete: "off",
+      "aria-hidden": "true",
+      className: "sora-hp",
+      value: f.company_url || '',
+      onChange: set('company_url')
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+      className: "sora-sell__fine",
+      children: "We need a phone number or an email to reply. We use them only to answer this enquiry."
+    }), state.error && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+      className: "sora-req__err",
+      role: "alert",
+      children: state.error
+    }), /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+      type: "submit",
+      className: "btn",
+      disabled: state.busy,
+      children: state.busy ? 'Sending…' : cta
+    })]
+  });
+}
+function Sell() {
+  usePageMeta({
+    title: 'Sell on SORA LIFESTYLE · Bulk & corporate gifting',
+    description: 'Makers and brands: apply to sell on SORA LIFESTYLE. Companies: ask us about bulk and corporate gifting.',
+    path: '/sell'
+  });
+  const partners = BRANDS.filter(b => b.page).map(b => b.name);
+  return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+    className: "sora-sell",
+    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "container",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
+        className: "hx-offers__crumbs",
+        "aria-label": "Breadcrumb",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+          to: "/",
+          children: "Home"
+        }), " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "chevronRight",
+          size: 12
+        }), " ", /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          children: "Sell on SORA"
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("header", {
+        className: "sora-sell__hero",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "sora-sell__eyebrow",
+          children: "Partner with SORA LIFESTYLE"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+          className: "serif",
+          children: "Sell your brand on SORA"
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+          children: ["SORA LIFESTYLE brings Indian makers into one shop across wellness, fashion and home. ", partners.length ? `Brands already here include ${partners.slice(0, -1).join(', ')} and ${partners[partners.length - 1]}.` : '']
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("a", {
+          href: "#bulk",
+          className: "sora-sell__jump",
+          children: ["Looking for bulk or corporate gifts? ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "arrowRight",
+            size: 15
+          })]
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+        className: "sora-sell__how",
+        "aria-labelledby": "sell-how",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+          id: "sell-how",
+          className: "serif",
+          children: "How it works"
+        }), /*#__PURE__*/jsxRuntimeExports.jsxs("ol", {
+          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("b", {
+              children: "Tell us about your brand"
+            }), " with the form below."]
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("b", {
+              children: "We talk it through"
+            }), " \u2014 what you make, prices, stock and photos."]
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("li", {
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("b", {
+              children: "Your products go live"
+            }), " with their own brand page, in the right store and categories."]
+          })]
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+        className: "sora-sell__card",
+        "aria-labelledby": "sell-partner",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+          id: "sell-partner",
+          className: "serif",
+          children: "Apply to sell"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(EnquiryForm, {
+          kind: "partner",
+          id: "sell-p",
+          fields: PARTNER_FIELDS,
+          messageLabel: "What do you make?",
+          messageHint: "Your products, price range, where you make them, how many you can supply\u2026",
+          cta: "Send application"
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+        className: "sora-sell__card",
+        id: "bulk",
+        "aria-labelledby": "sell-bulk",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+          id: "sell-bulk",
+          className: "serif",
+          children: "Bulk & corporate gifting"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "sora-sell__lede",
+          children: "Festive hampers, team gifts, wedding favours: tell us the occasion, how many and your budget, and we will put options together."
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(EnquiryForm, {
+          kind: "bulk",
+          id: "sell-b",
+          fields: BULK_FIELDS,
+          messageLabel: "What do you need?",
+          messageHint: "Occasion, quantity, budget per gift, delivery date\u2026",
+          cta: "Send enquiry"
+        })]
+      })]
+    })
+  });
+}
+
+const CARE_SECTIONS = Object.freeze([['Day to day', ['Hang jackets on a broad, shaped hanger so the shoulders keep their line.', 'Give leather room to breathe: a cotton dust bag or cover, never a plastic one.', 'Keep it out of direct sun and away from heaters — heat dries leather out and fades it.']], ['If it gets wet', ['Blot off the water with a soft, dry cloth; do not rub.', 'Let it dry naturally at room temperature, on its hanger or stuffed with paper — no hair dryer, heater or iron.', 'Once dry, a little leather conditioner helps it stay supple.']], ['Cleaning', ['Wipe off dust with a soft, dry cloth.', 'For marks and stains, use a cleaner made for leather, or take it to a leather cleaner — not household detergent.', 'Where the product page says “professional leather clean only”, follow that.']], ['Conditioning', ['Now and then, work in a thin layer of leather conditioner with a soft cloth, then buff.', 'Try any new product on a hidden spot first.']], ['Suede and nubuck', ['Brush gently with a suede brush to lift the nap and loosen dirt.', 'Keep suede away from water; for stains, a professional suede clean.']], ['Bags, wallets and belts', ['Stuff empty bags with paper so they hold their shape; do not overfill them in use.', 'Store belts rolled loosely or hanging straight, not folded tight.', 'Keep pens and anything sharp in an inner pocket.']], ['New leather', ['A leather smell is normal in a new piece and fades with wear; air it out on a hanger.', 'Creases form where you move — that is how leather takes your shape.']]]);
+function LeatherCare() {
+  usePageMeta({
+    title: 'How to care for leather · SORA LIFESTYLE',
+    description: 'Everyday care for leather jackets, bags, wallets and belts: storing, drying, cleaning and conditioning, and suede.',
+    path: '/guides/leather-care'
+  });
+  return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+    className: "sora-guide",
+    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "container",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
+        className: "hx-offers__crumbs",
+        "aria-label": "Breadcrumb",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+          to: "/",
+          children: "Home"
+        }), " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "chevronRight",
+          size: 12
+        }), " ", /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          children: "Leather care"
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("header", {
+        className: "sora-guide__head",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "sora-sell__eyebrow",
+          children: "Care guide"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+          className: "serif",
+          children: "How to care for leather"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          children: "Good leather gets better with wear when it is looked after. A few simple habits for the jackets, bags, wallets and belts from our makers. Always follow the care line on the product page first."
+        })]
+      }), CARE_SECTIONS.map(([h, items]) => /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+        className: "sora-guide__sec",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+          className: "serif",
+          children: h
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+          children: items.map(t => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+            children: t
+          }, t))
+        })]
+      }, h)), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "sora-guide__more",
+        children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: "/fashion/search?q=leather",
+          className: "btn",
+          children: ["Shop leather ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "arrowRight",
+            size: 15
+          })]
+        })
+      })]
+    })
+  });
+}
+
 // ============================================================
 // Creator portal charts — the pure part.
 //
@@ -74517,8 +75021,13 @@ function FashionSearch() {
       name: q ? 'Search' : 'All styles'
     }],
     emptyCopy: q ? `Nothing found for “${q}”. Try another word, or browse a category.` : 'The fashion store is being stocked — styles appear here as they go live.',
-    emptyExtra: q ? /*#__PURE__*/jsxRuntimeExports.jsx(FindForMe, {
-      q: q
+    emptyExtra: q ? /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(FindForMe, {
+        q: q
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(RequestProduct, {
+        q: q,
+        store: "fashion"
+      })]
     }) : null
   });
 }
@@ -75884,6 +76393,38 @@ function PriceHistory({
   });
 }
 
+function isLeather(material, name = '') {
+  const t = `${material || ''} ${material ? '' : name || ''}`.toLowerCase();
+  return /\b(leather|suede|nubuck)\b/.test(t) && !/\b(faux|vegan|pu|pu-leather|artificial|synthetic|rexine)\b/.test(t);
+}
+const madeInIndia = origin => String(origin || '').trim().toUpperCase() === 'IN' || /^india$/i.test(String(origin || '').trim());
+function ProductOrigin({
+  origin,
+  material,
+  name
+}) {
+  const india = madeInIndia(origin);
+  const leather = isLeather(material, name);
+  if (!india && !leather) return null;
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+    className: "sora-origin",
+    children: [india && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+      className: "sora-origin__in",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: "mapPin",
+        size: 14
+      }), " Made in India"]
+    }), leather && /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+      to: "/guides/leather-care",
+      className: "sora-origin__care",
+      children: ["How to care for leather ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: "arrowRight",
+        size: 13
+      })]
+    })]
+  });
+}
+
 function GalleryHeart({
   id,
   name
@@ -77028,6 +77569,10 @@ function HomeLivingProductPage() {
           }), tail && /*#__PURE__*/jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, {
             children: [" ", tail]
           })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(ProductOrigin, {
+          origin: view.country_of_origin,
+          material: view.material,
+          name: view.name
         }), lede && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
           className: "hl-pdp__lede",
           children: lede
@@ -77870,6 +78415,10 @@ function FashionProductPage() {
         }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
           className: "fs-pdp__h serif",
           children: view.name
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(ProductOrigin, {
+          origin: facts?.country_of_origin,
+          material: facts?.material,
+          name: view.name
         }), view.reviewCount > 0 && /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
           className: "fs-rating",
           children: [/*#__PURE__*/jsxRuntimeExports.jsx("b", {
@@ -79784,6 +80333,9 @@ function HomeLivingSearch() {
         children: "Browse Home & Living"
       }), status !== 'loading' && /*#__PURE__*/jsxRuntimeExports.jsx(FindForMe, {
         q: q
+      }), status !== 'loading' && /*#__PURE__*/jsxRuntimeExports.jsx(RequestProduct, {
+        q: q,
+        store: "homeliving"
       })]
     }) : /*#__PURE__*/jsxRuntimeExports.jsx("div", {
       className: "hl-grid",
@@ -80950,6 +81502,7 @@ const Coupons = /*#__PURE__*/reactExports.lazy(() => import('./chunks/Coupons.js
 const HomepageSettings = /*#__PURE__*/reactExports.lazy(() => import('./chunks/Homepage.js'));
 const AdminReviews = /*#__PURE__*/reactExports.lazy(() => import('./chunks/Reviews.js'));
 const AdminInsights = /*#__PURE__*/reactExports.lazy(() => import('./chunks/Insights.js'));
+const AdminEnquiries = /*#__PURE__*/reactExports.lazy(() => import('./chunks/Enquiries.js'));
 const Storefronts = /*#__PURE__*/reactExports.lazy(() => import('./chunks/Storefronts.js'));
 const StoreCatalogue = /*#__PURE__*/reactExports.lazy(() => import('./chunks/StoreCatalogue.js'));
 const CategoryExperience = /*#__PURE__*/reactExports.lazy(() => import('./chunks/CategoryExperience.js'));
@@ -81156,6 +81709,9 @@ function App() {
           path: "insights",
           element: /*#__PURE__*/jsxRuntimeExports.jsx(AdminInsights, {})
         }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
+          path: "enquiries",
+          element: /*#__PURE__*/jsxRuntimeExports.jsx(AdminEnquiries, {})
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
           path: "storefronts",
           element: /*#__PURE__*/jsxRuntimeExports.jsx(Storefronts, {})
         }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
@@ -81183,6 +81739,12 @@ function App() {
       }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
         path: "/gift-receipt/:orderNumber",
         element: /*#__PURE__*/jsxRuntimeExports.jsx(GiftReceipt, {})
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
+        path: "/sell",
+        element: /*#__PURE__*/jsxRuntimeExports.jsx(Sell, {})
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
+        path: "/guides/leather-care",
+        element: /*#__PURE__*/jsxRuntimeExports.jsx(LeatherCare, {})
       }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
         path: "/creator/:tab?",
         element: /*#__PURE__*/jsxRuntimeExports.jsx(CreatorPortal, {})
@@ -82391,5 +82953,5 @@ client.createRoot(document.getElementById('root')).render(/*#__PURE__*/jsxRuntim
   children: /*#__PURE__*/jsxRuntimeExports.jsx(Root, {})
 }));
 
-export { useLocation as $, adminListOrderEvents as A, adminMarkCodCollected as B, CONTACT_FIELDS as C, validateFulfillmentInput as D, adminUpdateOrderFulfillment as E, FULFILLMENT_STATUSES as F, GRIEVANCE_FIELDS as G, adminListProductMedia as H, adminCommitStagedProductMedia as I, validateMediaFile as J, mediaFailureMessage as K, LEGAL_PAGES as L, adminReorderProductMedia as M, NavLink as N, Outlet as O, adminSetPrimaryMedia as P, adminEnsurePrimaryMedia as Q, adminUpdateProductMedia as R, adminReplaceProductMedia as S, adminDeleteProductMedia as T, adminDiscoverMedia as U, adminImportMedia as V, validateContent as W, CONTENT_FIELDS as X, fieldPopulated as Y, CONTENT_LABELS as Z, useNavigate as _, adminGetSetting as a, adminListLevelRewards as a$, adminUpdateProduct as a0, adminCreateProduct as a1, adminUpdateProductPrice as a2, adminListVariants as a3, adminCreateVariant as a4, adminUpdateVariant as a5, adminSetVariantActive as a6, adminDeleteVariant as a7, adminGetProgramSettings as a8, CREATOR_STATUSES as a9, CONVERSION_STATUSES as aA, adminGetConversionItems as aB, adminGetConversionAudit as aC, adminRefundConversion as aD, adminListKyc as aE, KYC_STATUSES as aF, KYC_SIGNED_URL_SECONDS as aG, adminSetKycStatus as aH, KYC_DOCUMENT_KINDS as aI, kycDocumentState as aJ, adminKycDocumentUrl as aK, adminListKycAudit as aL, getPayoutConfig as aM, adminListPayouts as aN, PAYOUT_STATUSES as aO, adminSetWithdrawalsOpen as aP, adminGetPayoutLedger as aQ, adminGetPayoutAudit as aR, adminGetKycForCreator as aS, adminReviewPayout as aT, adminMarkPayoutPaid as aU, normalizeLadder as aV, DEFAULT_BEYOND_STEP as aW, adminGetTierLadder as aX, validateLadder as aY, ladderErrorMessage as aZ, rupees as a_, money2 as aa, adminListCreators as ab, adminCreatorStandings as ac, adminSetProgramSettings as ad, adminCreateCreator as ae, adminSetCreatorStatus as af, normalizeContentPatch as ag, contentScore as ah, adminGetCreator as ai, adminListCodeAliases as aj, adminListCampaigns as ak, adminListLinks as al, adminListAudit as am, adminListAttributionEvents as an, adminUpdateCampaign as ao, adminCreateCampaign as ap, CAMPAIGN_STATUSES as aq, buildTrackingUrl as ar, normalizeDestination as as, DESTINATION_TYPES as at, CopyButton as au, adminChangeCreatorCode as av, adminUpdateCreator as aw, adminCreateLink as ax, adminSetLinkStatus as ay, adminListConversions as az, brandingFromSetting as b, TILES_SECTION as b$, groupRewardsByLevel as b0, REWARD_OPTION_SLOTS as b1, validateRewardOption as b2, REWARD_TYPES as b3, REWARD_TYPE_LABEL as b4, adminListRewardClaims as b5, CLAIM_STATUSES as b6, CLAIM_STATUS_LABEL as b7, DEFAULT_LADDER as b8, adminSetTierLadder as b9, supabase as bA, CouponTicket as bB, HOMEPAGE_VISUAL_FIELDS as bC, safeVisualUrl as bD, MAX_CONCERN_PRODUCTS as bE, searchCatalogueForPicker as bF, productGallery as bG, MAX_DISCOVERY_CARDS as bH, makeDiscoveryId as bI, sanitizeHomepageVisuals as bJ, normalizeDiscovery as bK, products as bL, discoveryPayload as bM, mergeHomepageVisuals as bN, announceHomepageSaved as bO, fetchReviewsForAdmin as bP, fetchQuestionsForAdmin as bQ, productHref$3 as bR, fetchStockAlerts as bS, groupAlerts as bT, setReviewStatus as bU, answerQuestion as bV, rejectQuestion as bW, markAlertsNotified as bX, POSITION_LABELS as bY, HERO_SECTION as bZ, TRUST_SECTION as b_, rewardOptionErrorMessage as ba, adminUpsertLevelReward as bb, adminDeleteLevelReward as bc, adminSetRewardClaimStatus as bd, adminGetTheme as be, sanitizeTheme$1 as bf, TOKENS as bg, PRESET_LIST as bh, GROUPS as bi, DEFAULT_THEME as bj, OVERLAY_SCALES as bk, TYPE_SCALES as bl, HEX_RE as bm, adminSetTheme as bn, overlayRgba as bo, adminSaveCategory as bp, adminDeleteCategory as bq, normalizePromo as br, PromoPoster as bs, PromoOfferCard as bt, adminListPromotions as bu, adminUpsertPromotion as bv, adminDeletePromotion as bw, adminSetPromotionActive as bx, adminReorderPromotions as by, uploadPromoImage as bz, Link as c, STORES_SECTION as c0, FESTIVE_SECTION as c1, NEW_ARRIVALS_SECTION as c2, BIOSASH_SECTION as c3, BEDSHEETS_SECTION as c4, LIFESTYLE_SECTION as c5, JEWELLERY_BANNER_SECTION as c6, STORE_CAROUSEL_SECTION as c7, LUXURY_BEDS_SECTION as c8, DELIVERY_STRIP as c9, categoryToneTheme as cA, MIN_INTERVAL_MS as cB, MAX_INTERVAL_MS as cC, DEFAULT_ITEM_SCALE as cD, MIN_ITEM_SCALE as cE, MAX_ITEM_SCALE as cF, ITEM_OFFSET_LIMIT as cG, CategorySpotlight as cH, SOCIAL_NETWORKS as cI, POLICY_KEYS as cJ, validateCompanyForSave as cK, BENEFITS_STRIP as ca, DEPARTMENT_SECTIONS as cb, JEWELLERY_SECTIONS as cc, HOMELIVING_SECTIONS as cd, GROCERY_SECTIONS as ce, STOREFRONT_CONTENT_STORES as cf, STOREFRONT_LABELS as cg, normalizeFashionStorefront as ch, normalizeLifestyleStorefront as ci, sectionSpec as cj, sectionContent as ck, validateStorefrontContent as cl, useSearchParams as cm, buildTree as cn, validatePlacement as co, uploadImage as cp, isSpotlightEligible as cq, categoryBySlug as cr, sanitizeCategoryConfig as cs, safeColor as ct, safeGradient as cu, makeSpotlightId as cv, validateImageUpload as cw, normalizeCategoryExperience as cx, categoryExperiencePayload as cy, categoryIsReadyButOff as cz, defaultLegalPage as d, LegalUpdated as e, adminSetSetting as f, useAdminAuth as g, hasLegalContent as h, branding as i, jsxRuntimeExports as j, adminListProducts as k, legalKey as l, adminListCategories as m, normalizeLegalPage as n, adminSeedDefaultCategories as o, adminImportBiosashCatalog as p, money as q, reactExports as r, adminSetProductActive as s, adminDeleteProduct as t, useParams as u, validateLegalPage as v, adminReorderProducts as w, categories as x, adminListOrders as y, fulfillmentStatusLabel as z };
+export { useLocation as $, adminListOrderEvents as A, adminMarkCodCollected as B, CONTACT_FIELDS as C, validateFulfillmentInput as D, adminUpdateOrderFulfillment as E, FULFILLMENT_STATUSES as F, GRIEVANCE_FIELDS as G, adminListProductMedia as H, adminCommitStagedProductMedia as I, validateMediaFile as J, mediaFailureMessage as K, LEGAL_PAGES as L, adminReorderProductMedia as M, NavLink as N, Outlet as O, adminSetPrimaryMedia as P, adminEnsurePrimaryMedia as Q, adminUpdateProductMedia as R, adminReplaceProductMedia as S, adminDeleteProductMedia as T, adminDiscoverMedia as U, adminImportMedia as V, validateContent as W, CONTENT_FIELDS as X, fieldPopulated as Y, CONTENT_LABELS as Z, useNavigate as _, adminGetSetting as a, adminListLevelRewards as a$, adminUpdateProduct as a0, adminCreateProduct as a1, adminUpdateProductPrice as a2, adminListVariants as a3, adminCreateVariant as a4, adminUpdateVariant as a5, adminSetVariantActive as a6, adminDeleteVariant as a7, adminGetProgramSettings as a8, CREATOR_STATUSES as a9, CONVERSION_STATUSES as aA, adminGetConversionItems as aB, adminGetConversionAudit as aC, adminRefundConversion as aD, adminListKyc as aE, KYC_STATUSES as aF, KYC_SIGNED_URL_SECONDS as aG, adminSetKycStatus as aH, KYC_DOCUMENT_KINDS as aI, kycDocumentState as aJ, adminKycDocumentUrl as aK, adminListKycAudit as aL, getPayoutConfig as aM, adminListPayouts as aN, PAYOUT_STATUSES as aO, adminSetWithdrawalsOpen as aP, adminGetPayoutLedger as aQ, adminGetPayoutAudit as aR, adminGetKycForCreator as aS, adminReviewPayout as aT, adminMarkPayoutPaid as aU, normalizeLadder as aV, DEFAULT_BEYOND_STEP as aW, adminGetTierLadder as aX, validateLadder as aY, ladderErrorMessage as aZ, rupees as a_, money2 as aa, adminListCreators as ab, adminCreatorStandings as ac, adminSetProgramSettings as ad, adminCreateCreator as ae, adminSetCreatorStatus as af, normalizeContentPatch as ag, contentScore as ah, adminGetCreator as ai, adminListCodeAliases as aj, adminListCampaigns as ak, adminListLinks as al, adminListAudit as am, adminListAttributionEvents as an, adminUpdateCampaign as ao, adminCreateCampaign as ap, CAMPAIGN_STATUSES as aq, buildTrackingUrl as ar, normalizeDestination as as, DESTINATION_TYPES as at, CopyButton as au, adminChangeCreatorCode as av, adminUpdateCreator as aw, adminCreateLink as ax, adminSetLinkStatus as ay, adminListConversions as az, brandingFromSetting as b, TRUST_SECTION as b$, groupRewardsByLevel as b0, REWARD_OPTION_SLOTS as b1, validateRewardOption as b2, REWARD_TYPES as b3, REWARD_TYPE_LABEL as b4, adminListRewardClaims as b5, CLAIM_STATUSES as b6, CLAIM_STATUS_LABEL as b7, DEFAULT_LADDER as b8, adminSetTierLadder as b9, supabase as bA, CouponTicket as bB, HOMEPAGE_VISUAL_FIELDS as bC, safeVisualUrl as bD, MAX_CONCERN_PRODUCTS as bE, searchCatalogueForPicker as bF, productGallery as bG, MAX_DISCOVERY_CARDS as bH, makeDiscoveryId as bI, sanitizeHomepageVisuals as bJ, normalizeDiscovery as bK, products as bL, discoveryPayload as bM, mergeHomepageVisuals as bN, announceHomepageSaved as bO, fetchReviewsForAdmin as bP, fetchQuestionsForAdmin as bQ, productHref$3 as bR, fetchStockAlerts as bS, groupAlerts as bT, setReviewStatus as bU, answerQuestion as bV, rejectQuestion as bW, markAlertsNotified as bX, ENQUIRY_KINDS as bY, POSITION_LABELS as bZ, HERO_SECTION as b_, rewardOptionErrorMessage as ba, adminUpsertLevelReward as bb, adminDeleteLevelReward as bc, adminSetRewardClaimStatus as bd, adminGetTheme as be, sanitizeTheme$1 as bf, TOKENS as bg, PRESET_LIST as bh, GROUPS as bi, DEFAULT_THEME as bj, OVERLAY_SCALES as bk, TYPE_SCALES as bl, HEX_RE as bm, adminSetTheme as bn, overlayRgba as bo, adminSaveCategory as bp, adminDeleteCategory as bq, normalizePromo as br, PromoPoster as bs, PromoOfferCard as bt, adminListPromotions as bu, adminUpsertPromotion as bv, adminDeletePromotion as bw, adminSetPromotionActive as bx, adminReorderPromotions as by, uploadPromoImage as bz, Link as c, TILES_SECTION as c0, STORES_SECTION as c1, FESTIVE_SECTION as c2, NEW_ARRIVALS_SECTION as c3, BIOSASH_SECTION as c4, BEDSHEETS_SECTION as c5, LIFESTYLE_SECTION as c6, JEWELLERY_BANNER_SECTION as c7, STORE_CAROUSEL_SECTION as c8, LUXURY_BEDS_SECTION as c9, categoryIsReadyButOff as cA, categoryToneTheme as cB, MIN_INTERVAL_MS as cC, MAX_INTERVAL_MS as cD, DEFAULT_ITEM_SCALE as cE, MIN_ITEM_SCALE as cF, MAX_ITEM_SCALE as cG, ITEM_OFFSET_LIMIT as cH, CategorySpotlight as cI, SOCIAL_NETWORKS as cJ, POLICY_KEYS as cK, validateCompanyForSave as cL, DELIVERY_STRIP as ca, BENEFITS_STRIP as cb, DEPARTMENT_SECTIONS as cc, JEWELLERY_SECTIONS as cd, HOMELIVING_SECTIONS as ce, GROCERY_SECTIONS as cf, STOREFRONT_CONTENT_STORES as cg, STOREFRONT_LABELS as ch, normalizeFashionStorefront as ci, normalizeLifestyleStorefront as cj, sectionSpec as ck, sectionContent as cl, validateStorefrontContent as cm, useSearchParams as cn, buildTree as co, validatePlacement as cp, uploadImage as cq, isSpotlightEligible as cr, categoryBySlug as cs, sanitizeCategoryConfig as ct, safeColor as cu, safeGradient as cv, makeSpotlightId as cw, validateImageUpload as cx, normalizeCategoryExperience as cy, categoryExperiencePayload as cz, defaultLegalPage as d, LegalUpdated as e, adminSetSetting as f, useAdminAuth as g, hasLegalContent as h, branding as i, jsxRuntimeExports as j, adminListProducts as k, legalKey as l, adminListCategories as m, normalizeLegalPage as n, adminSeedDefaultCategories as o, adminImportBiosashCatalog as p, money as q, reactExports as r, adminSetProductActive as s, adminDeleteProduct as t, useParams as u, validateLegalPage as v, adminReorderProducts as w, categories as x, adminListOrders as y, fulfillmentStatusLabel as z };
 //# sourceMappingURL=bundle.js.map

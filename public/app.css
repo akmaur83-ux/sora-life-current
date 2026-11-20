@@ -10015,6 +10015,50 @@ body .fs .hx-ans .hx-ans__cta { background: #D9B26A; color: #121A16; }
 /* A brand's own size chart (2026-11-20). */
 .fs-sizeguide__brand { margin: 0 0 12px; font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #8A5A12; }
 .fs-sizeguide__table.is-wide { display: block; overflow-x: auto; white-space: nowrap; }
+/* Round 11 (2026-11-20): request it, sell on SORA, the honeypot. */
+.sora-hp { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+.sora-req { margin: 18px auto 0; max-width: 640px; padding: 16px; text-align: left; background: #FBF8F1; border: 1px solid rgba(30, 58, 47, .14); }
+.sora-req p { margin: 0 0 10px; font-size: 14.5px; color: #1E3A2F; }
+.sora-req__row { display: flex; flex-wrap: wrap; gap: 8px; }
+.sora-req__row .input { flex: 1 1 180px; min-width: 0; }
+.sora-req__err { margin: 8px 0 0 !important; color: #A33A2B !important; font-size: 13.5px !important; }
+.sora-req--done { margin: 18px auto 0; max-width: 640px; padding: 14px 16px; background: #EEF5EF; color: #1E3A2F; }
+.sora-sell { padding: 18px 0 56px; background: #fff; }
+.sora-sell .container { max-width: 880px; }
+.sora-sell__hero { padding: 18px 0 8px; }
+.sora-sell__eyebrow { margin: 0 0 6px; font-size: 12px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: #8A5A12; }
+.sora-sell__hero h1 { margin: 0 0 10px; font-size: clamp(30px, 5vw, 44px); font-weight: 500; color: #1E3A2F; }
+.sora-sell__hero p { margin: 0 0 12px; font-size: 16px; line-height: 1.6; color: #3d4a43; }
+.sora-sell__jump { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: #2C5341; }
+.sora-sell__how { margin: 26px 0; }
+.sora-sell__how h2, .sora-sell__card h2 { margin: 0 0 12px; font-size: 26px; font-weight: 500; color: #1E3A2F; }
+.sora-sell__how ol { margin: 0; padding-left: 22px; display: grid; gap: 8px; font-size: 15px; line-height: 1.55; color: #3d4a43; }
+.sora-sell__card { margin: 22px 0; padding: 22px; background: #FBF8F1; border: 1px solid rgba(30, 58, 47, .12); scroll-margin-top: 90px; }
+.sora-sell__lede { margin: 0 0 14px; color: #3d4a43; line-height: 1.55; }
+.sora-sell__form { display: grid; gap: 14px; }
+.sora-sell__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 14px; }
+.sora-sell__fine { margin: 0; font-size: 13px; color: #5c6a62; }
+.sora-sell__form .btn { justify-self: start; }
+.sora-sell__done { display: flex; gap: 8px; align-items: center; margin: 0; padding: 14px 16px; background: #EEF5EF; color: #1E3A2F; font-weight: 600; }
+@media (max-width: 600px) {
+  .sora-sell__grid { grid-template-columns: 1fr; }
+  .sora-sell__card { padding: 16px; }
+  .sora-sell__form .btn { justify-self: stretch; }
+}
+/* Made in India / leather care line, and the care guide (round 11, 2026-11-20). */
+.sora-origin { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: 6px 0 10px; font-size: 13px; }
+.sora-origin__in { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; font-weight: 600; color: #1E3A2F; background: #EEF5EF; border: 1px solid rgba(30, 58, 47, .15); }
+.sora-origin__care { display: inline-flex; align-items: center; gap: 4px; font-weight: 600; color: #8A5A12; text-decoration: none; }
+.sora-origin__care:hover { text-decoration: underline; }
+.sora-guide { padding: 18px 0 56px; background: #fff; }
+.sora-guide .container { max-width: 760px; }
+.sora-guide__head { padding: 18px 0 6px; }
+.sora-guide__head h1 { margin: 0 0 10px; font-size: clamp(30px, 5vw, 42px); font-weight: 500; color: #1E3A2F; }
+.sora-guide__head p { margin: 0; font-size: 16px; line-height: 1.6; color: #3d4a43; }
+.sora-guide__sec { margin: 26px 0 0; padding-top: 18px; border-top: 1px solid rgba(30, 58, 47, .1); }
+.sora-guide__sec h2 { margin: 0 0 10px; font-size: 22px; font-weight: 500; color: #1E3A2F; }
+.sora-guide__sec ul { margin: 0; padding-left: 20px; display: grid; gap: 8px; font-size: 15px; line-height: 1.6; color: #3d4a43; }
+.sora-guide__more { margin: 32px 0 0; }
 
 /* ═══ src/styles/storefront-sections.css ═══ */
 /* ============================================================
