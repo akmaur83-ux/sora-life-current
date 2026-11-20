@@ -10306,6 +10306,90 @@ html.sora-wintertop .v2-hdr__bar, html.sora-wintertop .sora-stickycats > * { pos
 @keyframes sw-drift { from { background-position: 0 0, 0 0, 0 0, 0 0; } to { background-position: 30px 90px, -20px 90px, 20px 90px, -30px 90px; } }
 @media (prefers-reduced-motion: reduce) { html.sora-wintertop .v2-hdr::after, html.sora-wintertop .sora-stickycats::after { animation: none; } }
 
+/* Winter band, round 27 (owner, 2026-11-20): knitted lettering, a muffler wrapping round it,
+   gusts of wind, snow swaying in three layers, snow settled on the tiles, the hero turning. */
+.sora-winter__title { display: block; width: min(100%, 540px); margin: 4px auto 0; text-shadow: none; font-size: 0; line-height: 0; }
+.sora-winter__title::after { content: none; }
+.sora-winter__title svg { display: block; width: 100%; height: auto; overflow: visible; }
+.sora-winter__head { gap: 0; }
+.sora-winter__letters { animation: sw-floaty 3.4s ease-in-out infinite; }
+@keyframes sw-floaty { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+.sora-winter__puff, .sora-winter__shine { font-family: 'Pacifico', 'Playfair Display', cursive; font-size: 66px; }
+/* Round, puffy lettering: a knit fill, a soft cream rim, a deep shadow under it. */
+.sora-winter__puff {
+  stroke: #EADCBC; stroke-width: 5; stroke-linejoin: round; paint-order: stroke;
+  filter: drop-shadow(0 3px 0 #B59B6A) drop-shadow(0 5px 0 #8C7448) drop-shadow(0 12px 12px rgba(0, 0, 0, .4));
+}
+.sora-winter__shine { fill: none; stroke: rgba(255, 255, 255, .55); stroke-width: 1; }
+
+/* The muffler: a red knit with cream stripes that travel round (it turns), revealed as it wraps. */
+.sora-muffler path { fill: none; }
+.sora-muffler__base { stroke: #B3332B; stroke-width: 20; }
+.sora-muffler--back .sora-muffler__base { stroke: #7E211B; }
+.sora-muffler__stripe { stroke: #F1E3C6; stroke-width: 20; stroke-dasharray: 5 13; animation: sw-turn 2.2s linear infinite; }
+.sora-muffler--back .sora-muffler__stripe { stroke: #BFAE8E; }
+.sora-muffler__knit { stroke: rgba(60, 8, 6, .32); stroke-width: 14; stroke-dasharray: 1.4 2.6; animation: sw-turn 2.2s linear infinite; }
+@keyframes sw-turn { to { stroke-dashoffset: -36; } }
+.sora-muffler__reveal { fill: none; stroke: #fff; stroke-width: 34; stroke-dasharray: 100 100; stroke-dashoffset: 100; animation: sw-wrapin .75s cubic-bezier(.5, 0, .3, 1) forwards; }
+.sora-muffler__reveal--back { animation-delay: .25s; }
+.sora-muffler__reveal--front { animation-delay: .95s; }
+@keyframes sw-wrapin { to { stroke-dashoffset: 0; } }
+.sora-muffler__ends { opacity: 0; animation: sw-ends .4s ease-out 1.6s forwards; }
+@keyframes sw-ends { to { opacity: 1; } }
+.sora-muffler__end { transform-box: fill-box; transform-origin: 30% 0; animation: sw-flap 1.5s ease-in-out infinite alternate; }
+.sora-muffler__end--b { animation-duration: 1.15s; animation-delay: -.4s; }
+@keyframes sw-flap { from { transform: rotate(-6deg) skewY(-3deg); } to { transform: rotate(14deg) skewY(4deg); } }
+.sora-muffler__tail { fill: #B3332B; stroke: #7E211B; stroke-width: 1; stroke-linejoin: round; }
+.sora-muffler__tailstripe { fill: none; stroke: #F1E3C6; stroke-width: 4; }
+.sora-muffler__fringe { fill: none; stroke: #F1E3C6; stroke-width: 1.8; stroke-linecap: round; }
+
+/* Wind: streaks sweeping across, the snow pushed along with them. */
+.sora-winter__wind { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+.sora-winter__wind path {
+  fill: none; stroke: rgba(255, 255, 255, .5); stroke-width: 1.6; stroke-linecap: round; vector-effect: non-scaling-stroke;
+  stroke-dasharray: 24 120; stroke-dashoffset: 24; animation: sw-gust var(--d) cubic-bezier(.4, 0, .6, 1) var(--delay) infinite;
+}
+@keyframes sw-gust { 0% { stroke-dashoffset: 24; opacity: 0; } 10% { opacity: 1; } 70% { opacity: .8; } 100% { stroke-dashoffset: -100; opacity: 0; } }
+.sora-winter__snow i { animation-name: sw-fall-sway; animation-timing-function: linear; }
+@keyframes sw-fall-sway {
+  0% { transform: translate3d(0, 0, 0); opacity: 0; }
+  8% { opacity: .9; }
+  25% { transform: translate3d(calc(var(--drift) * .7), 190px, 0); }
+  50% { transform: translate3d(calc(var(--drift) * -.2), 380px, 0); }
+  75% { transform: translate3d(var(--drift), 570px, 0); }
+  100% { transform: translate3d(calc(var(--drift) * .3), 780px, 0); opacity: .25; }
+}
+.sora-winter__snow--far i { opacity: .5; filter: none; }
+.sora-winter__snow--near { z-index: 2; }
+.sora-winter__snow--near i { opacity: .6; filter: blur(2px); animation-name: sw-fall-sway; }
+
+/* Snow settled on the top edge of every tile. */
+.sora-winter__hero::before, .sora-winter__tile::before {
+  content: ''; position: absolute; left: -2px; right: -2px; top: -1px; height: 9px; z-index: 1; pointer-events: none;
+  background: radial-gradient(circle at 8px 0, #fff 7px, rgba(255, 255, 255, 0) 8px) 0 0 / 16px 9px repeat-x;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .15)); opacity: .95;
+}
+
+/* The hero turning through the deals. */
+.sora-winter__heroin { flex: 1; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 4px; animation: sw-heroin .45s cubic-bezier(.2, .8, .2, 1) both; }
+@keyframes sw-heroin { from { opacity: 0; transform: translateY(14px) scale(.95); } to { opacity: 1; transform: none; } }
+.sora-winter__heroin .sora-winter__name { min-height: 3.9em; }
+.sora-winter__heroimg { position: relative; margin-top: auto; width: 100%; max-width: 150px; }
+.sora-winter__heroimg img { display: block; width: 100%; margin: 0; }
+.sora-winter__heroimg .sora-winter__save { bottom: 8px; right: 8px; }
+.sora-winter__dots { display: flex; gap: 4px; margin-top: 8px; }
+.sora-winter__dots i { width: 5px; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, .35); transition: width .3s ease, background-color .3s ease; }
+.sora-winter__dots i.is-on { width: 14px; background: var(--w-gold); }
+.fs .sora-winter__dots i { border-radius: 3px !important; }
+@media (min-width: 760px) { .sora-winter__heroimg { max-width: 170px; } }
+@media (prefers-reduced-motion: reduce) {
+  .sora-winter__wind { display: none; }
+  .sora-muffler__reveal { stroke-dashoffset: 0; }
+  .sora-muffler__ends { opacity: 1; }
+}
+/* The delivery line and the category row, under the product (owner, 2026-11-20). */
+.fs-pdp__more { margin: 28px 0 8px; display: grid; gap: 14px; }
+
 /* ═══ src/styles/storefront-sections.css ═══ */
 /* ============================================================
    Storefront sections an admin edits (Storefronts in the admin; storefrontContent.js).
