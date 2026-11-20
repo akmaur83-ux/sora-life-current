@@ -22,7 +22,7 @@ test('about the maker: partner brands only, by catalogue or display name; on all
   assert.match(read('src/pages/Product.jsx'), /<MakerCard brand=\{product\.brand\} \/>/);
 });
 test('sizes on the cards: in stock only, short labels, nothing for one size, "+n" past six', () => {
-  const c = loadModule('src/fashion/FashionProductCard.jsx', { useState: (v) => [v, () => {}], Link: () => null, Icon: () => null, money: String, swatchOverflow: () => ({ shown: [], more: 0 }), quickAddPlan: () => ({}), useFashionWishlist: () => ({}), useStore: () => ({}), VariantSheet: () => null });
+  const c = loadModule('src/fashion/FashionProductCard.jsx', { usePriceDrop: () => 0, useState: (v) => [v, () => {}], Link: () => null, Icon: () => null, money: String, swatchOverflow: () => ({ shown: [], more: 0 }), quickAddPlan: () => ({}), useFashionWishlist: () => ({}), useStore: () => ({}), VariantSheet: () => null });
   const v = (size, stock) => ({ size, colour: 'Black', stock });
   assert.deepEqual(c.cardSizes({ sizes: ['S (42)', 'M (44)', 'L (46)'], variants: [v('S (42)', 10), v('M (44)', 0), v('L (46)', 3)] }), { shown: ['S', 'L'], more: 0 });
   assert.equal(c.cardSizes({ sizes: ['Free Size'], variants: [v('Free Size', 5)] }), null);

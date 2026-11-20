@@ -7,6 +7,7 @@ import { quickAddPlan } from '../lib/fashionPdp.js';
 import { useFashionWishlist } from '../lib/fashionWishlist.js';
 import { useStore } from '../lib/store.jsx';
 import { VariantSheet } from './FashionVariantPicker.jsx';
+import { usePriceDrop } from '../lib/priceDrops.js';
 
 /**
  * The sizes in stock, for the card (round 9, 2026-11-16): any colour of that size has
@@ -58,6 +59,7 @@ export default function FashionProductCard({ view, layout = 'grid', mediaLoading
   };
   const { shown, more } = swatchOverflow(view.swatches, 4);
   const sizesLine = cardSizes(view);
+  const dropped = usePriceDrop(view.id);
   const href = productHref(view);
   const out = !view.inStock;
   return (
@@ -83,6 +85,8 @@ export default function FashionProductCard({ view, layout = 'grid', mediaLoading
           <strong><span className="fs-price__cur">₹</span>{rupee(view.price).replace(/^₹\s?/, '')}</strong>
           {view.hasDiscount && <span className="fs-price__mrp">M.R.P: <s>{rupee(view.mrp)}</s></span>}
         </p>
+        {/* A real price fall in the last 30 days (round 20, 2026-11-20; priceDrops.js). */}
+        {dropped > 0 && <p className="sora-drop">Price dropped {rupee(dropped)}</p>}
         <h3 className="fs-card__name"><Link to={href}>{view.name}</Link></h3>
         {view.brand && <p className={`fs-card__brand${layout === 'list' ? '' : ' fs-card__brand--grid'}`}>{view.brand}</p>}
         {/* No reviews yet: no rating row at all, rather than "0.0 ☆☆☆☆☆ (0)". */}

@@ -460,3 +460,5 @@ body .fs .hx-ans .hx-ans__cta { background: #D9B26A; color: #121A16; }
 .fs a.fs-btn { color: var(--slv2-ivory); }
 /* Disabled buy buttons still readable (round 18 audit, 2026-11-20): #8A8F8F on #F0F2F2 was 2.9:1. */
 .fs .fs-pdp--mk .fs-btn--add:disabled, .fs .fs-pdp--mk .fs-btn--buy:disabled, .fs .fs-pdp__bar .fs-btn--add:disabled, .fs .fs-pdp__bar .fs-btn--buy:disabled { color: #666B6B; }
+/* Price dropped (round 20, 2026-11-20): only from the price history. */
+.sora-drop { margin: 2px 0 0; font-size: 12px; font-weight: 700; color: #1F7A45; }

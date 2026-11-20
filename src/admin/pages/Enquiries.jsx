@@ -41,6 +41,31 @@ const waHref = (p, text = '') => { const d = String(p || '').replace(/\D/g, '');
 const when = (iso) => (iso ? new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : '');
 const box = { border: '1px solid #E4E8E1', background: '#fff', padding: 14 };
 
+function Notes({ row, onSaved }) {
+  const [text, setText] = useState(row.notes || '');
+  const [state, setState] = useState('');
+  const dirty = text !== (row.notes || '');
+  const save = async () => {
+    setState('saving');
+    const { error } = await supabase.from('enquiries').update({ notes: text.trim().slice(0, 1000) || null }).eq('id', row.id);
+    if (error) { setState('error'); return; }
+    onSaved(text.trim() || null); setState('saved');
+  };
+  return (
+    <div style={{ display: 'grid', gap: 6, marginTop: 8 }}>
+      <label className="adm-hint" htmlFor={`enq-notes-${row.id}`}>Your notes (only you see these)</label>
+      <textarea id={`enq-notes-${row.id}`} className="input" rows={2} maxLength={1000} value={text} onChange={(e) => { setText(e.target.value); setState(''); }} placeholder="e.g. Called on 21 Nov, sending price list" />
+      {(dirty || state) && (
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {dirty && <button type="button" className="btn btn-sm" onClick={save} disabled={state === 'saving'}>{state === 'saving' ? 'Saving…' : 'Save note'}</button>}
+          {state === 'saved' && !dirty && <span className="adm-hint">Saved</span>}
+          {state === 'error' && <span className="adm-hint" style={{ color: '#A33A2B' }}>Could not save. Try again.</span>}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Enquiries() {
   const [rows, setRows] = useState(null);
   const [kind, setKind] = useState('');
@@ -62,7 +87,7 @@ export default function Enquiries() {
   const save = () => downloadCsv('sora-enquiries.csv', toCsv(shown, [
     ['Date', (r) => String(r.created_at || '').slice(0, 10)], ['Kind', (r) => ENQUIRY_KINDS[r.kind] || r.kind], ['Status', (r) => r.status],
     ['Name', (r) => r.name], ['Business', (r) => r.business], ['Phone', (r) => r.phone], ['Email', (r) => r.email], ['City', (r) => r.city],
-    ['Website', (r) => r.website], ['Product asked for', (r) => r.query], ['Store', (r) => r.store], ['Message', (r) => r.message],
+    ['Website', (r) => r.website], ['Product asked for', (r) => r.query], ['Store', (r) => r.store], ['Message', (r) => r.message], ['Notes', (r) => r.notes],
   ]));
   const count = (k) => (rows || []).filter((r) => r.kind === k && r.status === 'new').length;
   return (
@@ -105,6 +130,8 @@ export default function Enquiries() {
                 <span className="adm-hint">{when(r.created_at)}</span>
               </div>
               {r.message && <p style={{ margin: '8px 0', whiteSpace: 'pre-line' }}>{r.message}</p>}
+              {/* Your notes (round 20, 2026-11-20): who called, what was agreed. Only the admin sees them. */}
+              <Notes row={r} onSaved={(notes) => setRows((list) => list.map((x) => (x.id === r.id ? { ...x, notes } : x)))} />
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginTop: 8 }}>
                 {r.phone && <a className="btn btn-sm btn-ghost" href={`tel:${r.phone}`}>Call {r.phone}</a>}
                 {r.phone && <a className="btn btn-sm btn-ghost" href={waHref(r.phone, replyText(r))} target="_blank" rel="noopener noreferrer">WhatsApp</a>}

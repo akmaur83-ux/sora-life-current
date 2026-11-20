@@ -3,6 +3,7 @@ import Icon from '../components/Icon.jsx';
 import { money } from '../lib/format.js';
 import { useStore } from '../lib/store.jsx';
 import { useHomeLivingWishlist } from '../lib/homelivingWishlist.js';
+import { usePriceDrop } from '../lib/priceDrops.js';
 
 // ============================================================
 // Home & Living product card — image, brand line, name, size, price, and
@@ -23,6 +24,7 @@ export default function HomeLivingProductCard({ product, layout = 'grid', mediaL
   const hasVariants = Array.isArray(product.variants) && product.variants.length > 0;
   const inStock = Number(product.stock) > 0;
   const wish = useHomeLivingWishlist();
+  const dropped = usePriceDrop(product.id);
   const saved = wish.has(product.id);
   return (
     <article className={`hl-card${layout === 'list' ? ' hl-card--list' : ''}`} data-product={product.slug}>
@@ -42,6 +44,8 @@ export default function HomeLivingProductCard({ product, layout = 'grid', mediaL
           <strong>{money(product.price)}</strong>
           {product.mrp > product.price && <s className="hl-price__mrp">{money(product.mrp)}</s>}
         </p>
+        {/* A real price fall in the last 30 days (round 20, 2026-11-20; priceDrops.js). */}
+        {dropped > 0 && <p className="sora-drop">Price dropped {money(dropped)}</p>}
         {hasVariants
           ? <Link to={href} className="hl-btn hl-add hl-card__add hl-card__add--choose">Choose options</Link>
           : (

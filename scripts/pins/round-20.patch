@@ -1,0 +1,126 @@
+diff --git a/src/admin/pages/Enquiries.jsx b/src/admin/pages/Enquiries.jsx
+index fb687ea..2f8e1fd 100644
+--- a/src/admin/pages/Enquiries.jsx
++++ b/src/admin/pages/Enquiries.jsx
+@@ -41,6 +41,31 @@ const waHref = (p, text = '') => { const d = String(p || '').replace(/\D/g, '');
+ const when = (iso) => (iso ? new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : '');
+ const box = { border: '1px solid #E4E8E1', background: '#fff', padding: 14 };
+ 
++function Notes({ row, onSaved }) {
++  const [text, setText] = useState(row.notes || '');
++  const [state, setState] = useState('');
++  const dirty = text !== (row.notes || '');
++  const save = async () => {
++    setState('saving');
++    const { error } = await supabase.from('enquiries').update({ notes: text.trim().slice(0, 1000) || null }).eq('id', row.id);
++    if (error) { setState('error'); return; }
++    onSaved(text.trim() || null); setState('saved');
++  };
++  return (
++    <div style={{ display: 'grid', gap: 6, marginTop: 8 }}>
++      <label className="adm-hint" htmlFor={`enq-notes-${row.id}`}>Your notes (only you see these)</label>
++      <textarea id={`enq-notes-${row.id}`} className="input" rows={2} maxLength={1000} value={text} onChange={(e) => { setText(e.target.value); setState(''); }} placeholder="e.g. Called on 21 Nov, sending price list" />
++      {(dirty || state) && (
++        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
++          {dirty && <button type="button" className="btn btn-sm" onClick={save} disabled={state === 'saving'}>{state === 'saving' ? 'Saving…' : 'Save note'}</button>}
++          {state === 'saved' && !dirty && <span className="adm-hint">Saved</span>}
++          {state === 'error' && <span className="adm-hint" style={{ color: '#A33A2B' }}>Could not save. Try again.</span>}
++        </div>
++      )}
++    </div>
++  );
++}
++
+ export default function Enquiries() {
+   const [rows, setRows] = useState(null);
+   const [kind, setKind] = useState('');
+@@ -62,7 +87,7 @@ export default function Enquiries() {
+   const save = () => downloadCsv('sora-enquiries.csv', toCsv(shown, [
+     ['Date', (r) => String(r.created_at || '').slice(0, 10)], ['Kind', (r) => ENQUIRY_KINDS[r.kind] || r.kind], ['Status', (r) => r.status],
+     ['Name', (r) => r.name], ['Business', (r) => r.business], ['Phone', (r) => r.phone], ['Email', (r) => r.email], ['City', (r) => r.city],
+-    ['Website', (r) => r.website], ['Product asked for', (r) => r.query], ['Store', (r) => r.store], ['Message', (r) => r.message],
++    ['Website', (r) => r.website], ['Product asked for', (r) => r.query], ['Store', (r) => r.store], ['Message', (r) => r.message], ['Notes', (r) => r.notes],
+   ]));
+   const count = (k) => (rows || []).filter((r) => r.kind === k && r.status === 'new').length;
+   return (
+@@ -105,6 +130,8 @@ export default function Enquiries() {
+                 <span className="adm-hint">{when(r.created_at)}</span>
+               </div>
+               {r.message && <p style={{ margin: '8px 0', whiteSpace: 'pre-line' }}>{r.message}</p>}
++              {/* Your notes (round 20, 2026-11-20): who called, what was agreed. Only the admin sees them. */}
++              <Notes row={r} onSaved={(notes) => setRows((list) => list.map((x) => (x.id === r.id ? { ...x, notes } : x)))} />
+               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginTop: 8 }}>
+                 {r.phone && <a className="btn btn-sm btn-ghost" href={`tel:${r.phone}`}>Call {r.phone}</a>}
+                 {r.phone && <a className="btn btn-sm btn-ghost" href={waHref(r.phone, replyText(r))} target="_blank" rel="noopener noreferrer">WhatsApp</a>}
+diff --git a/src/fashion/FashionProductCard.jsx b/src/fashion/FashionProductCard.jsx
+index 81fb544..23e3406 100644
+--- a/src/fashion/FashionProductCard.jsx
++++ b/src/fashion/FashionProductCard.jsx
+@@ -7,6 +7,7 @@ import { quickAddPlan } from '../lib/fashionPdp.js';
+ import { useFashionWishlist } from '../lib/fashionWishlist.js';
+ import { useStore } from '../lib/store.jsx';
+ import { VariantSheet } from './FashionVariantPicker.jsx';
++import { usePriceDrop } from '../lib/priceDrops.js';
+ 
+ /**
+  * The sizes in stock, for the card (round 9, 2026-11-16): any colour of that size has
+@@ -58,6 +59,7 @@ export default function FashionProductCard({ view, layout = 'grid', mediaLoading
+   };
+   const { shown, more } = swatchOverflow(view.swatches, 4);
+   const sizesLine = cardSizes(view);
++  const dropped = usePriceDrop(view.id);
+   const href = productHref(view);
+   const out = !view.inStock;
+   return (
+@@ -83,6 +85,8 @@ export default function FashionProductCard({ view, layout = 'grid', mediaLoading
+           <strong><span className="fs-price__cur">₹</span>{rupee(view.price).replace(/^₹\s?/, '')}</strong>
+           {view.hasDiscount && <span className="fs-price__mrp">M.R.P: <s>{rupee(view.mrp)}</s></span>}
+         </p>
++        {/* A real price fall in the last 30 days (round 20, 2026-11-20; priceDrops.js). */}
++        {dropped > 0 && <p className="sora-drop">Price dropped {rupee(dropped)}</p>}
+         <h3 className="fs-card__name"><Link to={href}>{view.name}</Link></h3>
+         {view.brand && <p className={`fs-card__brand${layout === 'list' ? '' : ' fs-card__brand--grid'}`}>{view.brand}</p>}
+         {/* No reviews yet: no rating row at all, rather than "0.0 ☆☆☆☆☆ (0)". */}
+diff --git a/src/homeliving/HomeLivingProductCard.jsx b/src/homeliving/HomeLivingProductCard.jsx
+index 24d8701..570fa60 100644
+--- a/src/homeliving/HomeLivingProductCard.jsx
++++ b/src/homeliving/HomeLivingProductCard.jsx
+@@ -3,6 +3,7 @@ import Icon from '../components/Icon.jsx';
+ import { money } from '../lib/format.js';
+ import { useStore } from '../lib/store.jsx';
+ import { useHomeLivingWishlist } from '../lib/homelivingWishlist.js';
++import { usePriceDrop } from '../lib/priceDrops.js';
+ 
+ // ============================================================
+ // Home & Living product card — image, brand line, name, size, price, and
+@@ -23,6 +24,7 @@ export default function HomeLivingProductCard({ product, layout = 'grid', mediaL
+   const hasVariants = Array.isArray(product.variants) && product.variants.length > 0;
+   const inStock = Number(product.stock) > 0;
+   const wish = useHomeLivingWishlist();
++  const dropped = usePriceDrop(product.id);
+   const saved = wish.has(product.id);
+   return (
+     <article className={`hl-card${layout === 'list' ? ' hl-card--list' : ''}`} data-product={product.slug}>
+@@ -42,6 +44,8 @@ export default function HomeLivingProductCard({ product, layout = 'grid', mediaL
+           <strong>{money(product.price)}</strong>
+           {product.mrp > product.price && <s className="hl-price__mrp">{money(product.mrp)}</s>}
+         </p>
++        {/* A real price fall in the last 30 days (round 20, 2026-11-20; priceDrops.js). */}
++        {dropped > 0 && <p className="sora-drop">Price dropped {money(dropped)}</p>}
+         {hasVariants
+           ? <Link to={href} className="hl-btn hl-add hl-card__add hl-card__add--choose">Choose options</Link>
+           : (
+diff --git a/src/styles/sora-ds.css b/src/styles/sora-ds.css
+index e5cdc8a..031dadc 100644
+--- a/src/styles/sora-ds.css
++++ b/src/styles/sora-ds.css
+@@ -459,4 +459,6 @@ body .fs .hx-ans .hx-ans__cta { background: #D9B26A; color: #121A16; }
+ /* A link styled as a Fashion button keeps its light text: `.fs a { color: inherit }` outranked `.fs-btn` (2026-11-20). */
+ .fs a.fs-btn { color: var(--slv2-ivory); }
+ /* Disabled buy buttons still readable (round 18 audit, 2026-11-20): #8A8F8F on #F0F2F2 was 2.9:1. */
+-.fs .fs-pdp--mk .fs-btn--add:disabled, .fs .fs-pdp--mk .fs-btn--buy:disabled, .fs .fs-pdp__bar .fs-btn--add:disabled, .fs .fs-pdp__bar .fs-btn--buy:disabled { color: #666B6B; }
+\ No newline at end of file
++.fs .fs-pdp--mk .fs-btn--add:disabled, .fs .fs-pdp--mk .fs-btn--buy:disabled, .fs .fs-pdp__bar .fs-btn--add:disabled, .fs .fs-pdp__bar .fs-btn--buy:disabled { color: #666B6B; }
++/* Price dropped (round 20, 2026-11-20): only from the price history. */
++.sora-drop { margin: 2px 0 0; font-size: 12px; font-weight: 700; color: #1F7A45; }
+\ No newline at end of file
