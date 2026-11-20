@@ -2,10 +2,11 @@ import { useSyncExternalStore } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import ProductBrowser from '../components/ProductBrowser.jsx';
 import Icon from '../components/Icon.jsx';
-import { products, searchProducts } from '../data/products.js';
+import { products, searchProducts, isCatalogHydrated } from '../data/products.js';
 import { getHomepageSnapshot, subscribeHomepage } from '../lib/settings.js';
 import OtherStoreResults from '../components/OtherStoreResults.jsx';
 import { DidYouMean } from '../components/SearchSuggest.jsx';
+import RequestProduct from '../components/RequestProduct.jsx';
 import { didYouMean } from '../lib/searchMatch.js';
 
 /** A wellness search that finds nothing: the corrected spelling, when it finds products (searchMatch.js). */
@@ -93,6 +94,8 @@ export default function Shop() {
         <ProductBrowser baseProducts={products} />
         {/* A search also lists what Fashion and Home & Living have for it (OtherStoreResults.jsx). */}
         {params.get('q') && <OtherStoreResults query={params.get('q')} />}
+        {/* Request it (round 11, 2026-11-20): a wellness search that found nothing. */}
+        {params.get('q') && isCatalogHydrated() && searchProducts(params.get('q')).length === 0 && <div className="v2-wrap"><RequestProduct q={params.get('q')} store="wellness" /></div>}
       </div>
     );
   }

@@ -26,6 +26,8 @@ import EditableLegal from './pages/EditableLegal.jsx';
 import Passport from './pages/Passport.jsx';
 import Invoice from './pages/Invoice.jsx';
 import GiftReceipt from './pages/GiftReceipt.jsx';
+import Sell from './pages/Sell.jsx';
+import LeatherCare from './pages/LeatherCare.jsx';
 import CreatorPortal from './pages/CreatorPortal.jsx';
 import CreatorAttribution from './components/CreatorAttribution.jsx';
 import NotFound from './pages/NotFound.jsx';
@@ -90,6 +92,7 @@ const Coupons = lazy(() => import('./admin/pages/Coupons.jsx'));
 const HomepageSettings = lazy(() => import('./admin/pages/Homepage.jsx'));
 const AdminReviews = lazy(() => import('./admin/pages/Reviews.jsx'));
 const AdminInsights = lazy(() => import('./admin/pages/Insights.jsx'));
+const AdminEnquiries = lazy(() => import('./admin/pages/Enquiries.jsx'));
 const Storefronts = lazy(() => import('./admin/pages/Storefronts.jsx'));
 const StoreCatalogue = lazy(() => import('./admin/pages/StoreCatalogue.jsx'));
 const CategoryExperience = lazy(() => import('./admin/pages/CategoryExperience.jsx'));
@@ -201,6 +204,7 @@ export default function App() {
         <Route path="homepage" element={<HomepageSettings />} />
         <Route path="reviews" element={<AdminReviews />} />
         <Route path="insights" element={<AdminInsights />} />
+        <Route path="enquiries" element={<AdminEnquiries />} />
         <Route path="storefronts" element={<Storefronts />} />
         <Route path="store-catalogue/:store/:productId?" element={<StoreCatalogue />} />
         <Route path="category-experience" element={<CategoryExperience />} />
@@ -213,6 +217,8 @@ export default function App() {
       {/* Customer invoice. Standalone (outside Layout) so it prints cleanly. */}
       <Route path="/invoice/:orderNumber" element={<Invoice />} />
       <Route path="/gift-receipt/:orderNumber" element={<GiftReceipt />} />
+      <Route path="/sell" element={<Sell />} />
+      <Route path="/guides/leather-care" element={<LeatherCare />} />
       {/* Creator Program portal. Standalone shell, own chrome. */}
       <Route path="/creator/:tab?" element={<CreatorPortal />} />
 

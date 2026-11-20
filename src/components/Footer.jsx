@@ -72,6 +72,9 @@ export default function Footer() {
             <Link to="/fashion/wedding">Wedding edit</Link>
             <Link to="/categories">All categories</Link>
             <Link to="/hamper">Build a hamper</Link>
+            <Link to="/sell">Sell on SORA</Link>
+            <Link to="/sell#bulk">Bulk &amp; corporate gifts</Link>
+            <Link to="/guides/leather-care">Leather care guide</Link>
             {categories.slice(0, 3).map((c) => (
               <Link key={c.slug} to={`/category/${c.slug}`}>{c.name}</Link>
             ))}

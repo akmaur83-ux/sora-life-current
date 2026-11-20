@@ -1,0 +1,229 @@
+diff --git a/src/App.jsx b/src/App.jsx
+index 47086e2..3d43c88 100644
+--- a/src/App.jsx
++++ b/src/App.jsx
+@@ -26,6 +26,8 @@ import EditableLegal from './pages/EditableLegal.jsx';
+ import Passport from './pages/Passport.jsx';
+ import Invoice from './pages/Invoice.jsx';
+ import GiftReceipt from './pages/GiftReceipt.jsx';
++import Sell from './pages/Sell.jsx';
++import LeatherCare from './pages/LeatherCare.jsx';
+ import CreatorPortal from './pages/CreatorPortal.jsx';
+ import CreatorAttribution from './components/CreatorAttribution.jsx';
+ import NotFound from './pages/NotFound.jsx';
+@@ -90,6 +92,7 @@ const Coupons = lazy(() => import('./admin/pages/Coupons.jsx'));
+ const HomepageSettings = lazy(() => import('./admin/pages/Homepage.jsx'));
+ const AdminReviews = lazy(() => import('./admin/pages/Reviews.jsx'));
+ const AdminInsights = lazy(() => import('./admin/pages/Insights.jsx'));
++const AdminEnquiries = lazy(() => import('./admin/pages/Enquiries.jsx'));
+ const Storefronts = lazy(() => import('./admin/pages/Storefronts.jsx'));
+ const StoreCatalogue = lazy(() => import('./admin/pages/StoreCatalogue.jsx'));
+ const CategoryExperience = lazy(() => import('./admin/pages/CategoryExperience.jsx'));
+@@ -201,6 +204,7 @@ export default function App() {
+         <Route path="homepage" element={<HomepageSettings />} />
+         <Route path="reviews" element={<AdminReviews />} />
+         <Route path="insights" element={<AdminInsights />} />
++        <Route path="enquiries" element={<AdminEnquiries />} />
+         <Route path="storefronts" element={<Storefronts />} />
+         <Route path="store-catalogue/:store/:productId?" element={<StoreCatalogue />} />
+         <Route path="category-experience" element={<CategoryExperience />} />
+@@ -213,6 +217,8 @@ export default function App() {
+       {/* Customer invoice. Standalone (outside Layout) so it prints cleanly. */}
+       <Route path="/invoice/:orderNumber" element={<Invoice />} />
+       <Route path="/gift-receipt/:orderNumber" element={<GiftReceipt />} />
++      <Route path="/sell" element={<Sell />} />
++      <Route path="/guides/leather-care" element={<LeatherCare />} />
+       {/* Creator Program portal. Standalone shell, own chrome. */}
+       <Route path="/creator/:tab?" element={<CreatorPortal />} />
+ 
+diff --git a/src/admin/AdminLayout.jsx b/src/admin/AdminLayout.jsx
+index 5ff0bcb..3ceadd2 100644
+--- a/src/admin/AdminLayout.jsx
++++ b/src/admin/AdminLayout.jsx
+@@ -21,6 +21,7 @@ const NAV = [
+   { to: '/admin/homepage', label: 'Homepage' },
+   { to: '/admin/reviews', label: 'Reviews' },
+   { to: '/admin/insights', label: 'Insights' },
++  { to: '/admin/enquiries', label: 'Enquiries' },
+   { to: '/admin/storefronts', label: 'Storefronts' },
+   { to: '/admin/store-catalogue/fashion', label: 'Fashion Products' },
+   { to: '/admin/store-catalogue/homeliving', label: 'Home & Living Products' },
+diff --git a/src/components/Footer.jsx b/src/components/Footer.jsx
+index 408b220..a51f3ab 100644
+--- a/src/components/Footer.jsx
++++ b/src/components/Footer.jsx
+@@ -72,6 +72,9 @@ export default function Footer() {
+             <Link to="/fashion/wedding">Wedding edit</Link>
+             <Link to="/categories">All categories</Link>
+             <Link to="/hamper">Build a hamper</Link>
++            <Link to="/sell">Sell on SORA</Link>
++            <Link to="/sell#bulk">Bulk &amp; corporate gifts</Link>
++            <Link to="/guides/leather-care">Leather care guide</Link>
+             {categories.slice(0, 3).map((c) => (
+               <Link key={c.slug} to={`/category/${c.slug}`}>{c.name}</Link>
+             ))}
+diff --git a/src/fashion/FashionListing.jsx b/src/fashion/FashionListing.jsx
+index ff43bc1..7cc8d56 100644
+--- a/src/fashion/FashionListing.jsx
++++ b/src/fashion/FashionListing.jsx
+@@ -14,6 +14,7 @@ import ShareList from '../components/ShareList.jsx';
+ import PriceDrops from '../components/PriceDrops.jsx';
+ import { DidYouMean } from '../components/SearchSuggest.jsx';
+ import FindForMe from '../components/FindForMe.jsx';
++import RequestProduct from '../components/RequestProduct.jsx';
+ import SkeletonGrid from '../components/Skeleton.jsx';
+ import { WEAVERS_FILMS } from '../lib/weaversVilla.js';
+ import { didYouMean } from '../lib/searchMatch.js';
+@@ -240,7 +241,7 @@ export function FashionSearch() {
+       title={q ? `Results for “${q}”` : 'All fashion'}
+       trail={[{ name: 'Fashion', href: '/fashion' }, { name: q ? 'Search' : 'All styles' }]}
+       emptyCopy={q ? `Nothing found for “${q}”. Try another word, or browse a category.` : 'The fashion store is being stocked — styles appear here as they go live.'}
+-      emptyExtra={q ? <FindForMe q={q} /> : null}
++      emptyExtra={q ? <><FindForMe q={q} /><RequestProduct q={q} store="fashion" /></> : null}
+     />
+   );
+ }
+diff --git a/src/fashion/FashionProductPage.jsx b/src/fashion/FashionProductPage.jsx
+index 0985c69..4e6eeb2 100644
+--- a/src/fashion/FashionProductPage.jsx
++++ b/src/fashion/FashionProductPage.jsx
+@@ -19,6 +19,7 @@ import { lookPicks } from '../lib/completeLook.js';
+ import { CompareButton } from '../components/Compare.jsx';
+ import PriceHistory from '../components/PriceHistory.jsx';
+ import MakerCard from '../components/MakerCard.jsx';
++import ProductOrigin from '../components/ProductOrigin.jsx';
+ import { StylingTips } from '../components/ShopExtras.jsx';
+ import { useFashionDetails, countryName } from '../lib/fashionPdpDetails.js';
+ import PdpDeliveryDate from '../components/pdp/PdpDeliveryDate.jsx';
+@@ -197,6 +198,8 @@ export default function FashionProductPage() {
+         <div className="fs-pdp__body">
+           {view.brand && <p className="fs-pdp__brand">Brand: <Link to={`/fashion/search?q=${encodeURIComponent(view.brand)}`}>{view.brand}</Link></p>}
+           <h1 className="fs-pdp__h serif">{view.name}</h1>
++          {/* Made in India / leather care (round 11, 2026-11-20): from the product's own record (ProductOrigin.jsx). */}
++          <ProductOrigin origin={facts?.country_of_origin} material={facts?.material} name={view.name} />
+           {/* No reviews yet: no rating row, rather than "0.0 ☆☆☆☆☆ (0 reviews)" (as on the card). */}
+           {view.reviewCount > 0 && <p className="fs-rating"><b>{view.rating.toFixed(1)}</b><Stars value={view.rating} size={15} /><span className="fs-rating__count">({view.reviewCount.toLocaleString('en-IN')} {view.reviewCount === 1 ? 'review' : 'reviews'})</span></p>}
+           {facts?.net_content && <p className="fs-pdp__net">{facts.net_content}</p>}
+diff --git a/src/homeliving/HomeLivingProductPage.jsx b/src/homeliving/HomeLivingProductPage.jsx
+index 4b6013c..4191a00 100644
+--- a/src/homeliving/HomeLivingProductPage.jsx
++++ b/src/homeliving/HomeLivingProductPage.jsx
+@@ -16,6 +16,7 @@ import { PdpCompare, PdpService, PdpBrandRail, PdpBundle, PdpRecent, PdpCheaper,
+ import { CompareButton } from '../components/Compare.jsx';
+ import PriceHistory from '../components/PriceHistory.jsx';
+ import MakerCard from '../components/MakerCard.jsx';
++import ProductOrigin from '../components/ProductOrigin.jsx';
+ import PdpDeliveryDate from '../components/pdp/PdpDeliveryDate.jsx';
+ import { usePageMeta, priceTitle } from '../lib/pageMeta.js';
+ import { useHomeLivingWishlist } from '../lib/homelivingWishlist.js';
+@@ -624,6 +625,8 @@ export default function HomeLivingProductPage() {
+         <div className="hl-pdp__body">
+           {view.brand && <p className="hl-pdp__brand">{view.brand}</p>}
+           <h1 className="hl-pdp__h serif">{head}{hl && <> <span className="hl-pdp__hl">{hl}</span></>}{tail && <> {tail}</>}</h1>
++          {/* Made in India / leather care (round 11, 2026-11-20): from the product's own record (ProductOrigin.jsx). */}
++          <ProductOrigin origin={view.country_of_origin} material={view.material} name={view.name} />
+           {lede && <p className="hl-pdp__lede">{lede}</p>}
+           {view.review_count > 0 && view.rating > 0 && (
+             <p className="hl-pdp__rating"><Stars rating={view.rating} /><b>{view.rating.toFixed(1)}</b> <span>({view.review_count.toLocaleString('en-IN')} Reviews)</span></p>
+diff --git a/src/homeliving/HomeLivingSearch.jsx b/src/homeliving/HomeLivingSearch.jsx
+index e6592e9..5964b55 100644
+--- a/src/homeliving/HomeLivingSearch.jsx
++++ b/src/homeliving/HomeLivingSearch.jsx
+@@ -4,6 +4,7 @@ import { useHomeLivingCatalogue } from '../data/homelivingHomepage.js';
+ import { searchItems, didYouMean } from '../lib/searchMatch.js';
+ import { DidYouMean } from '../components/SearchSuggest.jsx';
+ import FindForMe from '../components/FindForMe.jsx';
++import RequestProduct from '../components/RequestProduct.jsx';
+ import SkeletonGrid from '../components/Skeleton.jsx';
+ import { homelivingSearchRows } from './HomeLivingLayout.jsx';
+ import { Breadcrumb, Listing } from './HomeLivingCategory.jsx';
+@@ -43,6 +44,7 @@ export default function HomeLivingSearch() {
+           {status !== 'loading' && <DidYouMean fix={fix} href={`/homeliving/search?q=${encodeURIComponent(fix)}`} />}
+           {status !== 'loading' && <Link to="/homeliving" className="hl-btn">Browse Home &amp; Living</Link>}
+           {status !== 'loading' && <FindForMe q={q} />}
++          {status !== 'loading' && <RequestProduct q={q} store="homeliving" />}
+         </div>
+       ) : (
+         <div className="hl-grid">
+diff --git a/src/pages/Shop.jsx b/src/pages/Shop.jsx
+index b793bb6..cb3f348 100644
+--- a/src/pages/Shop.jsx
++++ b/src/pages/Shop.jsx
+@@ -2,10 +2,11 @@ import { useSyncExternalStore } from 'react';
+ import { Link, useSearchParams } from 'react-router-dom';
+ import ProductBrowser from '../components/ProductBrowser.jsx';
+ import Icon from '../components/Icon.jsx';
+-import { products, searchProducts } from '../data/products.js';
++import { products, searchProducts, isCatalogHydrated } from '../data/products.js';
+ import { getHomepageSnapshot, subscribeHomepage } from '../lib/settings.js';
+ import OtherStoreResults from '../components/OtherStoreResults.jsx';
+ import { DidYouMean } from '../components/SearchSuggest.jsx';
++import RequestProduct from '../components/RequestProduct.jsx';
+ import { didYouMean } from '../lib/searchMatch.js';
+ 
+ /** A wellness search that finds nothing: the corrected spelling, when it finds products (searchMatch.js). */
+@@ -93,6 +94,8 @@ export default function Shop() {
+         <ProductBrowser baseProducts={products} />
+         {/* A search also lists what Fashion and Home & Living have for it (OtherStoreResults.jsx). */}
+         {params.get('q') && <OtherStoreResults query={params.get('q')} />}
++        {/* Request it (round 11, 2026-11-20): a wellness search that found nothing. */}
++        {params.get('q') && isCatalogHydrated() && searchProducts(params.get('q')).length === 0 && <div className="v2-wrap"><RequestProduct q={params.get('q')} store="wellness" /></div>}
+       </div>
+     );
+   }
+diff --git a/src/styles/sora-ds.css b/src/styles/sora-ds.css
+index e35d58d..f4c96aa 100644
+--- a/src/styles/sora-ds.css
++++ b/src/styles/sora-ds.css
+@@ -354,4 +354,48 @@ body .fs .hx-ans .hx-ans__cta { background: #D9B26A; color: #121A16; }
+ @media (max-width: 600px) { .sora-bc__store { display: none; } }
+ /* A brand's own size chart (2026-11-20). */
+ .fs-sizeguide__brand { margin: 0 0 12px; font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #8A5A12; }
+-.fs-sizeguide__table.is-wide { display: block; overflow-x: auto; white-space: nowrap; }
+\ No newline at end of file
++.fs-sizeguide__table.is-wide { display: block; overflow-x: auto; white-space: nowrap; }
++/* Round 11 (2026-11-20): request it, sell on SORA, the honeypot. */
++.sora-hp { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
++.sora-req { margin: 18px auto 0; max-width: 640px; padding: 16px; text-align: left; background: #FBF8F1; border: 1px solid rgba(30, 58, 47, .14); }
++.sora-req p { margin: 0 0 10px; font-size: 14.5px; color: #1E3A2F; }
++.sora-req__row { display: flex; flex-wrap: wrap; gap: 8px; }
++.sora-req__row .input { flex: 1 1 180px; min-width: 0; }
++.sora-req__err { margin: 8px 0 0 !important; color: #A33A2B !important; font-size: 13.5px !important; }
++.sora-req--done { margin: 18px auto 0; max-width: 640px; padding: 14px 16px; background: #EEF5EF; color: #1E3A2F; }
++.sora-sell { padding: 18px 0 56px; background: #fff; }
++.sora-sell .container { max-width: 880px; }
++.sora-sell__hero { padding: 18px 0 8px; }
++.sora-sell__eyebrow { margin: 0 0 6px; font-size: 12px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: #8A5A12; }
++.sora-sell__hero h1 { margin: 0 0 10px; font-size: clamp(30px, 5vw, 44px); font-weight: 500; color: #1E3A2F; }
++.sora-sell__hero p { margin: 0 0 12px; font-size: 16px; line-height: 1.6; color: #3d4a43; }
++.sora-sell__jump { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: #2C5341; }
++.sora-sell__how { margin: 26px 0; }
++.sora-sell__how h2, .sora-sell__card h2 { margin: 0 0 12px; font-size: 26px; font-weight: 500; color: #1E3A2F; }
++.sora-sell__how ol { margin: 0; padding-left: 22px; display: grid; gap: 8px; font-size: 15px; line-height: 1.55; color: #3d4a43; }
++.sora-sell__card { margin: 22px 0; padding: 22px; background: #FBF8F1; border: 1px solid rgba(30, 58, 47, .12); scroll-margin-top: 90px; }
++.sora-sell__lede { margin: 0 0 14px; color: #3d4a43; line-height: 1.55; }
++.sora-sell__form { display: grid; gap: 14px; }
++.sora-sell__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 14px; }
++.sora-sell__fine { margin: 0; font-size: 13px; color: #5c6a62; }
++.sora-sell__form .btn { justify-self: start; }
++.sora-sell__done { display: flex; gap: 8px; align-items: center; margin: 0; padding: 14px 16px; background: #EEF5EF; color: #1E3A2F; font-weight: 600; }
++@media (max-width: 600px) {
++  .sora-sell__grid { grid-template-columns: 1fr; }
++  .sora-sell__card { padding: 16px; }
++  .sora-sell__form .btn { justify-self: stretch; }
++}
++/* Made in India / leather care line, and the care guide (round 11, 2026-11-20). */
++.sora-origin { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: 6px 0 10px; font-size: 13px; }
++.sora-origin__in { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; font-weight: 600; color: #1E3A2F; background: #EEF5EF; border: 1px solid rgba(30, 58, 47, .15); }
++.sora-origin__care { display: inline-flex; align-items: center; gap: 4px; font-weight: 600; color: #8A5A12; text-decoration: none; }
++.sora-origin__care:hover { text-decoration: underline; }
++.sora-guide { padding: 18px 0 56px; background: #fff; }
++.sora-guide .container { max-width: 760px; }
++.sora-guide__head { padding: 18px 0 6px; }
++.sora-guide__head h1 { margin: 0 0 10px; font-size: clamp(30px, 5vw, 42px); font-weight: 500; color: #1E3A2F; }
++.sora-guide__head p { margin: 0; font-size: 16px; line-height: 1.6; color: #3d4a43; }
++.sora-guide__sec { margin: 26px 0 0; padding-top: 18px; border-top: 1px solid rgba(30, 58, 47, .1); }
++.sora-guide__sec h2 { margin: 0 0 10px; font-size: 22px; font-weight: 500; color: #1E3A2F; }
++.sora-guide__sec ul { margin: 0; padding-left: 20px; display: grid; gap: 8px; font-size: 15px; line-height: 1.6; color: #3d4a43; }
++.sora-guide__more { margin: 32px 0 0; }
+\ No newline at end of file

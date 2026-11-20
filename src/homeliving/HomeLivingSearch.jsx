@@ -4,6 +4,7 @@ import { useHomeLivingCatalogue } from '../data/homelivingHomepage.js';
 import { searchItems, didYouMean } from '../lib/searchMatch.js';
 import { DidYouMean } from '../components/SearchSuggest.jsx';
 import FindForMe from '../components/FindForMe.jsx';
+import RequestProduct from '../components/RequestProduct.jsx';
 import SkeletonGrid from '../components/Skeleton.jsx';
 import { homelivingSearchRows } from './HomeLivingLayout.jsx';
 import { Breadcrumb, Listing } from './HomeLivingCategory.jsx';
@@ -43,6 +44,7 @@ export default function HomeLivingSearch() {
           {status !== 'loading' && <DidYouMean fix={fix} href={`/homeliving/search?q=${encodeURIComponent(fix)}`} />}
           {status !== 'loading' && <Link to="/homeliving" className="hl-btn">Browse Home &amp; Living</Link>}
           {status !== 'loading' && <FindForMe q={q} />}
+          {status !== 'loading' && <RequestProduct q={q} store="homeliving" />}
         </div>
       ) : (
         <div className="hl-grid">

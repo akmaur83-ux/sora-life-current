@@ -62,7 +62,7 @@ test('empty search: a WhatsApp ask with the search in it, on Fashion and Home & 
   const m = src.match(/export const findText = \(q\) => (`[^`]*`);/);
   const findText = new Function('q', `return ${m[1]};`);
   assert.equal(findText(' banarasi lehenga '), 'Hi SORA Lifestyle, I searched for “banarasi lehenga” on your site and couldn’t find it. Can you help me find it?');
-  assert.match(read('src/fashion/FashionListing.jsx'), /emptyExtra=\{q \? <FindForMe q=\{q\} \/> : null\}/);
+  assert.match(read('src/fashion/FashionListing.jsx'), /emptyExtra=\{q \? <><FindForMe q=\{q\} \/><RequestProduct q=\{q\} store="fashion" \/><\/> : null\}/);
   assert.match(read('src/homeliving/HomeLivingSearch.jsx'), /<FindForMe q=\{q\} \/>/);
   assert.match(src, /if \(!n \|\| !String\(q \|\| ''\)\.trim\(\)\) return null;/);
 });

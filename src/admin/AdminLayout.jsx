@@ -21,6 +21,7 @@ const NAV = [
   { to: '/admin/homepage', label: 'Homepage' },
   { to: '/admin/reviews', label: 'Reviews' },
   { to: '/admin/insights', label: 'Insights' },
+  { to: '/admin/enquiries', label: 'Enquiries' },
   { to: '/admin/storefronts', label: 'Storefronts' },
   { to: '/admin/store-catalogue/fashion', label: 'Fashion Products' },
   { to: '/admin/store-catalogue/homeliving', label: 'Home & Living Products' },

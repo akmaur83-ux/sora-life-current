@@ -19,6 +19,7 @@ import { lookPicks } from '../lib/completeLook.js';
 import { CompareButton } from '../components/Compare.jsx';
 import PriceHistory from '../components/PriceHistory.jsx';
 import MakerCard from '../components/MakerCard.jsx';
+import ProductOrigin from '../components/ProductOrigin.jsx';
 import { StylingTips } from '../components/ShopExtras.jsx';
 import { useFashionDetails, countryName } from '../lib/fashionPdpDetails.js';
 import PdpDeliveryDate from '../components/pdp/PdpDeliveryDate.jsx';
@@ -197,6 +198,8 @@ export default function FashionProductPage() {
         <div className="fs-pdp__body">
           {view.brand && <p className="fs-pdp__brand">Brand: <Link to={`/fashion/search?q=${encodeURIComponent(view.brand)}`}>{view.brand}</Link></p>}
           <h1 className="fs-pdp__h serif">{view.name}</h1>
+          {/* Made in India / leather care (round 11, 2026-11-20): from the product's own record (ProductOrigin.jsx). */}
+          <ProductOrigin origin={facts?.country_of_origin} material={facts?.material} name={view.name} />
           {/* No reviews yet: no rating row, rather than "0.0 ☆☆☆☆☆ (0 reviews)" (as on the card). */}
           {view.reviewCount > 0 && <p className="fs-rating"><b>{view.rating.toFixed(1)}</b><Stars value={view.rating} size={15} /><span className="fs-rating__count">({view.reviewCount.toLocaleString('en-IN')} {view.reviewCount === 1 ? 'review' : 'reviews'})</span></p>}
           {facts?.net_content && <p className="fs-pdp__net">{facts.net_content}</p>}

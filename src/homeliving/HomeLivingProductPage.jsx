@@ -16,6 +16,7 @@ import { PdpCompare, PdpService, PdpBrandRail, PdpBundle, PdpRecent, PdpCheaper,
 import { CompareButton } from '../components/Compare.jsx';
 import PriceHistory from '../components/PriceHistory.jsx';
 import MakerCard from '../components/MakerCard.jsx';
+import ProductOrigin from '../components/ProductOrigin.jsx';
 import PdpDeliveryDate from '../components/pdp/PdpDeliveryDate.jsx';
 import { usePageMeta, priceTitle } from '../lib/pageMeta.js';
 import { useHomeLivingWishlist } from '../lib/homelivingWishlist.js';
@@ -624,6 +625,8 @@ export default function HomeLivingProductPage() {
         <div className="hl-pdp__body">
           {view.brand && <p className="hl-pdp__brand">{view.brand}</p>}
           <h1 className="hl-pdp__h serif">{head}{hl && <> <span className="hl-pdp__hl">{hl}</span></>}{tail && <> {tail}</>}</h1>
+          {/* Made in India / leather care (round 11, 2026-11-20): from the product's own record (ProductOrigin.jsx). */}
+          <ProductOrigin origin={view.country_of_origin} material={view.material} name={view.name} />
           {lede && <p className="hl-pdp__lede">{lede}</p>}
           {view.review_count > 0 && view.rating > 0 && (
             <p className="hl-pdp__rating"><Stars rating={view.rating} /><b>{view.rating.toFixed(1)}</b> <span>({view.review_count.toLocaleString('en-IN')} Reviews)</span></p>

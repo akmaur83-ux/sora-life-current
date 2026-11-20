@@ -14,6 +14,7 @@ import ShareList from '../components/ShareList.jsx';
 import PriceDrops from '../components/PriceDrops.jsx';
 import { DidYouMean } from '../components/SearchSuggest.jsx';
 import FindForMe from '../components/FindForMe.jsx';
+import RequestProduct from '../components/RequestProduct.jsx';
 import SkeletonGrid from '../components/Skeleton.jsx';
 import { WEAVERS_FILMS } from '../lib/weaversVilla.js';
 import { didYouMean } from '../lib/searchMatch.js';
@@ -240,7 +241,7 @@ export function FashionSearch() {
       title={q ? `Results for “${q}”` : 'All fashion'}
       trail={[{ name: 'Fashion', href: '/fashion' }, { name: q ? 'Search' : 'All styles' }]}
       emptyCopy={q ? `Nothing found for “${q}”. Try another word, or browse a category.` : 'The fashion store is being stocked — styles appear here as they go live.'}
-      emptyExtra={q ? <FindForMe q={q} /> : null}
+      emptyExtra={q ? <><FindForMe q={q} /><RequestProduct q={q} store="fashion" /></> : null}
     />
   );
 }
