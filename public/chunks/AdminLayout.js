@@ -1,4 +1,4 @@
-import { g as useAdminAuth, j as jsxRuntimeExports, i as branding, N as NavLink, O as Outlet } from '../bundle.js';
+import { g as useAdminAuth, i as useLocation, j as jsxRuntimeExports, k as branding, N as NavLink, O as Outlet, r as reactExports, s as supabase } from '../bundle.js';
 
 const NAV = [{
   to: '/admin',
@@ -90,11 +90,38 @@ const NAV = [{
   to: '/admin/legal-pages/' + id,
   label
 }))];
+
+/** New enquiries waiting (round 12, 2026-11-20): the count beside "Enquiries"; 0 on any failure. Re-read on each admin page change. */
+function useNewEnquiries(pathname) {
+  const [n, setN] = reactExports.useState(0);
+  reactExports.useEffect(() => {
+    let live = true;
+    supabase.from('enquiries').select('id', {
+      count: 'exact',
+      head: true
+    }).eq('status', 'new').then(({
+      count,
+      error
+    }) => {
+      if (live) setN(error ? 0 : Number(count) || 0);
+    }, () => {
+      if (live) setN(0);
+    });
+    return () => {
+      live = false;
+    };
+  }, [pathname]);
+  return n;
+}
 function AdminLayout() {
   const {
     signOut,
     session
   } = useAdminAuth();
+  const {
+    pathname
+  } = useLocation();
+  const newEnquiries = useNewEnquiries(pathname);
   return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
     className: "adm",
     children: [/*#__PURE__*/jsxRuntimeExports.jsxs("aside", {
@@ -113,13 +140,17 @@ function AdminLayout() {
         })]
       }), /*#__PURE__*/jsxRuntimeExports.jsx("nav", {
         className: "adm__nav",
-        children: NAV.map(n => /*#__PURE__*/jsxRuntimeExports.jsx(NavLink, {
+        children: NAV.map(n => /*#__PURE__*/jsxRuntimeExports.jsxs(NavLink, {
           to: n.to,
           end: n.end,
           className: ({
             isActive
           }) => `adm__navitem ${isActive ? 'active' : ''}`,
-          children: n.label
+          children: [n.label, n.to === '/admin/enquiries' && newEnquiries > 0 && /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+            className: "adm__navcount",
+            "aria-label": `${newEnquiries} new`,
+            children: newEnquiries
+          })]
         }, n.to))
       }), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
         className: "adm__side-foot",

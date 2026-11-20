@@ -1,4 +1,4 @@
-import { r as reactExports, j as jsxRuntimeExports, c as Link, q as money, k as adminListProducts, s as adminSetProductActive, t as adminDeleteProduct, w as adminReorderProducts, x as categories } from '../bundle.js';
+import { r as reactExports, j as jsxRuntimeExports, c as Link, t as money, m as adminListProducts, w as adminSetProductActive, x as adminDeleteProduct, y as adminReorderProducts, z as categories } from '../bundle.js';
 
 function Products() {
   const [products, setProducts] = reactExports.useState([]);

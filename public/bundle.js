@@ -35723,6 +35723,12 @@ function Footer() {
           }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
             to: "/guides/leather-care",
             children: "Leather care guide"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+            to: "/fashion/winter",
+            children: "The Winter edit"
+          }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+            to: "/fashion/leather",
+            children: "Everything leather"
           }), categories.slice(0, 3).map(c => /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
             to: `/category/${c.slug}`,
             children: c.name
@@ -60457,8 +60463,8 @@ const inStock$1 = r => {
   return vs.length ? vs.some(v => Number(v.stock) > 0) : Number(r.stock) > 0;
 };
 
-/** Rows → sections of cards; categories inside a section take turns. Pure. */
-function weddingSections(rows, per = WEDDING_PER_SECTION) {
+/** Rows → sections of cards; categories inside a section take turns. `sections` defaults to the wedding edit's (the Winter and Leather edits pass theirs, 2026-11-20). Pure. */
+function weddingSections(rows, per = WEDDING_PER_SECTION, sections = WEDDING_SECTIONS) {
   const bySlug = new Map();
   for (const r of Array.isArray(rows) ? rows : []) {
     const slug = r?.category?.slug;
@@ -60474,7 +60480,7 @@ function weddingSections(rows, per = WEDDING_PER_SECTION) {
       price
     });
   }
-  return WEDDING_SECTIONS.map(s => {
+  return sections.map(s => {
     const lanes = s.slugs.map(slug => bySlug.get(slug) || []);
     const items = [];
     for (let i = 0; items.length < per && lanes.some(l => l.length > i); i += 1) for (const l of lanes) if (l[i] && items.length < per) items.push(l[i]);
@@ -60634,6 +60640,290 @@ function WeddingStrip() {
       children: ["Explore ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
         name: "arrowRight",
         size: 16
+      })]
+    })]
+  });
+}
+
+// ============================================================
+// More Fashion edits (owner, 2026-11-20: round 12), built the way the Wedding edit is
+// (weddingEdit.js): each section is its categories' live, in-stock pieces, the
+// categories taking turns, eight shown, "View all" opening the first category. A
+// section with nothing in stock is left out; an edit with nothing at all says so.
+//   * /fashion/winter  — jackets and coats for him and her, shawls and stoles,
+//     mufflers and caps, winter gifting;
+//   * /fashion/leather — every leather maker on SORA in one place: jackets, coats,
+//     bags, wallets and small leather, belts, gift sets — with the care guide.
+// ============================================================
+const FASHION_EDITS = Object.freeze({
+  winter: {
+    path: '/fashion/winter',
+    eyebrow: 'Winter is here',
+    title: 'The Winter edit',
+    lede: 'Leather jackets and coats, shawls, stoles, mufflers and caps — everything warm in the Fashion store, in one place.',
+    meta: 'Leather jackets and coats for men and women, shawls, stoles, mufflers and caps, and winter gift sets at SORA LIFESTYLE.',
+    sections: [{
+      id: 'him',
+      title: 'Jackets & coats for him',
+      note: 'Bikers, bombers and long leather coats',
+      slugs: ['mens-leather-jackets', 'mens-leather-coats']
+    }, {
+      id: 'her',
+      title: 'Jackets & coats for her',
+      note: 'Leather jackets and coats for women',
+      slugs: ['womens-leather-jackets', 'womens-leather-coats']
+    }, {
+      id: 'shawls',
+      title: 'Shawls & stoles',
+      note: 'Kullu weaves, woven and embroidered pieces',
+      slugs: ['womens-shawls', 'mens-shawls', 'stoles']
+    }, {
+      id: 'caps',
+      title: 'Mufflers & caps',
+      note: 'For the cold mornings',
+      slugs: ['mufflers-caps']
+    }, {
+      id: 'gifts',
+      title: 'Winter gifting',
+      note: 'Shawls in gift boxes',
+      slugs: ['shawl-gift-sets']
+    }]
+  },
+  leather: {
+    path: '/fashion/leather',
+    eyebrow: 'The leather store',
+    title: 'Everything leather',
+    lede: 'Jackets, coats, bags, wallets and belts from the leather makers on SORA — Taj Leather, Diamond Leather and Leather Factory.',
+    meta: 'Leather jackets, coats, bags, wallets, belts and gift sets from Taj Leather, Diamond Leather and Leather Factory at SORA LIFESTYLE.',
+    care: true,
+    sections: [{
+      id: 'jackets',
+      title: 'Leather jackets',
+      note: 'For men and women',
+      slugs: ['mens-leather-jackets', 'womens-leather-jackets']
+    }, {
+      id: 'coats',
+      title: 'Leather coats',
+      note: 'Long and three-quarter coats',
+      slugs: ['mens-leather-coats', 'womens-leather-coats']
+    }, {
+      id: 'bags',
+      title: 'Bags',
+      note: 'Handbags, slings, laptop and travel bags, clutches',
+      slugs: ['handbags', 'sling-bags', 'laptop-travel-bags', 'clutches', 'pouches']
+    }, {
+      id: 'small',
+      title: 'Wallets & small leather',
+      note: 'Wallets, card and passport holders, keychains',
+      slugs: ['mens-wallets', 'card-holders', 'passport-holders', 'keychains']
+    }, {
+      id: 'belts',
+      title: 'Belts',
+      note: 'Leather belts',
+      slugs: ['belts']
+    }, {
+      id: 'gifts',
+      title: 'Leather gift sets',
+      note: 'Boxed and ready to give',
+      slugs: ['leather-gift-sets']
+    }]
+  }
+});
+
+/** Rows → the edit's sections (the Wedding edit's rule, with this edit's sections). Pure. */
+function editSections(rows, edit, per = 8) {
+  return weddingSections(rows, per, edit.sections);
+}
+async function fetchEditRows(edit, client = supabase) {
+  const slugs = edit.sections.flatMap(s => s.slugs);
+  const {
+    data,
+    error
+  } = await client.from('catalogue_products').select('id, name, slug, mrp, sale_price, images, stock, is_demo, sort_order, category:catalogue_categories!inner(slug), variants:catalogue_variants(stock, is_active)').eq('store', 'fashion').eq('is_active', true).in('category.slug', slugs).order('sort_order', {
+    ascending: true
+  }).limit(1200);
+  return error || !Array.isArray(data) ? [] : data;
+}
+function useFashionEdit(id) {
+  const edit = FASHION_EDITS[id];
+  const [rows, setRows] = reactExports.useState(null);
+  reactExports.useEffect(() => {
+    let live = true;
+    setRows(null);
+    if (!edit) {
+      setRows([]);
+      return undefined;
+    }
+    fetchEditRows(edit).then(r => {
+      if (live) setRows(r);
+    }, () => {
+      if (live) setRows([]);
+    });
+    return () => {
+      live = false;
+    };
+  }, [edit]);
+  return reactExports.useMemo(() => rows && edit ? editSections(rows, edit) : null, [rows, edit]);
+}
+
+function FashionEdit({
+  id
+}) {
+  const edit = FASHION_EDITS[id];
+  const sections = useFashionEdit(id);
+  usePageMeta({
+    title: edit ? edit.title : 'Fashion',
+    description: edit?.meta,
+    path: edit?.path
+  });
+  if (!edit) return null;
+  return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+    className: "hx hx-wed",
+    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "hx-wrap",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
+        className: "hx-offers__crumbs",
+        "aria-label": "Breadcrumb",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+          to: "/fashion",
+          children: "Fashion"
+        }), " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "chevronRight",
+          size: 12
+        }), " ", /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          children: edit.title
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("header", {
+        className: "hx-wed__hero",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "hx-wed__eyebrow",
+          children: edit.eyebrow
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+          className: "hx-offers__h",
+          children: edit.title
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "hx-offers__lede",
+          children: edit.lede
+        }), edit.care && /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "hx-offers__lede",
+          children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+            to: "/guides/leather-care",
+            className: "sora-origin__care",
+            children: ["How to care for leather ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+              name: "arrowRight",
+              size: 13
+            })]
+          })
+        }), sections && sections.length > 1 && /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+          className: "hx-wed__jump",
+          children: sections.map(s => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+            children: /*#__PURE__*/jsxRuntimeExports.jsx("a", {
+              href: `#${id}-${s.id}`,
+              children: s.title
+            })
+          }, s.id))
+        })]
+      }), sections === null ? /*#__PURE__*/jsxRuntimeExports.jsx(SkeletonGrid, {
+        label: "Loading the edit\u2026"
+      }) : sections.length === 0 ? /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+        className: "hx-offers__empty",
+        children: ["The edit is being put together. ", /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+          to: "/fashion",
+          children: "Browse Fashion"
+        })]
+      }) : sections.map(s => /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+        className: "hx-wed__sec",
+        id: `${id}-${s.id}`,
+        "aria-labelledby": `${id}-${s.id}-h`,
+        children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+          className: "hx-wed__head",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+              id: `${id}-${s.id}-h`,
+              children: s.title
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+              children: s.note
+            })]
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+            to: s.href,
+            className: "hx-wed__all",
+            children: ["View all ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+              name: "arrowRight",
+              size: 15
+            })]
+          })]
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+          className: "hx-offers__grid",
+          children: s.items.map((c, i) => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+            children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+              to: c.href,
+              className: "hx-deals__card",
+              children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+                className: "hx-deals__img",
+                children: c.image && /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+                  src: c.image,
+                  alt: "",
+                  width: "300",
+                  height: "300",
+                  loading: i < 4 ? 'eager' : 'lazy',
+                  decoding: "async"
+                })
+              }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+                className: "hx-deals__name",
+                children: c.name
+              }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+                className: "hx-deals__price",
+                children: /*#__PURE__*/jsxRuntimeExports.jsx("b", {
+                  children: money(c.price)
+                })
+              })]
+            })
+          }, c.key))
+        })]
+      }, s.id))]
+    })
+  });
+}
+
+/** The Fashion home's ways in to the edits: winter and leather, side by side. */
+function EditStrips() {
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    className: "sora-editstrips fs-sec",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+      to: "/fashion/winter",
+      className: "hx-wedstrip",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("em", {
+          children: "Winter is here"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("b", {
+          children: "The Winter edit"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("i", {
+          children: "Leather jackets and coats, shawls, stoles, mufflers and caps"
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+        className: "hx-wedstrip__go",
+        children: ["Explore ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "arrowRight",
+          size: 16
+        })]
+      })]
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+      to: "/fashion/leather",
+      className: "hx-wedstrip",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("em", {
+          children: "The leather store"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("b", {
+          children: "Everything leather"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("i", {
+          children: "Jackets, coats, bags, wallets and belts from our leather makers"
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+        className: "hx-wedstrip__go",
+        children: ["Explore ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "arrowRight",
+          size: 16
+        })]
       })]
     })]
   });
@@ -72632,7 +72922,7 @@ function FashionHome() {
     }), /*#__PURE__*/jsxRuntimeExports.jsx(BudgetChips, {
       base: "/fashion/search",
       wrap: "fs-sec"
-    }), /*#__PURE__*/jsxRuntimeExports.jsx(WeddingStrip, {}), /*#__PURE__*/jsxRuntimeExports.jsx(ShopByColour, {}), /*#__PURE__*/jsxRuntimeExports.jsx(LastChance, {
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(WeddingStrip, {}), /*#__PURE__*/jsxRuntimeExports.jsx(EditStrips, {}), /*#__PURE__*/jsxRuntimeExports.jsx(ShopByColour, {}), /*#__PURE__*/jsxRuntimeExports.jsx(LastChance, {
       wrap: "fs-sec"
     }), /*#__PURE__*/jsxRuntimeExports.jsx(CategoryTiles, {
       tree: tree
@@ -81787,6 +82077,16 @@ function App() {
         }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
           path: "wedding",
           element: /*#__PURE__*/jsxRuntimeExports.jsx(WeddingEdit, {})
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
+          path: "winter",
+          element: /*#__PURE__*/jsxRuntimeExports.jsx(FashionEdit, {
+            id: "winter"
+          })
+        }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
+          path: "leather",
+          element: /*#__PURE__*/jsxRuntimeExports.jsx(FashionEdit, {
+            id: "leather"
+          })
         })]
       }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
         path: "/grocery",
@@ -82553,6 +82853,7 @@ function fashionMenu(rows, covers) {
     };
   }).filter(g => g.image || g.children.length);
 }
+const FASHION_EDIT_LINKS = Object.freeze([['/fashion/winter', 'The Winter edit'], ['/fashion/leather', 'Everything leather'], ['/fashion/wedding', 'Wedding & festive']]);
 function MegaMenu({
   store,
   onClose
@@ -82599,9 +82900,9 @@ function MegaMenu({
       children: "Loading\u2026"
     });
   } else if (store === 'fashion') {
-    body = /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+    body = /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
       className: "sora-mega__cols",
-      children: fashionMenu(data.rows, data.covers).slice(0, 6).map(g => /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      children: [fashionMenu(data.rows, data.covers).slice(0, 6).map(g => /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
         className: "sora-mega__col",
         children: [/*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
           to: g.href,
@@ -82631,7 +82932,21 @@ function MegaMenu({
             })
           }, c.id))
         })]
-      }, g.id))
+      }, g.id)), /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        className: "sora-mega__col sora-mega__edits",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("b", {
+          className: "sora-mega__label",
+          children: "Edits"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+          children: FASHION_EDIT_LINKS.map(([href, label]) => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+            children: /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+              to: href,
+              onClick: onClose,
+              children: label
+            })
+          }, href))
+        })]
+      })]
     });
   } else {
     const hl = (data.rows || []).filter(r => r.store === 'homeliving');
@@ -82953,5 +83268,5 @@ client.createRoot(document.getElementById('root')).render(/*#__PURE__*/jsxRuntim
   children: /*#__PURE__*/jsxRuntimeExports.jsx(Root, {})
 }));
 
-export { useLocation as $, adminListOrderEvents as A, adminMarkCodCollected as B, CONTACT_FIELDS as C, validateFulfillmentInput as D, adminUpdateOrderFulfillment as E, FULFILLMENT_STATUSES as F, GRIEVANCE_FIELDS as G, adminListProductMedia as H, adminCommitStagedProductMedia as I, validateMediaFile as J, mediaFailureMessage as K, LEGAL_PAGES as L, adminReorderProductMedia as M, NavLink as N, Outlet as O, adminSetPrimaryMedia as P, adminEnsurePrimaryMedia as Q, adminUpdateProductMedia as R, adminReplaceProductMedia as S, adminDeleteProductMedia as T, adminDiscoverMedia as U, adminImportMedia as V, validateContent as W, CONTENT_FIELDS as X, fieldPopulated as Y, CONTENT_LABELS as Z, useNavigate as _, adminGetSetting as a, adminListLevelRewards as a$, adminUpdateProduct as a0, adminCreateProduct as a1, adminUpdateProductPrice as a2, adminListVariants as a3, adminCreateVariant as a4, adminUpdateVariant as a5, adminSetVariantActive as a6, adminDeleteVariant as a7, adminGetProgramSettings as a8, CREATOR_STATUSES as a9, CONVERSION_STATUSES as aA, adminGetConversionItems as aB, adminGetConversionAudit as aC, adminRefundConversion as aD, adminListKyc as aE, KYC_STATUSES as aF, KYC_SIGNED_URL_SECONDS as aG, adminSetKycStatus as aH, KYC_DOCUMENT_KINDS as aI, kycDocumentState as aJ, adminKycDocumentUrl as aK, adminListKycAudit as aL, getPayoutConfig as aM, adminListPayouts as aN, PAYOUT_STATUSES as aO, adminSetWithdrawalsOpen as aP, adminGetPayoutLedger as aQ, adminGetPayoutAudit as aR, adminGetKycForCreator as aS, adminReviewPayout as aT, adminMarkPayoutPaid as aU, normalizeLadder as aV, DEFAULT_BEYOND_STEP as aW, adminGetTierLadder as aX, validateLadder as aY, ladderErrorMessage as aZ, rupees as a_, money2 as aa, adminListCreators as ab, adminCreatorStandings as ac, adminSetProgramSettings as ad, adminCreateCreator as ae, adminSetCreatorStatus as af, normalizeContentPatch as ag, contentScore as ah, adminGetCreator as ai, adminListCodeAliases as aj, adminListCampaigns as ak, adminListLinks as al, adminListAudit as am, adminListAttributionEvents as an, adminUpdateCampaign as ao, adminCreateCampaign as ap, CAMPAIGN_STATUSES as aq, buildTrackingUrl as ar, normalizeDestination as as, DESTINATION_TYPES as at, CopyButton as au, adminChangeCreatorCode as av, adminUpdateCreator as aw, adminCreateLink as ax, adminSetLinkStatus as ay, adminListConversions as az, brandingFromSetting as b, TRUST_SECTION as b$, groupRewardsByLevel as b0, REWARD_OPTION_SLOTS as b1, validateRewardOption as b2, REWARD_TYPES as b3, REWARD_TYPE_LABEL as b4, adminListRewardClaims as b5, CLAIM_STATUSES as b6, CLAIM_STATUS_LABEL as b7, DEFAULT_LADDER as b8, adminSetTierLadder as b9, supabase as bA, CouponTicket as bB, HOMEPAGE_VISUAL_FIELDS as bC, safeVisualUrl as bD, MAX_CONCERN_PRODUCTS as bE, searchCatalogueForPicker as bF, productGallery as bG, MAX_DISCOVERY_CARDS as bH, makeDiscoveryId as bI, sanitizeHomepageVisuals as bJ, normalizeDiscovery as bK, products as bL, discoveryPayload as bM, mergeHomepageVisuals as bN, announceHomepageSaved as bO, fetchReviewsForAdmin as bP, fetchQuestionsForAdmin as bQ, productHref$3 as bR, fetchStockAlerts as bS, groupAlerts as bT, setReviewStatus as bU, answerQuestion as bV, rejectQuestion as bW, markAlertsNotified as bX, ENQUIRY_KINDS as bY, POSITION_LABELS as bZ, HERO_SECTION as b_, rewardOptionErrorMessage as ba, adminUpsertLevelReward as bb, adminDeleteLevelReward as bc, adminSetRewardClaimStatus as bd, adminGetTheme as be, sanitizeTheme$1 as bf, TOKENS as bg, PRESET_LIST as bh, GROUPS as bi, DEFAULT_THEME as bj, OVERLAY_SCALES as bk, TYPE_SCALES as bl, HEX_RE as bm, adminSetTheme as bn, overlayRgba as bo, adminSaveCategory as bp, adminDeleteCategory as bq, normalizePromo as br, PromoPoster as bs, PromoOfferCard as bt, adminListPromotions as bu, adminUpsertPromotion as bv, adminDeletePromotion as bw, adminSetPromotionActive as bx, adminReorderPromotions as by, uploadPromoImage as bz, Link as c, TILES_SECTION as c0, STORES_SECTION as c1, FESTIVE_SECTION as c2, NEW_ARRIVALS_SECTION as c3, BIOSASH_SECTION as c4, BEDSHEETS_SECTION as c5, LIFESTYLE_SECTION as c6, JEWELLERY_BANNER_SECTION as c7, STORE_CAROUSEL_SECTION as c8, LUXURY_BEDS_SECTION as c9, categoryIsReadyButOff as cA, categoryToneTheme as cB, MIN_INTERVAL_MS as cC, MAX_INTERVAL_MS as cD, DEFAULT_ITEM_SCALE as cE, MIN_ITEM_SCALE as cF, MAX_ITEM_SCALE as cG, ITEM_OFFSET_LIMIT as cH, CategorySpotlight as cI, SOCIAL_NETWORKS as cJ, POLICY_KEYS as cK, validateCompanyForSave as cL, DELIVERY_STRIP as ca, BENEFITS_STRIP as cb, DEPARTMENT_SECTIONS as cc, JEWELLERY_SECTIONS as cd, HOMELIVING_SECTIONS as ce, GROCERY_SECTIONS as cf, STOREFRONT_CONTENT_STORES as cg, STOREFRONT_LABELS as ch, normalizeFashionStorefront as ci, normalizeLifestyleStorefront as cj, sectionSpec as ck, sectionContent as cl, validateStorefrontContent as cm, useSearchParams as cn, buildTree as co, validatePlacement as cp, uploadImage as cq, isSpotlightEligible as cr, categoryBySlug as cs, sanitizeCategoryConfig as ct, safeColor as cu, safeGradient as cv, makeSpotlightId as cw, validateImageUpload as cx, normalizeCategoryExperience as cy, categoryExperiencePayload as cz, defaultLegalPage as d, LegalUpdated as e, adminSetSetting as f, useAdminAuth as g, hasLegalContent as h, branding as i, jsxRuntimeExports as j, adminListProducts as k, legalKey as l, adminListCategories as m, normalizeLegalPage as n, adminSeedDefaultCategories as o, adminImportBiosashCatalog as p, money as q, reactExports as r, adminSetProductActive as s, adminDeleteProduct as t, useParams as u, validateLegalPage as v, adminReorderProducts as w, categories as x, adminListOrders as y, fulfillmentStatusLabel as z };
+export { CONTENT_LABELS as $, adminListOrders as A, fulfillmentStatusLabel as B, CONTACT_FIELDS as C, adminListOrderEvents as D, adminMarkCodCollected as E, FULFILLMENT_STATUSES as F, GRIEVANCE_FIELDS as G, validateFulfillmentInput as H, adminUpdateOrderFulfillment as I, adminListProductMedia as J, adminCommitStagedProductMedia as K, LEGAL_PAGES as L, validateMediaFile as M, NavLink as N, Outlet as O, mediaFailureMessage as P, adminReorderProductMedia as Q, adminSetPrimaryMedia as R, adminEnsurePrimaryMedia as S, adminUpdateProductMedia as T, adminReplaceProductMedia as U, adminDeleteProductMedia as V, adminDiscoverMedia as W, adminImportMedia as X, validateContent as Y, CONTENT_FIELDS as Z, fieldPopulated as _, adminGetSetting as a, rupees as a$, useNavigate as a0, adminUpdateProduct as a1, adminCreateProduct as a2, adminUpdateProductPrice as a3, adminListVariants as a4, adminCreateVariant as a5, adminUpdateVariant as a6, adminSetVariantActive as a7, adminDeleteVariant as a8, adminGetProgramSettings as a9, adminListConversions as aA, CONVERSION_STATUSES as aB, adminGetConversionItems as aC, adminGetConversionAudit as aD, adminRefundConversion as aE, adminListKyc as aF, KYC_STATUSES as aG, KYC_SIGNED_URL_SECONDS as aH, adminSetKycStatus as aI, KYC_DOCUMENT_KINDS as aJ, kycDocumentState as aK, adminKycDocumentUrl as aL, adminListKycAudit as aM, getPayoutConfig as aN, adminListPayouts as aO, PAYOUT_STATUSES as aP, adminSetWithdrawalsOpen as aQ, adminGetPayoutLedger as aR, adminGetPayoutAudit as aS, adminGetKycForCreator as aT, adminReviewPayout as aU, adminMarkPayoutPaid as aV, normalizeLadder as aW, DEFAULT_BEYOND_STEP as aX, adminGetTierLadder as aY, validateLadder as aZ, ladderErrorMessage as a_, CREATOR_STATUSES as aa, money2 as ab, adminListCreators as ac, adminCreatorStandings as ad, adminSetProgramSettings as ae, adminCreateCreator as af, adminSetCreatorStatus as ag, normalizeContentPatch as ah, contentScore as ai, adminGetCreator as aj, adminListCodeAliases as ak, adminListCampaigns as al, adminListLinks as am, adminListAudit as an, adminListAttributionEvents as ao, adminUpdateCampaign as ap, adminCreateCampaign as aq, CAMPAIGN_STATUSES as ar, buildTrackingUrl as as, normalizeDestination as at, DESTINATION_TYPES as au, CopyButton as av, adminChangeCreatorCode as aw, adminUpdateCreator as ax, adminCreateLink as ay, adminSetLinkStatus as az, brandingFromSetting as b, TRUST_SECTION as b$, adminListLevelRewards as b0, groupRewardsByLevel as b1, REWARD_OPTION_SLOTS as b2, validateRewardOption as b3, REWARD_TYPES as b4, REWARD_TYPE_LABEL as b5, adminListRewardClaims as b6, CLAIM_STATUSES as b7, CLAIM_STATUS_LABEL as b8, DEFAULT_LADDER as b9, uploadPromoImage as bA, CouponTicket as bB, HOMEPAGE_VISUAL_FIELDS as bC, safeVisualUrl as bD, MAX_CONCERN_PRODUCTS as bE, searchCatalogueForPicker as bF, productGallery as bG, MAX_DISCOVERY_CARDS as bH, makeDiscoveryId as bI, sanitizeHomepageVisuals as bJ, normalizeDiscovery as bK, products as bL, discoveryPayload as bM, mergeHomepageVisuals as bN, announceHomepageSaved as bO, fetchReviewsForAdmin as bP, fetchQuestionsForAdmin as bQ, productHref$3 as bR, fetchStockAlerts as bS, groupAlerts as bT, setReviewStatus as bU, answerQuestion as bV, rejectQuestion as bW, markAlertsNotified as bX, ENQUIRY_KINDS as bY, POSITION_LABELS as bZ, HERO_SECTION as b_, adminSetTierLadder as ba, rewardOptionErrorMessage as bb, adminUpsertLevelReward as bc, adminDeleteLevelReward as bd, adminSetRewardClaimStatus as be, adminGetTheme as bf, sanitizeTheme$1 as bg, TOKENS as bh, PRESET_LIST as bi, GROUPS as bj, DEFAULT_THEME as bk, OVERLAY_SCALES as bl, TYPE_SCALES as bm, HEX_RE as bn, adminSetTheme as bo, overlayRgba as bp, adminSaveCategory as bq, adminDeleteCategory as br, normalizePromo as bs, PromoPoster as bt, PromoOfferCard as bu, adminListPromotions as bv, adminUpsertPromotion as bw, adminDeletePromotion as bx, adminSetPromotionActive as by, adminReorderPromotions as bz, Link as c, TILES_SECTION as c0, STORES_SECTION as c1, FESTIVE_SECTION as c2, NEW_ARRIVALS_SECTION as c3, BIOSASH_SECTION as c4, BEDSHEETS_SECTION as c5, LIFESTYLE_SECTION as c6, JEWELLERY_BANNER_SECTION as c7, STORE_CAROUSEL_SECTION as c8, LUXURY_BEDS_SECTION as c9, categoryIsReadyButOff as cA, categoryToneTheme as cB, MIN_INTERVAL_MS as cC, MAX_INTERVAL_MS as cD, DEFAULT_ITEM_SCALE as cE, MIN_ITEM_SCALE as cF, MAX_ITEM_SCALE as cG, ITEM_OFFSET_LIMIT as cH, CategorySpotlight as cI, SOCIAL_NETWORKS as cJ, POLICY_KEYS as cK, validateCompanyForSave as cL, DELIVERY_STRIP as ca, BENEFITS_STRIP as cb, DEPARTMENT_SECTIONS as cc, JEWELLERY_SECTIONS as cd, HOMELIVING_SECTIONS as ce, GROCERY_SECTIONS as cf, STOREFRONT_CONTENT_STORES as cg, STOREFRONT_LABELS as ch, normalizeFashionStorefront as ci, normalizeLifestyleStorefront as cj, sectionSpec as ck, sectionContent as cl, validateStorefrontContent as cm, useSearchParams as cn, buildTree as co, validatePlacement as cp, uploadImage as cq, isSpotlightEligible as cr, categoryBySlug as cs, sanitizeCategoryConfig as ct, safeColor as cu, safeGradient as cv, makeSpotlightId as cw, validateImageUpload as cx, normalizeCategoryExperience as cy, categoryExperiencePayload as cz, defaultLegalPage as d, LegalUpdated as e, adminSetSetting as f, useAdminAuth as g, hasLegalContent as h, useLocation as i, jsxRuntimeExports as j, branding as k, legalKey as l, adminListProducts as m, normalizeLegalPage as n, adminListCategories as o, adminSeedDefaultCategories as p, adminImportBiosashCatalog as q, reactExports as r, supabase as s, money as t, useParams as u, validateLegalPage as v, adminSetProductActive as w, adminDeleteProduct as x, adminReorderProducts as y, categories as z };
 //# sourceMappingURL=bundle.js.map

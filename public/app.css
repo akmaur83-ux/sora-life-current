@@ -10059,6 +10059,16 @@ body .fs .hx-ans .hx-ans__cta { background: #D9B26A; color: #121A16; }
 .sora-guide__sec h2 { margin: 0 0 10px; font-size: 22px; font-weight: 500; color: #1E3A2F; }
 .sora-guide__sec ul { margin: 0; padding-left: 20px; display: grid; gap: 8px; font-size: 15px; line-height: 1.6; color: #3d4a43; }
 .sora-guide__more { margin: 32px 0 0; }
+/* The Winter and Leather edits' ways in (round 12, 2026-11-20). */
+.sora-editstrips { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.sora-editstrips .hx-wedstrip:first-child { background: linear-gradient(100deg, #12263A, #1F4767 55%, #3D7299); }
+.sora-editstrips .hx-wedstrip:first-child em { color: #CFE3F5; }
+.sora-editstrips .hx-wedstrip:last-child { background: linear-gradient(100deg, #2A1A10, #4E2F1A 55%, #7A4B26); }
+@media (max-width: 760px) { .sora-editstrips { grid-template-columns: 1fr; } }
+.sora-mega__edits { padding-left: 14px; border-left: 1px solid var(--sora-line, #E4E1D8); }
+.sora-mega__label { display: block; margin: 0 0 8px; font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #8A5A12; }
+/* New enquiries beside Admin → Enquiries (round 12, 2026-11-20). */
+.adm__navcount { display: inline-block; min-width: 20px; margin-left: 8px; padding: 1px 6px; font-size: 11px; font-weight: 700; line-height: 16px; text-align: center; color: #fff; background: #B4532A; border-radius: 10px; }
 
 /* ═══ src/styles/storefront-sections.css ═══ */
 /* ============================================================

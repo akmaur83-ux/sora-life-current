@@ -1,4 +1,4 @@
-import { bA as supabase, r as reactExports, j as jsxRuntimeExports, bB as CouponTicket } from '../bundle.js';
+import { s as supabase, r as reactExports, j as jsxRuntimeExports, bB as CouponTicket } from '../bundle.js';
 
 // ============================================================
 // COUPON RULES — pure, so the tests can execute them

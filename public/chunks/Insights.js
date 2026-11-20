@@ -1,4 +1,4 @@
-import { r as reactExports, bA as supabase, j as jsxRuntimeExports, q as money } from '../bundle.js';
+import { r as reactExports, s as supabase, j as jsxRuntimeExports, t as money } from '../bundle.js';
 import { d as downloadCsv, t as toCsv } from './csv.js';
 
 const RANGES = [[7, 'Last 7 days'], [30, 'Last 30 days'], [90, 'Last 90 days']];

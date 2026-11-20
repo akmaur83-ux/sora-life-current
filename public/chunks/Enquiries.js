@@ -1,4 +1,4 @@
-import { r as reactExports, bA as supabase, j as jsxRuntimeExports, bY as ENQUIRY_KINDS } from '../bundle.js';
+import { r as reactExports, s as supabase, j as jsxRuntimeExports, bY as ENQUIRY_KINDS } from '../bundle.js';
 import { d as downloadCsv, t as toCsv } from './csv.js';
 
 const STATUSES = [['new', 'New'], ['contacted', 'Contacted'], ['done', 'Done']];

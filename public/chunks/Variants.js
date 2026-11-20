@@ -1,4 +1,4 @@
-import { r as reactExports, k as adminListProducts, j as jsxRuntimeExports, q as money, a3 as adminListVariants, a4 as adminCreateVariant, a5 as adminUpdateVariant, a6 as adminSetVariantActive, a7 as adminDeleteVariant } from '../bundle.js';
+import { r as reactExports, m as adminListProducts, j as jsxRuntimeExports, t as money, a4 as adminListVariants, a5 as adminCreateVariant, a6 as adminUpdateVariant, a7 as adminSetVariantActive, a8 as adminDeleteVariant } from '../bundle.js';
 
 const UNITS = ['ml', 'g', 'kg', 'l', 'capsules', 'tablets', 'sachets', 'pcs'];
 const blank = {

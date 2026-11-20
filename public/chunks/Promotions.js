@@ -1,4 +1,4 @@
-import { r as reactExports, br as normalizePromo, j as jsxRuntimeExports, bs as PromoPoster, bt as PromoOfferCard, bu as adminListPromotions, bv as adminUpsertPromotion, bw as adminDeletePromotion, bx as adminSetPromotionActive, by as adminReorderPromotions, bz as uploadPromoImage } from '../bundle.js';
+import { r as reactExports, bs as normalizePromo, j as jsxRuntimeExports, bt as PromoPoster, bu as PromoOfferCard, bv as adminListPromotions, bw as adminUpsertPromotion, bx as adminDeletePromotion, by as adminSetPromotionActive, bz as adminReorderPromotions, bA as uploadPromoImage } from '../bundle.js';
 
 const THEME_OPTIONS = [['forest', 'Forest'], ['cream', 'Warm Cream'], ['orange', 'Orange Accent'], ['dark', 'Dark Luxe'], ['minimal', 'Minimal']];
 const PLACEMENT_OPTIONS = [['home', 'Homepage'], ['pdp', 'Product page'], ['cart', 'Cart']];

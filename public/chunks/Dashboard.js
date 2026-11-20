@@ -1,4 +1,4 @@
-import { r as reactExports, j as jsxRuntimeExports, c as Link, k as adminListProducts, m as adminListCategories, o as adminSeedDefaultCategories, p as adminImportBiosashCatalog } from '../bundle.js';
+import { r as reactExports, j as jsxRuntimeExports, c as Link, m as adminListProducts, o as adminListCategories, p as adminSeedDefaultCategories, q as adminImportBiosashCatalog } from '../bundle.js';
 
 function Dashboard() {
   const [loading, setLoading] = reactExports.useState(true);
