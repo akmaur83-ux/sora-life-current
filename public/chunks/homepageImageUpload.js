@@ -1,28 +1,2 @@
-import { s as supabase, bD as safeVisualUrl, cx as validateImageUpload } from '../bundle.js';
-
-async function validateHomepageImage(file) {
-  const result = await validateImageUpload(file, {
-    allowedTypes: ['image/png', 'image/jpeg', 'image/webp'],
-    maxBytes: 6 * 1024 * 1024
-  });
-  return result.extension;
-}
-async function uploadHomepageImage(file) {
-  const ext = await validateHomepageImage(file);
-  const bucket = supabase.storage.from('product-images');
-  const path = `homepage-visuals/${crypto.randomUUID()}.${ext}`;
-  const {
-    error
-  } = await bucket.upload(path, file, {
-    contentType: file.type,
-    cacheControl: '3600',
-    upsert: false
-  });
-  if (error) throw error;
-  const url = safeVisualUrl(bucket.getPublicUrl(path).data.publicUrl);
-  if (!url) throw new Error('Storage returned an unsupported public image URL.');
-  return url;
-}
-
-export { uploadHomepageImage as u };
+import{s as e,bD as a,cx as r}from"../bundle.js";async function t(t){const o=await async function(e){return(await r(e,{allowedTypes:["image/png","image/jpeg","image/webp"],maxBytes:6291456})).extension}(t),n=e.storage.from("product-images"),s=`homepage-visuals/${crypto.randomUUID()}.${o}`,{error:i}=await n.upload(s,t,{contentType:t.type,cacheControl:"3600",upsert:!1});if(i)throw i;const p=a(n.getPublicUrl(s).data.publicUrl);if(!p)throw new Error("Storage returned an unsupported public image URL.");return p}export{t as u};
 //# sourceMappingURL=homepageImageUpload.js.map
