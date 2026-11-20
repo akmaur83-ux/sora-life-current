@@ -59,6 +59,26 @@
       "destination": "/api/sitemap?kind=homeliving&slug=:slug"
     },
     {
+      "source": "/fashion",
+      "destination": "/api/sitemap?kind=page&slug=fashion"
+    },
+    {
+      "source": "/homeliving",
+      "destination": "/api/sitemap?kind=page&slug=homeliving"
+    },
+    {
+      "source": "/gifts",
+      "destination": "/api/sitemap?kind=page&slug=gifts"
+    },
+    {
+      "source": "/guides",
+      "destination": "/api/sitemap?kind=page&slug=guides"
+    },
+    {
+      "source": "/sell",
+      "destination": "/api/sitemap?kind=page&slug=sell"
+    },
+    {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }

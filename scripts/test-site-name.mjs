@@ -86,12 +86,12 @@ console.log('\n— The name goes in without stacking —');
 await test('T1 the tab title gets the name in front, the same however many times it is applied', () => {
   const html = read('index.html');
   const title = /<title>([^<]*)<\/title>/.exec(html)[1];
-  assert.equal(title, 'Sora Lifestyle — Modern Wellness, Beauty & Everyday Care');
+  assert.equal(title, 'SORA LIFESTYLE — Fashion, Home & Living, Wellness & Beauty');
   const once = settings.titleWithSiteName(title, 'SORA LIFESTYLE');
-  assert.equal(once, 'SORA LIFESTYLE — Modern Wellness, Beauty & Everyday Care');
+  assert.equal(once, 'SORA LIFESTYLE — Fashion, Home & Living, Wellness & Beauty');
   assert.equal(settings.titleWithSiteName(once, 'SORA LIFESTYLE'), once);
-  assert.equal(settings.titleWithSiteName('Sora Life — Modern Wellness, Beauty & Everyday Care', 'SORA LIFESTYLE'), once);
-  assert.equal(settings.titleWithSiteName(once, 'SORA LIFE'), 'SORA LIFE — Modern Wellness, Beauty & Everyday Care');
+  assert.equal(settings.titleWithSiteName('Sora Life — Fashion, Home & Living, Wellness & Beauty', 'SORA LIFESTYLE'), once);
+  assert.equal(settings.titleWithSiteName(once, 'SORA LIFE'), 'SORA LIFE — Fashion, Home & Living, Wellness & Beauty');
 });
 
 await test('T2 the tab title and favicon follow the saved setting once it loads, not only the first render', () => {

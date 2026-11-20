@@ -83,10 +83,37 @@ export function withProductHead(html, f) {
     `<link rel="canonical" href="${esc(url)}" />`,
     `<script type="application/ld+json">${JSON.stringify(ld).replace(/</g, '\\u003c')}</script>`,
   ].filter(Boolean).join('\n    ');
+  // The site's own card (index.html) makes way for the product's: one of each tag.
   return html
+    .replace(/\n?[ \t]*<meta (?:property="og:[^"]*"|name="twitter:[^"]*")[^>]*>/g, '')
     .replace(/<title>[\s\S]*?<\/title>/, `<title>${esc(title)}</title>`)
     .replace(/<meta name="description" content="[^"]*"\s*\/?>/, `<meta name="description" content="${esc(desc)}" />`)
     .replace('</head>', `    ${head}\n  </head>`);
+}
+
+/**
+ * The store pages' own cards (owner, 2026-11-20): a link to /fashion or /gifts pasted
+ * into WhatsApp says what is behind it, not just the site. Fixed words, no lookup.
+ */
+export const PAGE_CARDS = {
+  fashion: { title: `Fashion — leather, shawls, ethnic and everyday wear | ${SITE}`, description: 'Leather jackets and bags, shawls, sarees and everyday wear from Indian makers. Cash on delivery available.' },
+  homeliving: { title: `Home & Living — bedsheets, quilts and rugs | ${SITE}`, description: 'Bedsheets, quilts, rugs, cushion covers and table covers for every room. Cash on delivery available.' },
+  gifts: { title: `Gift finder — ideas for everyone | ${SITE}`, description: 'Pick who it is for and your budget: gift ideas from fashion, home and wellness.' },
+  guides: { title: `Care guides — leather and shawls | ${SITE}`, description: 'How to clean, store and look after leather and shawls so they last.' },
+  sell: { title: `Sell with ${SITE}`, description: 'Indian brands and makers: list your products on SORA LIFESTYLE. Tell us about your range.' },
+};
+
+/** index.html with a store page's title and description; pure. Unknown pages are left as they are. */
+export function withPageHead(html, page) {
+  const c = Object.prototype.hasOwnProperty.call(PAGE_CARDS, page) ? PAGE_CARDS[page] : null;
+  if (!html || !c) return html;
+  const url = `${ORIGIN}/${page}`;
+  return html
+    .replace(/<title>[\s\S]*?<\/title>/, `<title>${esc(c.title)}</title>`)
+    .replace(/<meta name="description" content="[^"]*"\s*\/?>/, `<meta name="description" content="${esc(c.description)}" />`)
+    .replace(/<meta property="og:title" content="[^"]*"\s*\/?>/, `<meta property="og:title" content="${esc(c.title)}" />`)
+    .replace(/<meta property="og:description" content="[^"]*"\s*\/?>/, `<meta property="og:description" content="${esc(c.description)}" />`)
+    .replace('</head>', `    <meta property="og:url" content="${esc(url)}" />\n    <link rel="canonical" href="${esc(url)}" />\n  </head>`);
 }
 
 export async function shareHandler(req, res) {
@@ -98,6 +125,10 @@ export async function shareHandler(req, res) {
   }
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   if (!html) return res.status(500).send('<!doctype html><title>SORA LIFESTYLE</title><p>Please refresh the page.</p>');
+  if (kind === 'page') {
+    res.setHeader('Cache-Control', 'public, s-maxage=600, stale-while-revalidate=3600');
+    return res.status(200).send(withPageHead(html, slug));
+  }
   let facts = null;
   const url = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
   const key = process.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY;

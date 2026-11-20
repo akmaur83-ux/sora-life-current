@@ -2,7 +2,7 @@
 //   node scripts/test-share-card.mjs
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { shareFacts, withProductHead } from '../api/_lib/share.js';
+import { shareFacts, withProductHead, withPageHead, PAGE_CARDS } from '../api/_lib/share.js';
 let passed = 0, failed = 0;
 const test = (n, fn) => { try { fn(); console.log(`  PASS  ${n}`); passed++; } catch (e) { console.log(`  FAIL  ${n}\n        ${e.message}`); failed++; } };
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
@@ -26,6 +26,27 @@ test('vercel.json sends the three product paths here before the app', () => {
   const v = JSON.parse(readFileSync(new URL('../vercel.json', import.meta.url), 'utf8'));
   const i = (s) => v.rewrites.findIndex((r) => r.source === s);
   for (const s of ['/product/:slug', '/fashion/p/:slug', '/homeliving/p/:slug']) assert.ok(i(s) >= 0 && i(s) < i('/((?!api/).*)'), s);
+});
+test('the site card: the sparrow share picture, the new title; a product page carries one of each tag, its own', () => {
+  assert.match(html, /<meta property="og:image" content="https:\/\/www.soralifestyle.in\/assets\/sora-share-card.jpg" \/>/);
+  assert.match(html, /<meta property="og:title" content="SORA LIFESTYLE — Fashion, Home &amp; Living, Wellness &amp; Beauty" \/>/);
+  const out = withProductHead(html, shareFacts('fashion', { name: 'Jacket', images: ['https://cdn/j.jpg'], mrp: 5000, sale_price: 4000 }, 'jacket'));
+  for (const tag of ['og:image', 'og:title', 'og:description', 'og:type']) assert.equal((out.match(new RegExp(`property="${tag}"`, 'g')) || []).length, 1, tag);
+  assert.equal((out.match(/name="twitter:card"/g) || []).length, 1);
+  assert.match(out, /og:image" content="https:\/\/cdn\/j.jpg"/);
+});
+test('store pages: their own title and description, the site picture kept; unknown pages untouched', () => {
+  const out = withPageHead(html, 'fashion');
+  assert.match(out, /<title>Fashion — leather, shawls, ethnic and everyday wear \| SORA LIFESTYLE<\/title>/);
+  assert.match(out, /<meta property="og:title" content="Fashion — leather/);
+  assert.match(out, /og:image" content="https:\/\/www.soralifestyle.in\/assets\/sora-share-card.jpg"/);
+  assert.match(out, /<link rel="canonical" href="https:\/\/www.soralifestyle.in\/fashion" \/>/);
+  assert.equal(withPageHead(html, 'constructor'), html);
+  assert.equal(withPageHead(html, 'nope'), html);
+  const v = JSON.parse(readFileSync(new URL('../vercel.json', import.meta.url), 'utf8'));
+  const i = (s) => v.rewrites.findIndex((r) => r.source === s);
+  for (const k of Object.keys(PAGE_CARDS)) assert.ok(i(`/${k}`) >= 0 && i(`/${k}`) < i('/((?!api/).*)'), k);
+  assert.equal(v.rewrites[i('/fashion')].destination, '/api/sitemap?kind=page&slug=fashion');
 });
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

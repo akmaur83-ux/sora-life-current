@@ -12,10 +12,10 @@ import { branding, titleWithSiteName } from './settings.js';
 export const SITE = 'SORA LIFESTYLE';
 export const ORIGIN = 'https://www.soralifestyle.in';
 
-const INDEX_TITLE = 'Sora Lifestyle — Modern Wellness, Beauty & Everyday Care';   // index.html's
+const INDEX_TITLE = 'SORA LIFESTYLE — Fashion, Home & Living, Wellness & Beauty';   // index.html's
 /** The site's own title, with the admin's site name (as App.jsx sets it on start). */
 export const siteHomeTitle = () => (branding?.siteName ? titleWithSiteName(INDEX_TITLE, branding.siteName) : INDEX_TITLE);
-const INDEX_DESCRIPTION = 'Sora Lifestyle — premium health, wellness, beauty and personal-care essentials for modern living.';
+const INDEX_DESCRIPTION = 'Fashion, leather, shawls, home & living, wellness and beauty from trusted Indian brands, in one place. Cash on delivery available.';
 let base = null;
 const metaEl = (attr, key) => {
   let el = document.head.querySelector(`meta[${attr}="${key}"]`);

@@ -61,7 +61,7 @@ test('manifest: installable — standalone, scope, start URL, any + maskable ico
   for (const s of m.screenshots) assert.equal(webp(s.src.slice(1)), s.sizes, s.src);
   const idx = read('index.html');
   assert.match(idx, /<meta name="apple-mobile-web-app-capable" content="yes" \/>/);
-  assert.match(idx, /<link rel="apple-touch-icon" sizes="180x180" href="\/assets\/apple-touch-icon.png" \/>/);
+  assert.match(idx, /<link rel="apple-touch-icon" sizes="180x180" href="\/assets\/apple-touch-icon.png(?:\?v=\d+)?" \/>/);
   assert.equal(png('assets/apple-touch-icon.png'), '180x180');
 });
 test('install: iPhone Safari gets the Share guide; Chrome/in-app browsers on iPhone and Android do not', () => {
