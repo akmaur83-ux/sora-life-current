@@ -35724,8 +35724,8 @@ function Footer() {
             to: "/sell#bulk",
             children: "Bulk & corporate gifts"
           }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
-            to: "/guides/leather-care",
-            children: "Leather care guide"
+            to: "/guides",
+            children: "Care guides"
           }), /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
             to: "/fashion/winter",
             children: "The Winter edit"
@@ -42860,6 +42860,17 @@ function FashionEdit({
 }) {
   const edit = FASHION_EDITS[id];
   const sections = useFashionEdit(id);
+  const {
+    hash
+  } = useLocation();
+  // A link to one section (e.g. /fashion/leather#leather-bags) lands on it once the sections are in.
+  reactExports.useEffect(() => {
+    if (!sections || !hash) return;
+    const el = document.getElementById(decodeURIComponent(hash.slice(1)));
+    if (el) el.scrollIntoView({
+      block: 'start'
+    });
+  }, [sections, hash]);
   usePageMeta({
     title: edit ? edit.title : 'Fashion',
     description: edit?.meta,
@@ -43015,6 +43026,212 @@ function EditStrips() {
         })]
       })]
     })]
+  });
+}
+
+// ============================================================
+// Shop insights on the client (owner, 2026-11-13: features 23, 26, 33, 36):
+// writes the search log, reads the public aggregates (0043_insights.sql).
+// Nothing personal is sent: the search text, the store and the result count.
+// ============================================================
+const logged = new Set();
+
+/** Search text worth logging: trimmed, collapsed, 1–80 characters. Pure. */
+function cleanQuery(q) {
+  const s = String(q || '').replace(/\s+/g, ' ').trim().toLowerCase();
+  return s.length >= 1 && s.length <= 80 ? s : '';
+}
+
+/** One row per store + query per page load; a failure is silent. */
+function logSearch(store, q, results, client = supabase) {
+  const text = cleanQuery(q);
+  if (!client || !text || !['wellness', 'fashion', 'homeliving', 'grocery'].includes(store)) return false;
+  const key = `${store}|${text}`;
+  if (logged.has(key)) return false;
+  logged.add(key);
+  client.from('search_log').insert({
+    q: text,
+    store,
+    results: Math.max(0, Math.min(99999, Math.round(Number(results) || 0)))
+  }).then(() => {}, () => {});
+  return true;
+}
+let popularCache = null;
+/** Queries people searched at least 3 times in two weeks that found something; [] until known. */
+function usePopularSearches() {
+  const [list, setList] = reactExports.useState(popularCache || []);
+  reactExports.useEffect(() => {
+    if (popularCache || !supabase) return undefined;
+    let live = true;
+    supabase.rpc('popular_searches', {
+      days: 14,
+      max_rows: 8
+    }).then(({
+      data
+    }) => {
+      popularCache = Array.isArray(data) ? data.map(r => r.q).filter(Boolean) : [];
+      if (live) setList(popularCache);
+    }, () => {});
+    return () => {
+      live = false;
+    };
+  }, []);
+  return list;
+}
+
+/** A product's daily prices, oldest first: [{ day, price, mrp }]. */
+async function fetchPriceHistory(productId, client = supabase) {
+  if (!client || !productId) return [];
+  const {
+    data,
+    error
+  } = await client.from('catalogue_price_history').select('recorded_on, price, mrp').eq('product_id', productId).order('recorded_on', {
+    ascending: true
+  }).limit(120);
+  if (error || !Array.isArray(data)) return [];
+  return data.map(r => ({
+    day: r.recorded_on,
+    price: Number(r.price),
+    mrp: r.mrp == null ? null : Number(r.mrp)
+  }));
+}
+
+/** The last `days` of a history, and its low, high and whether today is the lowest. Pure. */
+function priceSummary(history, days = 30, today = new Date().toISOString().slice(0, 10)) {
+  const from = new Date(Date.parse(`${today}T00:00:00Z`) - days * 86400e3).toISOString().slice(0, 10);
+  const pts = (Array.isArray(history) ? history : []).filter(p => p.day >= from && Number.isFinite(p.price));
+  if (pts.length < 2) return null;
+  const prices = pts.map(p => p.price);
+  const low = Math.min(...prices);
+  const high = Math.max(...prices);
+  const now = prices[prices.length - 1];
+  return {
+    points: pts,
+    low,
+    high,
+    now,
+    isLowest: now === low && high > low,
+    days
+  };
+}
+let coversCache = null;
+/** category id → first product picture (catalogue_category_covers); {} until read. */
+async function fetchCategoryCovers(client = supabase) {
+  if (coversCache) return coversCache;
+  if (!client) return {};
+  const {
+    data
+  } = await client.from('catalogue_category_covers').select('category_id, image');
+  coversCache = Object.fromEntries((Array.isArray(data) ? data : []).map(r => [r.category_id, r.image]));
+  return coversCache;
+}
+
+const OCCASIONS = Object.freeze([{
+  id: 'wedding',
+  label: 'Wedding & festive',
+  note: 'Suits, sarees, drapes',
+  href: '/fashion/wedding',
+  slug: 'suits-dress-materials'
+}, {
+  id: 'winter',
+  label: 'Winter',
+  note: 'Jackets, shawls, mufflers',
+  href: '/fashion/winter',
+  slug: 'mens-leather-jackets'
+}, {
+  id: 'gifts',
+  label: 'Gifting',
+  note: 'By who and budget',
+  href: '/gifts',
+  slug: 'shawl-gift-sets'
+}, {
+  id: 'work',
+  label: 'Work & travel',
+  note: 'Laptop bags, wallets',
+  href: '/fashion/leather#leather-bags',
+  slug: 'laptop-travel-bags'
+}, {
+  id: 'leather',
+  label: 'Everyday leather',
+  note: 'Bags, belts, wallets',
+  href: '/fashion/leather',
+  slug: 'handbags'
+}, {
+  id: 'home',
+  label: 'For the home',
+  note: 'Table covers, rugs, beds',
+  href: '/homeliving',
+  slug: 'table-covers'
+}]);
+
+/** Occasions with a picture, in order; pictures by category slug. Pure. */
+const occasionTiles = pics => OCCASIONS.filter(o => pics && pics[o.slug]).map(o => ({
+  ...o,
+  image: pics[o.slug]
+}));
+
+/** { slug: picture } for the occasions' categories. */
+async function fetchOccasionPictures(client = supabase) {
+  if (!client) return {};
+  const [{
+    data: cats
+  }, covers] = await Promise.all([client.from('catalogue_categories').select('id, slug').in('slug', OCCASIONS.map(o => o.slug)), fetchCategoryCovers(client)]);
+  return Object.fromEntries((cats || []).filter(c => covers[c.id]).map(c => [c.slug, covers[c.id]]));
+}
+function ShopByOccasion({
+  className = ''
+}) {
+  const [pics, setPics] = reactExports.useState(null);
+  reactExports.useEffect(() => {
+    let live = true;
+    fetchOccasionPictures().then(p => {
+      if (live) setPics(p);
+    }, () => {
+      if (live) setPics({});
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+  const tiles = occasionTiles(pics);
+  if (tiles.length < 4) return null;
+  return /*#__PURE__*/jsxRuntimeExports.jsx("section", {
+    className: `hx sora-occ ${className}`.trim(),
+    "aria-labelledby": "sora-occ-h",
+    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "hx-wrap",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+        className: "hx-stores__h",
+        id: "sora-occ-h",
+        children: "Shop by occasion"
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+        className: "sora-occ__grid",
+        children: tiles.map(t => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+          children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+            to: t.href,
+            className: "sora-occ__tile",
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
+              className: "sora-occ__img",
+              children: /*#__PURE__*/jsxRuntimeExports.jsx("img", {
+                src: t.image,
+                alt: "",
+                width: "320",
+                height: "400",
+                loading: "lazy",
+                decoding: "async"
+              })
+            }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+              className: "sora-occ__body",
+              children: [/*#__PURE__*/jsxRuntimeExports.jsx("b", {
+                children: t.label
+              }), /*#__PURE__*/jsxRuntimeExports.jsx("em", {
+                children: t.note
+              })]
+            })]
+          })
+        }, t.id))
+      })]
+    })
   });
 }
 
@@ -49190,7 +49407,7 @@ function Home() {
       title: "Wellness, fashion and home"
     }), /*#__PURE__*/jsxRuntimeExports.jsx(ShopByCategory$1, {}), /*#__PURE__*/jsxRuntimeExports.jsx(ShopByConcerns, {}), /*#__PURE__*/jsxRuntimeExports.jsx(ShopByIngredient, {
       products: products
-    }), /*#__PURE__*/jsxRuntimeExports.jsx(GiftShop, {}), /*#__PURE__*/jsxRuntimeExports.jsx(TopDeals, {}), /*#__PURE__*/jsxRuntimeExports.jsx(BiosashRange, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Bedsheets, {}), /*#__PURE__*/jsxRuntimeExports.jsx(LifestyleBanner, {}), /*#__PURE__*/jsxRuntimeExports.jsx(JewelleryBanner, {}), /*#__PURE__*/jsxRuntimeExports.jsx(HomeGroup, {
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(ShopByOccasion, {}), /*#__PURE__*/jsxRuntimeExports.jsx(GiftShop, {}), /*#__PURE__*/jsxRuntimeExports.jsx(TopDeals, {}), /*#__PURE__*/jsxRuntimeExports.jsx(BiosashRange, {}), /*#__PURE__*/jsxRuntimeExports.jsx(Bedsheets, {}), /*#__PURE__*/jsxRuntimeExports.jsx(LifestyleBanner, {}), /*#__PURE__*/jsxRuntimeExports.jsx(JewelleryBanner, {}), /*#__PURE__*/jsxRuntimeExports.jsx(HomeGroup, {
       eyebrow: "For you",
       title: "Picked for you"
     }), /*#__PURE__*/jsxRuntimeExports.jsx(RecentlyViewedHome, {}), /*#__PURE__*/jsxRuntimeExports.jsx(WishlistRail, {}), /*#__PURE__*/jsxRuntimeExports.jsx(MarketplaceProductRail, {
@@ -49848,103 +50065,6 @@ function OtherStoreResults({
       }, p.key))
     })]
   });
-}
-
-// ============================================================
-// Shop insights on the client (owner, 2026-11-13: features 23, 26, 33, 36):
-// writes the search log, reads the public aggregates (0043_insights.sql).
-// Nothing personal is sent: the search text, the store and the result count.
-// ============================================================
-const logged = new Set();
-
-/** Search text worth logging: trimmed, collapsed, 1–80 characters. Pure. */
-function cleanQuery(q) {
-  const s = String(q || '').replace(/\s+/g, ' ').trim().toLowerCase();
-  return s.length >= 1 && s.length <= 80 ? s : '';
-}
-
-/** One row per store + query per page load; a failure is silent. */
-function logSearch(store, q, results, client = supabase) {
-  const text = cleanQuery(q);
-  if (!client || !text || !['wellness', 'fashion', 'homeliving', 'grocery'].includes(store)) return false;
-  const key = `${store}|${text}`;
-  if (logged.has(key)) return false;
-  logged.add(key);
-  client.from('search_log').insert({
-    q: text,
-    store,
-    results: Math.max(0, Math.min(99999, Math.round(Number(results) || 0)))
-  }).then(() => {}, () => {});
-  return true;
-}
-let popularCache = null;
-/** Queries people searched at least 3 times in two weeks that found something; [] until known. */
-function usePopularSearches() {
-  const [list, setList] = reactExports.useState(popularCache || []);
-  reactExports.useEffect(() => {
-    if (popularCache || !supabase) return undefined;
-    let live = true;
-    supabase.rpc('popular_searches', {
-      days: 14,
-      max_rows: 8
-    }).then(({
-      data
-    }) => {
-      popularCache = Array.isArray(data) ? data.map(r => r.q).filter(Boolean) : [];
-      if (live) setList(popularCache);
-    }, () => {});
-    return () => {
-      live = false;
-    };
-  }, []);
-  return list;
-}
-
-/** A product's daily prices, oldest first: [{ day, price, mrp }]. */
-async function fetchPriceHistory(productId, client = supabase) {
-  if (!client || !productId) return [];
-  const {
-    data,
-    error
-  } = await client.from('catalogue_price_history').select('recorded_on, price, mrp').eq('product_id', productId).order('recorded_on', {
-    ascending: true
-  }).limit(120);
-  if (error || !Array.isArray(data)) return [];
-  return data.map(r => ({
-    day: r.recorded_on,
-    price: Number(r.price),
-    mrp: r.mrp == null ? null : Number(r.mrp)
-  }));
-}
-
-/** The last `days` of a history, and its low, high and whether today is the lowest. Pure. */
-function priceSummary(history, days = 30, today = new Date().toISOString().slice(0, 10)) {
-  const from = new Date(Date.parse(`${today}T00:00:00Z`) - days * 86400e3).toISOString().slice(0, 10);
-  const pts = (Array.isArray(history) ? history : []).filter(p => p.day >= from && Number.isFinite(p.price));
-  if (pts.length < 2) return null;
-  const prices = pts.map(p => p.price);
-  const low = Math.min(...prices);
-  const high = Math.max(...prices);
-  const now = prices[prices.length - 1];
-  return {
-    points: pts,
-    low,
-    high,
-    now,
-    isLowest: now === low && high > low,
-    days
-  };
-}
-let coversCache = null;
-/** category id → first product picture (catalogue_category_covers); {} until read. */
-async function fetchCategoryCovers(client = supabase) {
-  if (coversCache) return coversCache;
-  if (!client) return {};
-  const {
-    data
-  } = await client.from('catalogue_category_covers').select('category_id, image');
-  coversCache = Object.fromEntries((Array.isArray(data) ? data : []).map(r => [r.category_id, r.image]));
-  return coversCache;
 }
 
 const SUGGEST_MAX = 6;
@@ -61354,12 +61474,17 @@ function wellnessBrandCards(products, isBrand) {
   });
 }
 
-/** Filter by category, then sort. Pure. */
+/** Words to look for in a brand's names (2026-11-20): lower-cased, at most 6, short ones dropped. Pure. */
+const brandQueryWords = q => String(q || '').toLowerCase().replace(/[^a-z0-9\u0900-\u097f ]+/g, ' ').split(/\s+/).filter(w => w.length >= 2).slice(0, 6);
+
+/** Filter by category and by words (every word in the name or category — "black biker"), then sort. Pure. */
 function arrangeBrandCards(cards, {
   category = '',
-  sort = 'featured'
+  sort = 'featured',
+  q = ''
 } = {}) {
-  const list = category ? cards.filter(c => c.category === category) : [...cards];
+  const words = brandQueryWords(q);
+  const list = cards.filter(c => (!category || c.category === category) && (!words.length || words.every(w => `${c.name} ${c.category}`.toLowerCase().includes(w))));
   if (sort === 'low') list.sort((a, b) => a.price - b.price || a.order - b.order);else if (sort === 'high') list.sort((a, b) => b.price - a.price || a.order - b.order);else if (sort === 'new') list.sort((a, b) => b.at - a.at || a.order - b.order);else {
     // Featured: the brand's biggest categories first (a jacket maker opens on jackets), the catalogue's order within.
     const rank = new Map(brandCategories(list).map((c, i) => [c.name, i]));
@@ -61432,11 +61557,13 @@ function BrandPage() {
   const cards = brand?.catalogueBrand ? fromCatalogue : wellness;
   const category = params.get('cat') || '';
   const sort = BRAND_SORTS.some(s => s.id === params.get('sort')) ? params.get('sort') : 'featured';
+  const q = (params.get('q') || '').slice(0, 60);
   const shown = cards ? arrangeBrandCards(cards, {
     category,
-    sort
+    sort,
+    q
   }) : [];
-  const paging = useShowMore(shown.length, `${id}|${category}|${sort}`);
+  const paging = useShowMore(shown.length, `${id}|${category}|${sort}|${q}`);
   usePageMeta({
     title: brand ? brand.name : 'Brand',
     description: brand ? `${brand.name} at SORA LIFESTYLE. ${brand.text}` : '',
@@ -61521,6 +61648,21 @@ function BrandPage() {
               children: c.count
             })]
           }, c.name))]
+        }), cards && cards.length > 12 && /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
+          className: "sora-brand__find",
+          children: [/*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "search",
+            size: 16
+          }), /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
+            className: "sr-only",
+            children: ["Search ", brand.name]
+          }), /*#__PURE__*/jsxRuntimeExports.jsx("input", {
+            type: "search",
+            value: q,
+            onChange: e => set('q', e.target.value),
+            placeholder: `Search ${brand.name}`,
+            maxLength: 60
+          })]
         }), /*#__PURE__*/jsxRuntimeExports.jsxs("label", {
           className: "sora-brand__sort",
           children: [/*#__PURE__*/jsxRuntimeExports.jsx("span", {
@@ -61536,6 +61678,14 @@ function BrandPage() {
         })]
       }), cards === null ? /*#__PURE__*/jsxRuntimeExports.jsx(SkeletonGrid, {
         label: `Loading ${brand.name}…`
+      }) : shown.length === 0 && q ? /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
+        className: "hx-offers__empty",
+        children: ["Nothing of ", brand.name, "\u2019s matches \u201C", q, "\u201D. ", /*#__PURE__*/jsxRuntimeExports.jsx("button", {
+          type: "button",
+          className: "sora-brand__clear",
+          onClick: () => set('q', ''),
+          children: "Clear the search"
+        })]
       }) : shown.length === 0 ? /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
         className: "hx-offers__empty",
         children: ["Nothing of ", brand.name, "\u2019s is in stock right now. New pieces appear the moment they go live."]
@@ -64482,8 +64632,14 @@ function LeatherCare() {
         }), " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
           name: "chevronRight",
           size: 12
+        }), " ", /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+          to: "/guides",
+          children: "Care guides"
+        }), " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "chevronRight",
+          size: 12
         }), " ", /*#__PURE__*/jsxRuntimeExports.jsx("span", {
-          children: "Leather care"
+          children: "Leather"
         })]
       }), /*#__PURE__*/jsxRuntimeExports.jsxs("header", {
         className: "sora-guide__head",
@@ -64779,6 +64935,133 @@ function Gifts() {
           to: "/sell#bulk",
           children: "Bulk & corporate gifting"
         })]
+      })]
+    })
+  });
+}
+
+const SHAWL_SECTIONS = Object.freeze([['Storing', ['Fold loosely, with tissue paper in the folds, and keep in a cotton bag or wrapped in muslin — not plastic.', 'Keep shawls dry and out of direct sun, which fades colour.', 'Dried neem leaves, cedar or lavender sachets in the cupboard help keep moths away from wool.']], ['Washing', ['Follow the care label: many woollen and embroidered shawls are dry clean only.', 'Where hand washing is allowed: cold water and a mild wool wash, a short soak, no rubbing or wringing.', 'Roll in a towel to press the water out, then dry flat in the shade — never on a hanger while wet.']], ['Ironing', ['Steam lightly, or iron on low heat with a thin cotton cloth between the iron and the shawl.', 'Iron embroidery and zari from the reverse side.']], ['Wearing', ['Watch for snags from rings, brooches, bag zips and velcro.', 'Air a shawl on a chair back between wears instead of washing it each time.', 'Spray perfume on before you put the shawl on, not onto it.']], ['Embroidered, zari and phulkari pieces', ['Dry clean, and store flat or loosely rolled, away from damp.', 'Keep zari wrapped in muslin so it does not rub against other pieces.']], ['Bobbles on wool', ['Some wool forms small bobbles where it rubs; lift them off gently with a fabric comb or shaver.']]]);
+const GUIDES = Object.freeze([{
+  href: '/guides/leather-care',
+  title: 'How to care for leather',
+  text: 'Jackets, coats, bags, wallets and belts: storing, drying, cleaning, conditioning and suede.'
+}, {
+  href: '/guides/shawl-care',
+  title: 'How to care for shawls & stoles',
+  text: 'Wool, woven and embroidered pieces: storing, washing, ironing and keeping moths away.'
+}]);
+function ShawlCare() {
+  usePageMeta({
+    title: 'How to care for shawls & stoles · SORA LIFESTYLE',
+    description: 'Storing, washing, ironing and wearing woollen, woven and embroidered shawls, stoles and dupattas.',
+    path: '/guides/shawl-care'
+  });
+  return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+    className: "sora-guide",
+    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "container",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
+        className: "hx-offers__crumbs",
+        "aria-label": "Breadcrumb",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+          to: "/",
+          children: "Home"
+        }), " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "chevronRight",
+          size: 12
+        }), " ", /*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+          to: "/guides",
+          children: "Care guides"
+        }), " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "chevronRight",
+          size: 12
+        }), " ", /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          children: "Shawls & stoles"
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("header", {
+        className: "sora-guide__head",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "sora-sell__eyebrow",
+          children: "Care guide"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+          className: "serif",
+          children: "How to care for shawls & stoles"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          children: "A good shawl is worn for many winters. A few habits for the woollen, woven and embroidered shawls, stoles and dupattas in our Fashion store. The care label and the product page always come first."
+        })]
+      }), SHAWL_SECTIONS.map(([h, items]) => /*#__PURE__*/jsxRuntimeExports.jsxs("section", {
+        className: "sora-guide__sec",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("h2", {
+          className: "serif",
+          children: h
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+          children: items.map(t => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+            children: t
+          }, t))
+        })]
+      }, h)), /*#__PURE__*/jsxRuntimeExports.jsx("p", {
+        className: "sora-guide__more",
+        children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+          to: "/fashion/winter#winter-shawls",
+          className: "btn",
+          children: ["Shop shawls & stoles ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+            name: "arrowRight",
+            size: 15
+          })]
+        })
+      })]
+    })
+  });
+}
+function GuidesHub() {
+  usePageMeta({
+    title: 'Care guides · SORA LIFESTYLE',
+    description: 'How to look after leather, shawls and stoles from SORA LIFESTYLE.',
+    path: '/guides'
+  });
+  return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+    className: "sora-guide",
+    children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+      className: "container",
+      children: [/*#__PURE__*/jsxRuntimeExports.jsxs("nav", {
+        className: "hx-offers__crumbs",
+        "aria-label": "Breadcrumb",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(Link, {
+          to: "/",
+          children: "Home"
+        }), " ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+          name: "chevronRight",
+          size: 12
+        }), " ", /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+          children: "Care guides"
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsxs("header", {
+        className: "sora-guide__head",
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx("p", {
+          className: "sora-sell__eyebrow",
+          children: "Look after what you love"
+        }), /*#__PURE__*/jsxRuntimeExports.jsx("h1", {
+          className: "serif",
+          children: "Care guides"
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx("ul", {
+        className: "sora-guides",
+        children: GUIDES.map(g => /*#__PURE__*/jsxRuntimeExports.jsx("li", {
+          children: /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+            to: g.href,
+            children: [/*#__PURE__*/jsxRuntimeExports.jsx("b", {
+              className: "serif",
+              children: g.title
+            }), /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+              children: g.text
+            }), /*#__PURE__*/jsxRuntimeExports.jsxs("i", {
+              children: ["Read the guide ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+                name: "arrowRight",
+                size: 14
+              })]
+            })]
+          })
+        }, g.href))
       })]
     })
   });
@@ -73207,7 +73490,9 @@ function FashionHome() {
     }), /*#__PURE__*/jsxRuntimeExports.jsx(BudgetChips, {
       base: "/fashion/search",
       wrap: "fs-sec"
-    }), /*#__PURE__*/jsxRuntimeExports.jsx(WeddingStrip, {}), /*#__PURE__*/jsxRuntimeExports.jsx(EditStrips, {}), /*#__PURE__*/jsxRuntimeExports.jsx(ShopByColour, {}), /*#__PURE__*/jsxRuntimeExports.jsx(LastChance, {
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(WeddingStrip, {}), /*#__PURE__*/jsxRuntimeExports.jsx(EditStrips, {}), /*#__PURE__*/jsxRuntimeExports.jsx(ShopByOccasion, {
+      className: "fs-sec"
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(ShopByColour, {}), /*#__PURE__*/jsxRuntimeExports.jsx(LastChance, {
       wrap: "fs-sec"
     }), /*#__PURE__*/jsxRuntimeExports.jsx(CategoryTiles, {
       tree: tree
@@ -76972,6 +77257,8 @@ function isLeather(material, name = '') {
   const t = `${material || ''} ${material ? '' : name || ''}`.toLowerCase();
   return /\b(leather|suede|nubuck)\b/.test(t) && !/\b(faux|vegan|pu|pu-leather|artificial|synthetic|rexine)\b/.test(t);
 }
+/** Whether a product is a shawl, stole, dupatta or muffler, by its name (round 14, 2026-11-20). Pure. */
+const isShawl = (name = '') => /\b(shawls?|stoles?|dupattas?|mufflers?|wraps?)\b/i.test(String(name));
 const madeInIndia = origin => String(origin || '').trim().toUpperCase() === 'IN' || /^india$/i.test(String(origin || '').trim());
 function ProductOrigin({
   origin,
@@ -76980,7 +77267,8 @@ function ProductOrigin({
 }) {
   const india = madeInIndia(origin);
   const leather = isLeather(material, name);
-  if (!india && !leather) return null;
+  const shawl = !leather && isShawl(name);
+  if (!india && !leather && !shawl) return null;
   return /*#__PURE__*/jsxRuntimeExports.jsxs("p", {
     className: "sora-origin",
     children: [india && /*#__PURE__*/jsxRuntimeExports.jsxs("span", {
@@ -76993,6 +77281,13 @@ function ProductOrigin({
       to: "/guides/leather-care",
       className: "sora-origin__care",
       children: ["How to care for leather ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
+        name: "arrowRight",
+        size: 13
+      })]
+    }), shawl && /*#__PURE__*/jsxRuntimeExports.jsxs(Link, {
+      to: "/guides/shawl-care",
+      className: "sora-origin__care",
+      children: ["How to care for it ", /*#__PURE__*/jsxRuntimeExports.jsx(Icon, {
         name: "arrowRight",
         size: 13
       })]
@@ -82320,6 +82615,12 @@ function App() {
       }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
         path: "/guides/leather-care",
         element: /*#__PURE__*/jsxRuntimeExports.jsx(LeatherCare, {})
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
+        path: "/guides/shawl-care",
+        element: /*#__PURE__*/jsxRuntimeExports.jsx(ShawlCare, {})
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
+        path: "/guides",
+        element: /*#__PURE__*/jsxRuntimeExports.jsx(GuidesHub, {})
       }), /*#__PURE__*/jsxRuntimeExports.jsx(Route, {
         path: "/gifts",
         element: /*#__PURE__*/jsxRuntimeExports.jsx(Gifts, {})
