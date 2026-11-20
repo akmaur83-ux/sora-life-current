@@ -1,4 +1,5 @@
 import { useEffect, useState, Fragment } from 'react';
+import { toCsv, downloadCsv } from '../lib/csv.js';
 import { Link } from 'react-router-dom';
 import { adminListOrders, adminUpdateOrderFulfillment, adminMarkCodCollected, adminListOrderEvents } from '../../lib/adminApi.js';
 import { money } from '../../lib/format.js';
@@ -55,6 +56,27 @@ function hasAddress(c = {}) {
 
 const dt = (iso) => (iso ? new Date(iso).toLocaleString('en-IN') : null);
 
+/**
+ * Orders as CSV (2026-11-20: for the accounts). One row per order; the items as one
+ * readable cell. Where it went (name, city, state, PIN) but no street, phone or email:
+ * a spreadsheet gets passed around, and those stay in the admin. Pure.
+ */
+export const ORDER_CSV_COLUMNS = [
+  ['Order', (o) => o.order_number],
+  ['Date', (o) => (o.created_at ? new Date(o.created_at).toISOString().slice(0, 10) : '')],
+  ['Payment', (o) => o.payment_status || ''],
+  ['Method', (o) => o.payment_method || ''],
+  ['Status', (o) => o.fulfillment_status || o.status || ''],
+  ['Amount (INR)', (o) => (Number.isFinite(Number(o.amount_paise)) ? Number(o.amount_paise) / 100 : '')],
+  ['Units', (o) => (Array.isArray(o.items) ? o.items.reduce((n, l) => n + (Number(l?.qty) || 0), 0) : 0)],
+  ['Items', (o) => (Array.isArray(o.items) ? o.items.map((l) => `${l?.name || 'Item'}${l?.variant ? ` (${l.variant})` : ''} × ${Number(l?.qty) || 1}`).join('; ') : '')],
+  ['Customer', (o) => [o.customer?.firstName, o.customer?.lastName].filter(Boolean).join(' ')],
+  ['City', (o) => o.customer?.city || ''],
+  ['State', (o) => o.customer?.state || ''],
+  ['PIN', (o) => o.customer?.pin || ''],
+];
+export const ordersCsv = (orders) => toCsv(orders, ORDER_CSV_COLUMNS);
+
 // The audit trail an order can prove from its own columns. Steps with no
 // timestamp are not shown — nothing here is inferred or back-dated.
 function timeline(o) {
@@ -110,6 +132,14 @@ export default function Orders() {
   }, []);
 
   const paidCount = orders.filter((o) => o.payment_status === 'paid').length;
+  const [exporting, setExporting] = useState(false);
+  async function exportCsv() {
+    setExporting(true);
+    try {
+      const all = await adminListOrders(5000);
+      downloadCsv(`sora-orders-${new Date().toISOString().slice(0, 10)}.csv`, ordersCsv(all));
+    } catch (e) { setErr(e.message || String(e)); } finally { setExporting(false); }
+  }
 
   async function copyAddress(order) {
     const text = formatAddress(order.customer);
@@ -139,6 +169,11 @@ export default function Orders() {
           <h1>Orders</h1>
           <p>{loading ? 'Loading…' : `${orders.length} orders · ${paidCount} paid`}</p>
         </div>
+        {orders.length > 0 && (
+          <button type="button" className="btn btn-sm btn-ghost" onClick={exportCsv} disabled={exporting} title="Every order as a spreadsheet (no street, phone or email)">
+            {exporting ? 'Preparing…' : 'Download CSV'}
+          </button>
+        )}
       </div>
 
       {err && (

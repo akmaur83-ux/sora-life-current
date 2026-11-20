@@ -1,0 +1,413 @@
+diff --git a/src/admin/pages/Insights.jsx b/src/admin/pages/Insights.jsx
+index d5d572d..02380e8 100644
+--- a/src/admin/pages/Insights.jsx
++++ b/src/admin/pages/Insights.jsx
+@@ -1,6 +1,7 @@
+ import { useEffect, useState } from 'react';
+ import { supabase } from '../../lib/supabase.js';
+ import { money } from '../../lib/format.js';
++import { toCsv, downloadCsv } from '../lib/csv.js';
+ 
+ // ============================================================
+ // Admin → Insights (owner, 2026-11-13: feature 36, "kya bik raha hai"). Three lists:
+@@ -8,9 +9,12 @@ import { money } from '../../lib/format.js';
+ //   * Searched, nothing found — demand the catalogue does not meet yet: stock it,
+ //     or add the words to a product's name or description;
+ //   * Best sellers — paid orders' lines, by units, in the period.
++//   * Sales by brand (2026-11-20) — what each partner sold in the period, units and
++//     takings at the price charged, to settle with them; downloadable as CSV.
++//   * Stock watch (2026-11-20) — live products out of stock or down to 1–3, every store.
+ // Read-only. The search log holds the text only — no shopper, no address.
+ // ============================================================
+-export const RANGES = [[7, 'Last 7 days'], [30, 'Last 30 days']];
++export const RANGES = [[7, 'Last 7 days'], [30, 'Last 30 days'], [90, 'Last 90 days']];
+ 
+ /** search_log rows → { top, zero }: each { q, store, n }, most searched first. Pure. */
+ export function summariseSearches(rows) {
+@@ -43,6 +47,46 @@ export function bestSellers(orders) {
+   return [...m.values()].sort((a, b) => b.units - a.units || b.revenue - a.revenue);
+ }
+ 
++/**
++ * Paid orders → sales by brand: { brand, units, revenue, orders }, biggest takings first.
++ * `brandOf(line)` names a line's brand ('' when unknown → "Other"). Pure.
++ */
++export function salesByBrand(orders, brandOf) {
++  const m = new Map();
++  for (const o of Array.isArray(orders) ? orders : []) {
++    if (o.payment_status !== 'paid') continue;
++    const seen = new Set();
++    for (const l of Array.isArray(o.items) ? o.items : []) {
++      const brand = String(brandOf(l) || '').trim() || 'Other';
++      const cur = m.get(brand) || { brand, units: 0, revenue: 0, orders: 0 };
++      cur.units += Number(l.qty) || 0;
++      cur.revenue += Number(l.line_total) || (Number(l.unit_price) || 0) * (Number(l.qty) || 0);
++      if (!seen.has(brand)) { cur.orders += 1; seen.add(brand); }
++      m.set(brand, cur);
++    }
++  }
++  return [...m.values()].sort((a, b) => b.revenue - a.revenue || a.brand.localeCompare(b.brand));
++}
++
++/** The brand lookup for order lines: catalogue lines by their product, wellness lines by theirs, Biosash lines by their id. Pure. */
++export function lineBrand(catalogueBrands, wellnessBrands) {
++  return (l) => {
++    const id = String(l?.product_id ?? '');
++    if (l?.catalogue) return catalogueBrands[id] || '';
++    return wellnessBrands[id] || (l?.biosash_id ? 'Biosash' : '');
++  };
++}
++
++/** Live products out of stock or at 1–`low` left → { out, low }, each { name, store, brand, stock }. Pure. */
++export function stockWatch(rows, low = 3) {
++  const live = (Array.isArray(rows) ? rows : []).filter((r) => r && r.is_active !== false);
++  const pick = (r) => ({ name: r.name, store: r.store || 'wellness', brand: r.brand || '', stock: Number(r.stock) || 0 });
++  return {
++    out: live.filter((r) => (Number(r.stock) || 0) <= 0).map(pick).sort((a, b) => a.name.localeCompare(b.name)),
++    low: live.filter((r) => Number(r.stock) >= 1 && Number(r.stock) <= low).map(pick).sort((a, b) => a.stock - b.stock || a.name.localeCompare(b.name)),
++  };
++}
++
+ const STORE = { wellness: 'Wellness', fashion: 'Fashion', homeliving: 'Home & Living', grocery: 'Grocery' };
+ const box = { border: '1px solid #E4E8E1', background: '#fff', padding: 14 };
+ 
+@@ -62,17 +106,52 @@ export default function Insights() {
+   const [days, setDays] = useState(7);
+   const [searches, setSearches] = useState(null);
+   const [sellers, setSellers] = useState(null);
++  const [brands, setBrands] = useState(null);
++  const [stock, setStock] = useState(null);
+   const [error, setError] = useState('');
+   useEffect(() => {
+     let live = true;
+-    setSearches(null); setSellers(null); setError('');
++    setSearches(null); setSellers(null); setBrands(null); setError('');
+     const since = new Date(Date.now() - days * 86400e3).toISOString();
+     supabase.from('search_log').select('q, store, results').gte('created_at', since).order('created_at', { ascending: false }).limit(5000)
+       .then(({ data, error: e }) => { if (!live) return; if (e) { setError(e.message); setSearches({ top: [], zero: [] }); } else setSearches(summariseSearches(data)); });
+     supabase.from('orders').select('items, payment_status, created_at').eq('payment_status', 'paid').gte('created_at', since).limit(2000)
+-      .then(({ data, error: e }) => { if (!live) return; if (e) { setError(e.message); setSellers([]); } else setSellers(bestSellers(data)); });
++      .then(async ({ data, error: e }) => {
++        if (!live) return;
++        if (e) { setError(e.message); setSellers([]); setBrands([]); return; }
++        setSellers(bestSellers(data));
++        // Each line's brand, from the product it was (catalogue or wellness).
++        const lines = (data || []).flatMap((o) => (Array.isArray(o.items) ? o.items : []));
++        const cat = [...new Set(lines.filter((l) => l.catalogue && l.product_id).map((l) => String(l.product_id)))];
++        const well = [...new Set(lines.filter((l) => !l.catalogue && l.product_id).map((l) => String(l.product_id)))];
++        const [c, w] = await Promise.all([
++          cat.length ? supabase.from('catalogue_products').select('id, brand').in('id', cat) : { data: [] },
++          well.length ? supabase.from('products').select('id, brand').in('id', well) : { data: [] },
++        ]);
++        if (!live) return;
++        const map = (r) => Object.fromEntries((r?.data || []).map((x) => [String(x.id), x.brand || '']));
++        setBrands(salesByBrand(data, lineBrand(map(c), map(w))));
++      });
+     return () => { live = false; };
+   }, [days]);
++
++  // Stock watch: every store, live products only; the same whatever the period.
++  useEffect(() => {
++    let live = true;
++    Promise.all([
++      supabase.from('catalogue_products').select('name, store, brand, stock, is_active').eq('is_active', true).lte('stock', 3).limit(1000),
++      supabase.from('products').select('name, brand, stock, is_active').lte('stock', 3).limit(1000),
++    ]).then(([c, w]) => {
++      if (!live) return;
++      const rows = [...(c.data || []), ...(w.data || []).map((r) => ({ ...r, store: 'wellness' }))];
++      setStock(stockWatch(rows));
++    }, () => { if (live) setStock({ out: [], low: [] }); });
++    return () => { live = false; };
++  }, []);
++
++  const saveBrands = () => downloadCsv(`sora-sales-by-brand-${days}-days.csv`, toCsv(brands || [], [
++    ['Brand', (r) => r.brand], ['Orders', (r) => r.orders], ['Units', (r) => r.units], ['Takings (INR)', (r) => Math.round(r.revenue * 100) / 100],
++  ]));
+   return (
+     <div>
+       <div className="adm__head"><h1>Insights</h1></div>
+@@ -87,6 +166,23 @@ export default function Insights() {
+           render={(r) => <li key={`${r.store}|${r.q}`}><b>{r.q}</b> <span style={{ color: '#5F6D64' }}>· {STORE[r.store]} · {r.n}×</span></li>} />
+         <List title="Best sellers" hint="Units sold in paid orders." rows={sellers} empty="No paid orders in this period."
+           render={(r) => <li key={r.name}><b>{r.name}</b> <span style={{ color: '#5F6D64' }}>· {r.units} sold · {money(r.revenue)}</span></li>} />
++        <section style={box}>
++          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
++            <h2 style={{ margin: '0 0 4px', fontSize: 16 }}>Sales by brand</h2>
++            {brands?.length > 0 && <button type="button" className="btn btn-sm btn-ghost" onClick={saveBrands}>Download CSV</button>}
++          </div>
++          <p className="adm-hint" style={{ margin: '0 0 10px' }}>Paid orders in the period, by the brand of each item: for settling with partners. Takings at the price charged, after discounts.</p>
++          {brands === null ? <p>Loading…</p> : brands.length === 0 ? <p className="adm-hint">No paid orders in this period.</p> : (
++            <table className="adm-table" style={{ fontSize: 14 }}>
++              <thead><tr><th>Brand</th><th>Orders</th><th>Units</th><th>Takings</th></tr></thead>
++              <tbody>{brands.map((r) => <tr key={r.brand}><td><b>{r.brand}</b></td><td>{r.orders}</td><td>{r.units}</td><td>{money(r.revenue)}</td></tr>)}</tbody>
++            </table>
++          )}
++        </section>
++        <List title={`Out of stock${stock ? ` (${stock.out.length})` : ''}`} hint="Live products with none left: restock them, or hide them from the shop." rows={stock?.out ?? null} empty="Nothing is out of stock."
++          render={(r, i) => <li key={`${r.store}|${r.name}|${i}`}><b>{r.name}</b> <span style={{ color: '#5F6D64' }}>· {STORE[r.store] || r.store}{r.brand ? ` · ${r.brand}` : ''}</span></li>} />
++        <List title={`Running low${stock ? ` (${stock.low.length})` : ''}`} hint="Live products with 1–3 left, fewest first." rows={stock?.low ?? null} empty="Nothing is running low."
++          render={(r, i) => <li key={`${r.store}|${r.name}|${i}`}><b>{r.name}</b> <span style={{ color: '#5F6D64' }}>· {r.stock} left · {STORE[r.store] || r.store}{r.brand ? ` · ${r.brand}` : ''}</span></li>} />
+       </div>
+     </div>
+   );
+diff --git a/src/admin/pages/Orders.jsx b/src/admin/pages/Orders.jsx
+index ff821c0..0af291c 100644
+--- a/src/admin/pages/Orders.jsx
++++ b/src/admin/pages/Orders.jsx
+@@ -1,4 +1,5 @@
+ import { useEffect, useState, Fragment } from 'react';
++import { toCsv, downloadCsv } from '../lib/csv.js';
+ import { Link } from 'react-router-dom';
+ import { adminListOrders, adminUpdateOrderFulfillment, adminMarkCodCollected, adminListOrderEvents } from '../../lib/adminApi.js';
+ import { money } from '../../lib/format.js';
+@@ -55,6 +56,27 @@ function hasAddress(c = {}) {
+ 
+ const dt = (iso) => (iso ? new Date(iso).toLocaleString('en-IN') : null);
+ 
++/**
++ * Orders as CSV (2026-11-20: for the accounts). One row per order; the items as one
++ * readable cell. Where it went (name, city, state, PIN) but no street, phone or email:
++ * a spreadsheet gets passed around, and those stay in the admin. Pure.
++ */
++export const ORDER_CSV_COLUMNS = [
++  ['Order', (o) => o.order_number],
++  ['Date', (o) => (o.created_at ? new Date(o.created_at).toISOString().slice(0, 10) : '')],
++  ['Payment', (o) => o.payment_status || ''],
++  ['Method', (o) => o.payment_method || ''],
++  ['Status', (o) => o.fulfillment_status || o.status || ''],
++  ['Amount (INR)', (o) => (Number.isFinite(Number(o.amount_paise)) ? Number(o.amount_paise) / 100 : '')],
++  ['Units', (o) => (Array.isArray(o.items) ? o.items.reduce((n, l) => n + (Number(l?.qty) || 0), 0) : 0)],
++  ['Items', (o) => (Array.isArray(o.items) ? o.items.map((l) => `${l?.name || 'Item'}${l?.variant ? ` (${l.variant})` : ''} × ${Number(l?.qty) || 1}`).join('; ') : '')],
++  ['Customer', (o) => [o.customer?.firstName, o.customer?.lastName].filter(Boolean).join(' ')],
++  ['City', (o) => o.customer?.city || ''],
++  ['State', (o) => o.customer?.state || ''],
++  ['PIN', (o) => o.customer?.pin || ''],
++];
++export const ordersCsv = (orders) => toCsv(orders, ORDER_CSV_COLUMNS);
++
+ // The audit trail an order can prove from its own columns. Steps with no
+ // timestamp are not shown — nothing here is inferred or back-dated.
+ function timeline(o) {
+@@ -110,6 +132,14 @@ export default function Orders() {
+   }, []);
+ 
+   const paidCount = orders.filter((o) => o.payment_status === 'paid').length;
++  const [exporting, setExporting] = useState(false);
++  async function exportCsv() {
++    setExporting(true);
++    try {
++      const all = await adminListOrders(5000);
++      downloadCsv(`sora-orders-${new Date().toISOString().slice(0, 10)}.csv`, ordersCsv(all));
++    } catch (e) { setErr(e.message || String(e)); } finally { setExporting(false); }
++  }
+ 
+   async function copyAddress(order) {
+     const text = formatAddress(order.customer);
+@@ -139,6 +169,11 @@ export default function Orders() {
+           <h1>Orders</h1>
+           <p>{loading ? 'Loading…' : `${orders.length} orders · ${paidCount} paid`}</p>
+         </div>
++        {orders.length > 0 && (
++          <button type="button" className="btn btn-sm btn-ghost" onClick={exportCsv} disabled={exporting} title="Every order as a spreadsheet (no street, phone or email)">
++            {exporting ? 'Preparing…' : 'Download CSV'}
++          </button>
++        )}
+       </div>
+ 
+       {err && (
+diff --git a/src/components/AppShell.jsx b/src/components/AppShell.jsx
+index 664e5ed..7856488 100644
+--- a/src/components/AppShell.jsx
++++ b/src/components/AppShell.jsx
+@@ -37,6 +37,19 @@ async function buildStamp() {
+   } catch { return ''; }
+ }
+ 
++/** Whether a key press lands in something the visitor is typing into (2026-11-20). Pure. */
++export function isTypingTarget(el) {
++  if (!el) return false;
++  const tag = String(el.tagName || '').toUpperCase();
++  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable === true;
++}
++
++/** The page's search box on screen: the first visible input inside a role="search" (each store's header has one). */
++export function visibleSearchInput(doc = typeof document !== 'undefined' ? document : null) {
++  if (!doc) return null;
++  return [...doc.querySelectorAll('[role="search"] input')].find((i) => { const r = i.getBoundingClientRect(); return r.width > 0 && r.height > 0; }) || null;
++}
++
+ export function registerServiceWorker(win = typeof window !== 'undefined' ? window : null) {
+   if (!win || !('serviceWorker' in win.navigator)) return;
+   const local = /^(localhost|127\.0\.0\.1)$/.test(win.location.hostname);
+@@ -122,6 +135,22 @@ export default function AppShell() {
+     return () => clearTimeout(t);
+   }, [pathname, search]);
+ 
++  // "/" jumps to the search box (2026-11-20), as on most big shops — never while typing,
++  // never with a modifier key, and not in the admin.
++  useEffect(() => {
++    const onKey = (e) => {
++      if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented || isTypingTarget(e.target)) return;
++      if (/^\/admin(\/|$)/.test(window.location.pathname)) return;
++      const input = visibleSearchInput();
++      if (!input) return;
++      e.preventDefault();
++      input.focus();
++      input.select?.();
++    };
++    window.addEventListener('keydown', onKey);
++    return () => window.removeEventListener('keydown', onKey);
++  }, []);
++
+   // Product page views for "Popular this week" (round 9, 2026-11-16): the store and the slug,
+   // once a day per browser, after the page has been open a moment (lib/popular.js).
+   useEffect(() => {
+diff --git a/src/fashion/FashionProductPage.jsx b/src/fashion/FashionProductPage.jsx
+index 994ad0b..0985c69 100644
+--- a/src/fashion/FashionProductPage.jsx
++++ b/src/fashion/FashionProductPage.jsx
+@@ -209,7 +209,7 @@ export default function FashionProductPage() {
+           <PdpAssurances />
+ 
+           <VariantPicker view={view} size={st.size} colour={st.colour} onChange={setSel} />
+-          <SizeGuide sizes={view.sizes} department={node && tree.ancestors(node.id).some((a) => /^men/i.test(a.slug)) ? 'men' : 'women'} />
++          <SizeGuide sizes={view.sizes} department={node && tree.ancestors(node.id).some((a) => /^men/i.test(a.slug)) ? 'men' : 'women'} brand={view.brand} />
+ 
+           <PdpFactTable rows={factRows} />
+           <PdpAbout bullets={bullets} />
+diff --git a/src/fashion/SizeGuide.jsx b/src/fashion/SizeGuide.jsx
+index 7c538d4..b9fb8c4 100644
+--- a/src/fashion/SizeGuide.jsx
++++ b/src/fashion/SizeGuide.jsx
+@@ -7,8 +7,36 @@ import Icon from '../components/Icon.jsx';
+ // measurements in inches, as Indian brands commonly size; the product's own
+ // details, where they give measurements, come first — the dialog says so.
+ // ============================================================
+-export const LETTER_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL'];
+-export const hasLetterSizes = (sizes = []) => sizes.some((s) => LETTER_SIZES.includes(String(s).trim().toUpperCase()));
++export const LETTER_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', '4XL', '5XL'];
++/**
++ * A size's letter, however the brand writes it (2026-11-20): "M", "S (42)", "M-44",
++ * "2XL-50" → M, S, M, XXL; '' when it is not a letter size. Pure.
++ */
++export function letterOf(size) {
++  const t = String(size || '').trim().toUpperCase().replace(/\s*\([^)]*\)\s*$/, '').replace(/[\s-]+\d+(\.\d+)?$/, '');
++  const l = t === '2XL' ? 'XXL' : t;
++  return LETTER_SIZES.includes(l) ? l : '';
++}
++export const hasLetterSizes = (sizes = []) => sizes.some((s) => letterOf(s));
++
++/**
++ * A brand's own size chart (2026-11-20), used in place of the general one on that
++ * brand's products — copied from the chart on the brand's own shop. Body measurements
++ * in inches. `inclusive`: the brand's rule is "chest 34–35 → S", so a measurement at a
++ * row's top end stays in that row.
++ */
++export const BRAND_CHARTS = Object.freeze({
++  'diamond leather': {
++    title: 'Diamond Leather size chart',
++    measure: 'chest',
++    inclusive: true,
++    head: ['Size', 'Chest', 'Waist', 'Hips', 'Shoulder', 'Sleeve', 'Length'],
++    rows: [['XS', '32–33', '30–31', '32–33', '16', '24', '25'], ['S', '34–35', '32–33', '34–35', '16', '24', '25'], ['M', '36–37', '34–35', '36–37', '17', '24.5', '26.5'], ['L', '38–39', '36–37', '38–39', '18', '25', '27'], ['XL', '40–41', '38–39', '40–41', '18.5', '25.5', '28'], ['XXL', '42–43', '40–41', '42–43', '18.5', '26', '28'], ['3XL', '44–45', '42–43', '44–45', '19', '26.5', '28'], ['4XL', '46–47', '44–45', '46–47', '19.5', '26.5', '28.5'], ['5XL', '48–49', '46–47', '48–49', '20', '26.5', '29.5']],
++    how: [['Chest', 'take it over bare skin or a thin layer, around the fullest part, tape level under the arms — not over a heavy layer.'], ['Choose by chest', 'the brand sizes by your chest measurement: chest 34–35 in is an S, 36–37 in an M, and so on.']],
++    note: "Diamond Leather's own chart. The number in a size's name on this page (S (42), M (44)…) is the brand's label; choose your size by your chest measurement in this chart.",
++  },
++});
++export const brandChart = (brand) => BRAND_CHARTS[String(brand || '').trim().toLowerCase()] || null;
+ 
+ export const SIZE_CHART = Object.freeze({
+   women: { head: ['Size', 'Bust', 'Waist', 'Hip'], rows: [['XS', '30–32', '24–26', '33–35'], ['S', '32–34', '26–28', '35–37'], ['M', '34–36', '28–30', '37–39'], ['L', '36–38', '30–32', '39–41'], ['XL', '38–40', '32–34', '41–43'], ['XXL', '40–42', '34–36', '43–45']] },
+@@ -25,11 +53,12 @@ export function suggestSize(chart, inches) {
+   if (!chart || !Number.isFinite(n) || n <= 0) return '';
+   const rows = chart.rows.map((r) => { const [lo, hi] = String(r[1]).split('–').map(Number); return { size: r[0], lo, hi: Number.isFinite(hi) ? hi : lo }; });
+   if (n < rows[0].lo - 2 || n > rows[rows.length - 1].hi + 1) return '';
+-  const hit = rows.find((r) => n < r.hi);
++  // A brand chart's rows run 34–35, 36–37…: 35.5 is past the S row and in no row, so the next size up.
++  const hit = chart.inclusive ? rows.find((r) => n <= r.hi) : rows.find((r) => n < r.hi);
+   return (hit || rows[rows.length - 1]).size;
+ }
+ 
+-export default function SizeGuide({ sizes, department = 'women' }) {
++export default function SizeGuide({ sizes, department = 'women', brand = '' }) {
+   const [open, setOpen] = useState(false);
+   const [tab, setTab] = useState(department === 'men' ? 'men' : 'women');
+   const [inches, setInches] = useState('');
+@@ -44,9 +73,11 @@ export default function SizeGuide({ sizes, department = 'women' }) {
+     return () => { document.body.style.overflow = prev; window.removeEventListener('keydown', onKey); };
+   }, [open]);
+   if (!hasLetterSizes(sizes)) return null;
+-  const chart = SIZE_CHART[tab];
++  const own = brandChart(brand);
++  const chart = own || SIZE_CHART[tab];
+   const pick = suggestSize(chart, inches);
+-  const sold = sizes.map((x) => String(x).trim().toUpperCase());
++  const sold = sizes.map(letterOf).filter(Boolean);
++  const chest = own ? own.measure === 'chest' : tab === 'men';
+   const pickSold = pick && sold.includes(pick);
+   return (
+     <>
+@@ -58,14 +89,16 @@ export default function SizeGuide({ sizes, department = 'women' }) {
+               <h2 id="fs-sizeguide-h">Size guide</h2>
+               <button type="button" ref={closer} className="fs-sizeguide__x" onClick={() => setOpen(false)} aria-label="Close size guide"><Icon name="x" size={20} /></button>
+             </div>
+-            <div className="fs-sizeguide__tabs" role="tablist">
+-              {[['women', 'Women'], ['men', 'Men']].map(([id, label]) => (
+-                <button key={id} type="button" role="tab" aria-selected={tab === id} className={tab === id ? 'is-on' : ''} onClick={() => setTab(id)}>{label}</button>
+-              ))}
+-            </div>
++            {own ? <p className="fs-sizeguide__brand">{own.title}</p> : (
++              <div className="fs-sizeguide__tabs" role="tablist">
++                {[['women', 'Women'], ['men', 'Men']].map(([id, label]) => (
++                  <button key={id} type="button" role="tab" aria-selected={tab === id} className={tab === id ? 'is-on' : ''} onClick={() => setTab(id)}>{label}</button>
++                ))}
++              </div>
++            )}
+             <div className="fs-sizeguide__find">
+-              <label htmlFor="fs-sizeguide-in">Find my size: your {tab === 'men' ? 'chest' : 'bust'} in inches</label>
+-              <input id="fs-sizeguide-in" type="number" inputMode="decimal" min="20" max="60" step="0.5" placeholder={tab === 'men' ? 'e.g. 40' : 'e.g. 35'}
++              <label htmlFor="fs-sizeguide-in">Find my size: your {chest ? 'chest' : 'bust'} in inches</label>
++              <input id="fs-sizeguide-in" type="number" inputMode="decimal" min="20" max="60" step="0.5" placeholder={chest ? 'e.g. 38' : 'e.g. 35'}
+                 value={inches} onChange={(e) => setInches(e.target.value)} />
+               <p role="status" aria-live="polite">
+                 {!inches ? 'Measure as below, then type it in.'
+@@ -73,18 +106,22 @@ export default function SizeGuide({ sizes, department = 'women' }) {
+                     : <>Suggested size: <b>{pick}</b>{pickSold ? '' : ' (not made in this product; try the next size or ask us)'}</>}
+               </p>
+             </div>
+-            <table className="fs-sizeguide__table">
++            <table className={`fs-sizeguide__table${own ? ' is-wide' : ''}`}>
+               <caption>Body measurements in inches</caption>
+               <thead><tr>{chart.head.map((h) => <th key={h} scope="col">{h}</th>)}</tr></thead>
+               <tbody>{chart.rows.map((r) => <tr key={r[0]} className={`${sold.includes(r[0]) ? 'is-sold' : ''}${r[0] === pick ? ' is-pick' : ''}`.trim()}>{r.map((c, i) => (i === 0 ? <th key={i} scope="row">{c}</th> : <td key={i}>{c}</td>))}</tr>)}</tbody>
+             </table>
++            {own ? (
++              <ul className="fs-sizeguide__how">{own.how.map(([b, t]) => <li key={b}><b>{b}:</b> {t}</li>)}</ul>
++            ) : (
+             <ul className="fs-sizeguide__how">
+               <li><b>Chest / bust:</b> around the fullest part, tape level under the arms.</li>
+               <li><b>Waist:</b> around the natural waistline, where you usually wear a belt.</li>
+               <li><b>Hip:</b> around the fullest part of the hips.</li>
+               <li>Between two sizes? Choose the larger for a relaxed fit.</li>
+             </ul>
+-            <p className="fs-sizeguide__note">A general guide. Where a product lists its own measurements in its details, follow those. Highlighted rows are the sizes this product comes in.</p>
++            )}
++            {own ? <p className="fs-sizeguide__note">{own.note} Highlighted rows are the sizes this product comes in.</p> : <p className="fs-sizeguide__note">A general guide. Where a product lists its own measurements in its details, follow those. Highlighted rows are the sizes this product comes in.</p>}
+           </div>
+         </div>
+       )}
+diff --git a/src/styles/sora-ds.css b/src/styles/sora-ds.css
+index 5b08cf5..e35d58d 100644
+--- a/src/styles/sora-ds.css
++++ b/src/styles/sora-ds.css
+@@ -351,4 +351,7 @@ body .fs .hx-ans .hx-ans__cta { background: #D9B26A; color: #121A16; }
+ .sora-ingr__list a { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 8px 16px; font-size: 14px; font-weight: 600; color: #1E3A2F; text-decoration: none; background: #FBF8F1; border: 1px solid rgba(30, 58, 47, .16); }
+ .sora-ingr__list a:hover { border-color: #2C5341; background: #fff; }
+ .sora-ingr__list span { font-size: 12px; font-weight: 500; color: #5c6a62; }
+-@media (max-width: 600px) { .sora-bc__store { display: none; } }
+\ No newline at end of file
++@media (max-width: 600px) { .sora-bc__store { display: none; } }
++/* A brand's own size chart (2026-11-20). */
++.fs-sizeguide__brand { margin: 0 0 12px; font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #8A5A12; }
++.fs-sizeguide__table.is-wide { display: block; overflow-x: auto; white-space: nowrap; }
+\ No newline at end of file

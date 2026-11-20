@@ -37,6 +37,19 @@ async function buildStamp() {
   } catch { return ''; }
 }
 
+/** Whether a key press lands in something the visitor is typing into (2026-11-20). Pure. */
+export function isTypingTarget(el) {
+  if (!el) return false;
+  const tag = String(el.tagName || '').toUpperCase();
+  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable === true;
+}
+
+/** The page's search box on screen: the first visible input inside a role="search" (each store's header has one). */
+export function visibleSearchInput(doc = typeof document !== 'undefined' ? document : null) {
+  if (!doc) return null;
+  return [...doc.querySelectorAll('[role="search"] input')].find((i) => { const r = i.getBoundingClientRect(); return r.width > 0 && r.height > 0; }) || null;
+}
+
 export function registerServiceWorker(win = typeof window !== 'undefined' ? window : null) {
   if (!win || !('serviceWorker' in win.navigator)) return;
   const local = /^(localhost|127\.0\.0\.1)$/.test(win.location.hostname);
@@ -121,6 +134,22 @@ export default function AppShell() {
     const t = setTimeout(() => { logSearch(m[1], q, document.querySelectorAll(m[2]).length); }, 3500);
     return () => clearTimeout(t);
   }, [pathname, search]);
+
+  // "/" jumps to the search box (2026-11-20), as on most big shops — never while typing,
+  // never with a modifier key, and not in the admin.
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented || isTypingTarget(e.target)) return;
+      if (/^\/admin(\/|$)/.test(window.location.pathname)) return;
+      const input = visibleSearchInput();
+      if (!input) return;
+      e.preventDefault();
+      input.focus();
+      input.select?.();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   // Product page views for "Popular this week" (round 9, 2026-11-16): the store and the slug,
   // once a day per browser, after the page has been open a moment (lib/popular.js).

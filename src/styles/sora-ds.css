@@ -352,3 +352,6 @@ body .fs .hx-ans .hx-ans__cta { background: #D9B26A; color: #121A16; }
 .sora-ingr__list a:hover { border-color: #2C5341; background: #fff; }
 .sora-ingr__list span { font-size: 12px; font-weight: 500; color: #5c6a62; }
 @media (max-width: 600px) { .sora-bc__store { display: none; } }
+/* A brand's own size chart (2026-11-20). */
+.fs-sizeguide__brand { margin: 0 0 12px; font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #8A5A12; }
+.fs-sizeguide__table.is-wide { display: block; overflow-x: auto; white-space: nowrap; }

@@ -209,7 +209,7 @@ export default function FashionProductPage() {
           <PdpAssurances />
 
           <VariantPicker view={view} size={st.size} colour={st.colour} onChange={setSel} />
-          <SizeGuide sizes={view.sizes} department={node && tree.ancestors(node.id).some((a) => /^men/i.test(a.slug)) ? 'men' : 'women'} />
+          <SizeGuide sizes={view.sizes} department={node && tree.ancestors(node.id).some((a) => /^men/i.test(a.slug)) ? 'men' : 'women'} brand={view.brand} />
 
           <PdpFactTable rows={factRows} />
           <PdpAbout bullets={bullets} />
