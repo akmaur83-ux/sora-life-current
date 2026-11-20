@@ -16,6 +16,7 @@ import PopularThisWeek from '../components/PopularThisWeek.jsx';
 import { EditStrips } from '../fashion/FashionEdit.jsx';
 import ShopByOccasion from '../components/ShopByOccasion.jsx';
 import ViewedLike from '../components/ViewedLike.jsx';
+import WinterDeals from '../components/WinterDeals.jsx';
 import { ShopByIngredient } from '../components/ShopExtras.jsx';
 import { LuxuryBeds, Bedsheets } from '../components/HomeCategoryRails.jsx';
 import RecentlyViewedHome from '../components/RecentlyViewedHome.jsx';
@@ -83,6 +84,8 @@ export default function Home() {
       <HomeTiles />
       {/* The round quick-nav row stays straight under the hero, above the offers (test-home-discovery D18). */}
       <ExploreStores />
+      {/* Winter deals (owner, 2026-11-20): the seasonal band, Nov–Feb, real discounts only (WinterDeals.jsx). */}
+      <WinterDeals />
 
       <HomeGroup eyebrow="Offers" title="Deals worth grabbing" />
       {/* The running offer with a live countdown (OfferBanner.jsx); nothing once it ends. */}
