@@ -17,6 +17,8 @@ test('the deploy step still finds the project in a minified bundle (and in a rea
   const url = 'https://sjqtevgcexumcmmjbehv.supabase.co'; const key = 'sb_publishable__rkhLKtvMtOYXbJikyHE6Q_yGGTSPEZ';
   assert.deepEqual(supabaseFromBundle(`const e="${url}",t="${key}";`), { url, key });
   assert.deepEqual(supabaseFromBundle(`const supabaseUrl = "${url}";\nconst supabasePublishableKey = "${key}";`), { url, key });
+  const jwt = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiJ9.c2lnbmF0dXJlc2lnbmF0dXJl';
+  assert.deepEqual(supabaseFromBundle(`var a="${url}",b="${jwt}";`), { url, key: jwt }, 'the production build uses a JWT anon key');
   assert.throws(() => supabaseFromBundle('console.log(1)'));
 });
 test('every re-encoded picture is in the repo, small, and named in the rollback map', () => {

@@ -38,7 +38,7 @@ export function supabaseFromBundle(bundleText) {
   const url = /const supabaseUrl = "(https:\/\/[a-z0-9]+\.supabase\.co)"/.exec(bundleText)?.[1]
     || /"(https:\/\/[a-z0-9]{15,}\.supabase\.co)"/.exec(bundleText)?.[1];
   const key = /const supabasePublishableKey = "([A-Za-z0-9_.-]{20,})"/.exec(bundleText)?.[1]
-    || /"(sb_publishable_[A-Za-z0-9_-]{20,})"/.exec(bundleText)?.[1];
+    || /"(sb_publishable_[A-Za-z0-9_-]{20,}|eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,})"/.exec(bundleText)?.[1];
   if (!url || !key) throw new Error('public/bundle.js carries no Supabase project URL and key, so the published content cannot be read.');
   return { url, key };
 }
