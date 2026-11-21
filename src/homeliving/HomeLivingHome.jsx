@@ -9,6 +9,7 @@ import RecentlyViewedHome from '../components/RecentlyViewedHome.jsx';
 import BudgetChips from '../components/BudgetChips.jsx';
 import OfferBanner from '../components/OfferBanner.jsx';
 import { BagReminder } from '../components/HomeExtras.jsx';
+import SkeletonGrid from '../components/Skeleton.jsx';
 
 // ============================================================
 // /homeliving — the hero (to the top of the page, the shell's header floats
@@ -182,7 +183,9 @@ function FeaturedRow({ products, status }) {
         <div><h2 className="hl-sec__h serif" id="hl-featured-h">{title}</h2>{sub && <p className="hl-sec__sub">{sub}</p>}</div>
         <Link to={link} className="hl-sec__link">{more} <Icon name="arrowRight" size={16} /></Link>
       </header>
-      {row.length === 0 ? (
+      {row.length === 0 && status === 'loading' ? (
+        <SkeletonGrid count={4} label="Loading the catalogue…" className="hl-skel-row" />
+      ) : row.length === 0 ? (
         <p className="hl-empty">{status === 'loading' ? 'Loading the catalogue…' : status === 'error' ? 'The Home & Living catalogue could not be loaded. Please try again shortly.' : 'The Home & Living store is being stocked — products appear here as they go live.'}</p>
       ) : (
         <div className="hl-row">

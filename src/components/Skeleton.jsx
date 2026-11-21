@@ -21,3 +21,25 @@ export default function SkeletonGrid({ count = 8, label = 'Loading…', classNam
     </div>
   );
 }
+
+/**
+ * A product page's shape while its catalogue loads (round 35, 2026-11-21): the picture, the
+ * name, the price and the button as soft blocks — the page reads as arriving, not empty.
+ */
+export function SkeletonPdp({ label = 'Loading the product…' }) {
+  return (
+    <div role="status" className="sora-skel-pdp">
+      <span className="sora-sr">{label}</span>
+      <span className="sora-skel sora-skel-pdp__img" aria-hidden="true" />
+      <div className="sora-skel-pdp__info" aria-hidden="true">
+        <span className="sora-skel sora-skel--short" />
+        <span className="sora-skel sora-skel-pdp__title" />
+        <span className="sora-skel sora-skel-pdp__title sora-skel-pdp__title--2" />
+        <span className="sora-skel sora-skel--price" />
+        <span className="sora-skel sora-skel-pdp__btn" />
+        <span className="sora-skel sora-skel--line" />
+        <span className="sora-skel sora-skel--line" />
+      </div>
+    </div>
+  );
+}

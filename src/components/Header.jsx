@@ -13,6 +13,7 @@ import { branding } from '../lib/settings.js';
 import { lockScroll, unlockScroll } from '../lib/scrollLock.js';
 import { useOtherStoreMatches } from '../lib/crossStoreSearch.js';
 import VoiceSearch from './VoiceSearch.jsx';
+import { SEARCH_HINTS, useRotatingHint } from '../lib/feel.js';
 
 // The desktop nav used to paint the built-in category set and then visibly
 // swap it for the Supabase set once hydration landed a few hundred ms later —
@@ -58,6 +59,8 @@ export default function Header() {
   const [drawer, setDrawer] = useState(false);
   const [q, setQ] = useState('');
   const [focused, setFocused] = useState(false);
+  // The search box suggests real things to look for, turning while it is idle (2026-11-21).
+  const hint = useRotatingHint(SEARCH_HINTS.wellness, !focused && !q);
   const [scrolled, setScrolled] = useState(false);
   // Mobile search overlay. The desktop search field is hidden on small
   // screens, so mobile previously had no way to search at all — the icon
@@ -161,7 +164,7 @@ export default function Header() {
               <form className="v2-hdr__searchbox" onSubmit={submit} role="search">
                 <Icon name="search" size={17} stroke={1.5} />
                 <input
-                  placeholder="Search wellness essentials"
+                  placeholder={hint || "Search wellness essentials"}
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
                   onFocus={() => setFocused(true)}
@@ -261,7 +264,7 @@ export default function Header() {
                 type="search"
                 enterKeyHint="search"
                 autoComplete="off"
-                placeholder="Search for products..."
+                placeholder={hint || "Search for products..."}
                 aria-label="Search for products"
                 value={q}
                 onChange={(e) => setQ(e.target.value)}

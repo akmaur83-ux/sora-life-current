@@ -1,0 +1,953 @@
+diff --git a/src/components/CartExtras.jsx b/src/components/CartExtras.jsx
+new file mode 100644
+index 0000000..3c72c73
+--- /dev/null
++++ b/src/components/CartExtras.jsx
+@@ -0,0 +1,63 @@
++import { Link } from 'react-router-dom';
++import Icon from './Icon.jsx';
++import ProductImage from './ProductImage.jsx';
++import { useStore } from '../lib/store.jsx';
++import { money } from '../lib/format.js';
++import { products as allProducts, isPurchasable } from '../data/products.js';
++
++// ============================================================
++// The cart's two Blinkit/Zepto touches (round 35, owner 2026-11-21), in SORA's look:
++//   CartSavings     "You're saving ₹X on this order" — MRP and coupon savings, from the
++//                   server's quote when it has answered, else the cart's own MRP figure.
++//   BeforeCheckout  a row of small, in-stock wellness add-ons at ₹499 or less that are not
++//                   already in the bag, one tap each. An item added leaves the row.
++// ============================================================
++
++/** Total saved on this order: product (MRP) discount + coupon, from the quote or the cart. Pure. */
++export function orderSavings(breakdown, cartSavingsValue = 0) {
++  if (breakdown) return Math.max(0, (Number(breakdown.productDiscount) || 0) + (Number(breakdown.couponDiscount) || 0));
++  return Math.max(0, Number(cartSavingsValue) || 0);
++}
++
++export function CartSavings({ breakdown, fallback = 0 }) {
++  const saved = orderSavings(breakdown, fallback);
++  if (!(saved >= 1)) return null;
++  return (
++    <p className="sora-saved" role="status">
++      <Icon name="tag" size={16} />
++      <span>You’re saving <b>{money(saved)}</b> on this order</span>
++    </p>
++  );
++}
++
++export const ADDON_MAX_PRICE = 499;
++/** Small add-ons: in stock, buyable, at most ₹499, not in the bag; bestsellers first, then cheapest. Pure. */
++export function addOnPicks(list, cartIds, max = 10) {
++  const inBag = new Set((cartIds || []).map(String));
++  return (Array.isArray(list) ? list : [])
++    .filter((p) => p && !inBag.has(String(p.id)) && Number(p.stock) > 0 && Number(p.price) > 0 && Number(p.price) <= ADDON_MAX_PRICE && isPurchasable(p))
++    .sort((a, b) => (b.isBestseller ? 1 : 0) - (a.isBestseller ? 1 : 0) || Number(a.price) - Number(b.price))
++    .slice(0, max);
++}
++
++export function BeforeCheckout() {
++  const { cart, addToCart } = useStore();
++  const picks = addOnPicks(allProducts, (cart || []).filter((l) => !l.catalogue).map((l) => l.id));
++  if (picks.length < 3) return null;
++  return (
++    <section className="sora-addons" aria-labelledby="sora-addons-h">
++      <h2 id="sora-addons-h" className="sora-addons__h">Before you checkout</h2>
++      <p className="sora-addons__sub">Small things, ₹{ADDON_MAX_PRICE} or less</p>
++      <ul className="sora-addons__row">
++        {picks.map((p) => (
++          <li key={p.id} className="sora-addons__item">
++            <Link to={`/product/${p.slug}`} className="sora-addons__pic" aria-label={p.name}><ProductImage product={p} frame="v2" variant="card" loading="lazy" /></Link>
++            <Link to={`/product/${p.slug}`} className="sora-addons__name">{p.name}</Link>
++            <span className="sora-addons__price">{money(p.price)}{Number(p.mrp) > Number(p.price) && <s>{money(p.mrp)}</s>}</span>
++            <button type="button" className="sora-addons__add" onClick={() => addToCart(p)} aria-label={`Add ${p.name} to bag`}><Icon name="plus" size={14} stroke={2} /> Add</button>
++          </li>
++        ))}
++      </ul>
++    </section>
++  );
++}
+diff --git a/src/components/Header.jsx b/src/components/Header.jsx
+index 55daefe..25f2b20 100644
+--- a/src/components/Header.jsx
++++ b/src/components/Header.jsx
+@@ -13,6 +13,7 @@ import { branding } from '../lib/settings.js';
+ import { lockScroll, unlockScroll } from '../lib/scrollLock.js';
+ import { useOtherStoreMatches } from '../lib/crossStoreSearch.js';
+ import VoiceSearch from './VoiceSearch.jsx';
++import { SEARCH_HINTS, useRotatingHint } from '../lib/feel.js';
+ 
+ // The desktop nav used to paint the built-in category set and then visibly
+ // swap it for the Supabase set once hydration landed a few hundred ms later —
+@@ -58,6 +59,8 @@ export default function Header() {
+   const [drawer, setDrawer] = useState(false);
+   const [q, setQ] = useState('');
+   const [focused, setFocused] = useState(false);
++  // The search box suggests real things to look for, turning while it is idle (2026-11-21).
++  const hint = useRotatingHint(SEARCH_HINTS.wellness, !focused && !q);
+   const [scrolled, setScrolled] = useState(false);
+   // Mobile search overlay. The desktop search field is hidden on small
+   // screens, so mobile previously had no way to search at all — the icon
+@@ -161,7 +164,7 @@ export default function Header() {
+               <form className="v2-hdr__searchbox" onSubmit={submit} role="search">
+                 <Icon name="search" size={17} stroke={1.5} />
+                 <input
+-                  placeholder="Search wellness essentials"
++                  placeholder={hint || "Search wellness essentials"}
+                   value={q}
+                   onChange={(e) => setQ(e.target.value)}
+                   onFocus={() => setFocused(true)}
+@@ -261,7 +264,7 @@ export default function Header() {
+                 type="search"
+                 enterKeyHint="search"
+                 autoComplete="off"
+-                placeholder="Search for products..."
++                placeholder={hint || "Search for products..."}
+                 aria-label="Search for products"
+                 value={q}
+                 onChange={(e) => setQ(e.target.value)}
+diff --git a/src/components/MobileCartSummary.jsx b/src/components/MobileCartSummary.jsx
+index 661d0bb..d785e48 100644
+--- a/src/components/MobileCartSummary.jsx
++++ b/src/components/MobileCartSummary.jsx
+@@ -1,21 +1,46 @@
++import { useEffect, useRef, useState } from 'react';
+ import { Link, useLocation } from 'react-router-dom';
+ import { useStore } from '../lib/store.jsx';
+ import { money } from '../lib/format.js';
+ import Icon from './Icon.jsx';
+ import MobileTabBar from './MobileTabBar.jsx';
+ 
+-// Search results use /shop?q=...; purchase and non-storefront routes are
+-// deliberately excluded. The existing PDP purchase bar retains priority.
+-export default function MobileCartSummary() {
++// The phone's floating cart bar, sitting on the bottom navigation.
++// Round 35 (owner, 2026-11-21: "Blinkit/Zepto jaise" — the pattern, SORA's look): it now
++// shows wherever a shopper browses, in all three stores — not only /shop and categories —
++// with the last few things added as small pictures, what the bag saves on MRP, and a small
++// bump each time something new lands. Purchase and account pages keep it out of the way
++// (the product page's own buy bar retains priority).
++export const CART_BAR_HIDDEN = /^\/(?:cart|checkout|product\/|fashion\/p\/|homeliving\/p\/|grocery\/p\/|account|invoice|passport|gift-receipt|admin|login|signin|creator|track)/;
++export const cartBarRoute = (pathname) => !CART_BAR_HIDDEN.test(String(pathname || '/'));
++
++/** A line's picture, from any store's hydrated line. */
++const lineImage = (l) => l?.product?.image || (Array.isArray(l?.product?.images) ? l.product.images.find(Boolean) : null) || null;
++
++export default function MobileCartSummary({ tabbar = null }) {
+   const { pathname } = useLocation();
+-  const { cartCount, subtotal } = useStore();
+-  const browseRoute = /^\/(?:shop\/?|wishlist\/?|category\/[^/]+\/?)?$/.test(pathname);
+-  const visible = browseRoute && cartCount > 0;
++  const { cartCount, subtotal, savings, cartDetailed } = useStore();
++  const visible = cartBarRoute(pathname) && cartCount > 0;
++
++  // A bump when the count goes up (not when it goes down).
++  const prev = useRef(cartCount);
++  const [bump, setBump] = useState(0);
++  useEffect(() => {
++    if (cartCount > prev.current) setBump((b) => b + 1);
++    prev.current = cartCount;
++  }, [cartCount]);
++
++  const thumbs = (cartDetailed || []).map(lineImage).filter(Boolean).slice(-3).reverse();
+ 
+   return (
+     <div className={`v2-cart-dock${visible ? ' v2-cart-dock--active' : ''}`}>
+       {visible && (
+-        <aside className="v2-mobile-cart" aria-label="Cart summary">
++        <aside key={bump} className={`v2-mobile-cart${bump ? ' v2-mobile-cart--bump' : ''}`} aria-label="Cart summary">
++          {thumbs.length > 0 && (
++            <span className="v2-mobile-cart__thumbs" aria-hidden="true">
++              {thumbs.map((src, i) => <img key={src + i} src={src} alt="" width="34" height="34" loading="lazy" decoding="async" style={{ '--i': i }} />)}
++            </span>
++          )}
+           {/* Count and amount share one line: the stacked block made the bar
+               tall enough that, with the tab bar under it, the two together
+               covered a meaningful slice of a 390px screen. */}
+@@ -26,13 +51,14 @@ export default function MobileCartSummary() {
+             <span className="v2-mobile-cart__count">
+               {cartCount} {cartCount === 1 ? 'item' : 'items'}
+             </span>
++            {savings > 0 && <span className="v2-mobile-cart__saved">Saved {money(savings)}</span>}
+           </div>
+           <Link to="/cart" className="v2-mobile-cart__link">
+             View cart <Icon name="arrowRight" size={17} />
+           </Link>
+         </aside>
+       )}
+-      <MobileTabBar />
++      {tabbar || <MobileTabBar />}
+     </div>
+   );
+ }
+diff --git a/src/components/OrderAgain.jsx b/src/components/OrderAgain.jsx
+new file mode 100644
+index 0000000..6b7bac0
+--- /dev/null
++++ b/src/components/OrderAgain.jsx
+@@ -0,0 +1,46 @@
++import { useEffect, useState } from 'react';
++import ProductRail from './ProductRail.jsx';
++import { useCustomerAuth } from '../lib/customerAuth.jsx';
++import { supabase } from '../lib/supabase.js';
++import { productById } from '../data/products.js';
++
++// ============================================================
++// "Order again" (round 35, owner 2026-11-21 — Blinkit/Zepto's buy-again row, SORA's look):
++// for a signed-in shopper, the wellness products from their own recent orders that are
++// still on sale and in stock, newest first, each with its card's Add / − qty + control.
++// Nothing for a guest, nothing when there is nothing to show. Their orders are read under
++// RLS ("orders customer read") — only their own rows, only the items column.
++// Fashion and Home & Living lines need a size or colour chosen again, so they are left to
++// the account page's "Buy it again" for now.
++// ============================================================
++
++/** Unique, still-buyable wellness products from orders (newest first), at most `max`. Pure. */
++export function orderAgainProducts(orders, byId = productById, max = 12) {
++  const out = []; const seen = new Set();
++  for (const o of Array.isArray(orders) ? orders : []) {
++    if (o?.status === 'cancelled') continue;
++    for (const l of Array.isArray(o?.items) ? o.items : []) {
++      if (!l || l.catalogue) continue;
++      const key = l.biosash_id ?? l.product_id;
++      const p = key != null ? byId[key] : null;
++      if (!p || seen.has(p.id) || !(Number(p.stock) > 0) || !(Number(p.price) > 0)) continue;
++      seen.add(p.id); out.push(p);
++      if (out.length >= max) return out;
++    }
++  }
++  return out;
++}
++
++export default function OrderAgain() {
++  const { session } = useCustomerAuth();
++  const [items, setItems] = useState([]);
++  useEffect(() => {
++    if (!session || !supabase) { setItems([]); return undefined; }
++    let live = true;
++    supabase.from('orders').select('status, items').order('created_at', { ascending: false }).limit(10)
++      .then(({ data }) => { if (live) setItems(orderAgainProducts(data)); }, () => { if (live) setItems([]); });
++    return () => { live = false; };
++  }, [session]);
++  if (items.length < 2) return null;
++  return <ProductRail eyebrow="Welcome back" title="Order again" products={items} link="/account/orders" linkLabel="Your orders" limit={12} />;
++}
+diff --git a/src/components/ProductCard.jsx b/src/components/ProductCard.jsx
+index eca8cd9..d2d1d90 100644
+--- a/src/components/ProductCard.jsx
++++ b/src/components/ProductCard.jsx
+@@ -5,6 +5,7 @@ import PriceTag from './PriceTag.jsx';
+ import { useStore } from '../lib/store.jsx';
+ import { categoryBySlug } from '../data/categories.js';
+ import { isPurchasable, UNAVAILABLE_LABEL } from '../data/products.js';
++import { haptic } from '../lib/feel.js';
+ 
+ // ============================================================================
+ // SORA LIFE V2 — PRODUCT CARD
+@@ -41,7 +42,15 @@ function pickBadge(product, out) {
+ }
+ 
+ export default function ProductCard({ product, mediaLoading = 'lazy', mediaFetchPriority }) {
+-  const { addToCart, toggleWish, isWished } = useStore();
++  const { addToCart, toggleWish, isWished, cart, dispatch } = useStore();
++  // In the bag already (round 35, 2026-11-21: Blinkit/Zepto's stepper): the card's button
++  // becomes − qty + for that line, so the bag changes without leaving the list. The line
++  // is the plain one "Add to cart" makes (no pack chosen); a pack picked on the product
++  // page is a different line and leaves the card as it was.
++  const line = Array.isArray(cart) ? cart.find((l) => !l.catalogue && l.key === String(product.id)) : null;
++  const atStock = line && Number.isFinite(product.stock) && product.stock > 0 && line.qty >= product.stock;
++  const less = () => { haptic(); if (line.qty <= 1) dispatch({ type: 'REMOVE', key: line.key }); else dispatch({ type: 'SET_QTY', key: line.key, qty: line.qty - 1 }); };
++  const more = () => { haptic(); dispatch({ type: 'SET_QTY', key: line.key, qty: line.qty + 1 }); };
+   const buyable = isPurchasable(product);
+   const wished = isWished(product.id);
+   const out = product.stock === 0;
+@@ -104,6 +113,12 @@ export default function ProductCard({ product, mediaLoading = 'lazy', mediaFetch
+             <button type="button" className="v2-pc__cta v2-pc__cta--out" disabled aria-disabled="true">
+               {UNAVAILABLE_LABEL}
+             </button>
++          ) : line ? (
++            <div className="v2-pc__step" role="group" aria-label={`${product.name} in your bag`}>
++              <button type="button" onClick={less} aria-label={line.qty <= 1 ? `Remove ${product.name} from bag` : `One less ${product.name}`}><Icon name={line.qty <= 1 ? 'trash' : 'minus'} size={14} stroke={1.8} /></button>
++              <span aria-live="polite">{line.qty}</span>
++              <button type="button" onClick={more} disabled={atStock} aria-label={`One more ${product.name}`}><Icon name="plus" size={14} stroke={1.8} /></button>
++            </div>
+           ) : (
+             <button type="button" className="v2-pc__cta" onClick={() => addToCart(product)}>
+               <Icon name="bag" size={14} stroke={1.6} /> Add to cart
+diff --git a/src/components/ProductGallery.jsx b/src/components/ProductGallery.jsx
+index 71debdb..1cb2ce6 100644
+--- a/src/components/ProductGallery.jsx
++++ b/src/components/ProductGallery.jsx
+@@ -1,6 +1,6 @@
+ import { useEffect, useRef, useState } from 'react';
+ import ProductImage from './ProductImage.jsx';
+-import ProductLightbox from './pdp/ProductLightbox.jsx';
++import { GalleryZoom } from '../homeliving/HomeLivingProductPage.jsx';
+ import { productGallery } from '../data/products.js';
+ 
+ // ============================================================
+@@ -126,13 +126,13 @@ export default function ProductGallery({ product, children }) {
+       )}
+ 
+       {lightboxOpen && (
+-        <ProductLightbox
+-          product={product}
+-          frames={frames}
+-          active={idx}
+-          onChange={setActive}
++        // The full-screen viewer with pinch to zoom, swipe between pictures and drag down to
++        // close — the one Fashion and Home & Living use (round 35, 2026-11-21).
++        <GalleryZoom
++          images={frames.map((f) => ({ url: f.url, alt: f.alt || product.name }))}
++          start={idx}
++          name={product.name}
+           onClose={() => setLightboxOpen(false)}
+-          onImageError={rejectFrame}
+         />
+       )}
+     </div>
+diff --git a/src/components/Skeleton.jsx b/src/components/Skeleton.jsx
+index 9652fa7..b196637 100644
+--- a/src/components/Skeleton.jsx
++++ b/src/components/Skeleton.jsx
+@@ -21,3 +21,25 @@ export default function SkeletonGrid({ count = 8, label = 'Loading…', classNam
+     </div>
+   );
+ }
++
++/**
++ * A product page's shape while its catalogue loads (round 35, 2026-11-21): the picture, the
++ * name, the price and the button as soft blocks — the page reads as arriving, not empty.
++ */
++export function SkeletonPdp({ label = 'Loading the product…' }) {
++  return (
++    <div role="status" className="sora-skel-pdp">
++      <span className="sora-sr">{label}</span>
++      <span className="sora-skel sora-skel-pdp__img" aria-hidden="true" />
++      <div className="sora-skel-pdp__info" aria-hidden="true">
++        <span className="sora-skel sora-skel--short" />
++        <span className="sora-skel sora-skel-pdp__title" />
++        <span className="sora-skel sora-skel-pdp__title sora-skel-pdp__title--2" />
++        <span className="sora-skel sora-skel--price" />
++        <span className="sora-skel sora-skel-pdp__btn" />
++        <span className="sora-skel sora-skel--line" />
++        <span className="sora-skel sora-skel--line" />
++      </div>
++    </div>
++  );
++}
+diff --git a/src/components/Toasts.jsx b/src/components/Toasts.jsx
+index 0c40bad..0c70b0f 100644
+--- a/src/components/Toasts.jsx
++++ b/src/components/Toasts.jsx
+@@ -1,8 +1,21 @@
++import { useEffect, useRef } from 'react';
+ import Icon from './Icon.jsx';
+ import { useStore } from '../lib/store.jsx';
++import { celebrateAdd, trackPresses } from '../lib/feel.js';
+ 
+ export default function Toasts() {
+   const { toasts } = useStore();
++  // Something just landed in the bag (round 35, 2026-11-21): a tick on the phone and its
++  // picture flying into the bag icon (lib/feel.js). Each note is celebrated once.
++  const seen = useRef(new Set());
++  useEffect(() => { trackPresses(); }, []);
++  useEffect(() => {
++    for (const t of toasts) {
++      if (seen.current.has(t.id)) continue;
++      seen.current.add(t.id);
++      if (t.kind === 'cart' && /^Added to cart/.test(String(t.message))) celebrateAdd();
++    }
++  }, [toasts]);
+   return (
+     <div className="toast-wrap" role="status" aria-live="polite">
+       {toasts.map((t) => (
+diff --git a/src/fashion/FashionHome.jsx b/src/fashion/FashionHome.jsx
+index f785cdc..31e6464 100644
+--- a/src/fashion/FashionHome.jsx
++++ b/src/fashion/FashionHome.jsx
+@@ -23,6 +23,7 @@ import { DEFAULT_FASHION_STOREFRONT, normalizeFashionStorefront } from '../lib/s
+ import { useStorefrontSection } from '../lib/storefrontSections.js';
+ import WinterDeals from '../components/WinterDeals.jsx';
+ import LoadMore, { useRememberedShowMore } from '../components/LoadMore.jsx';
++import SkeletonGrid from '../components/Skeleton.jsx';
+ 
+ // ============================================================
+ // /fashion — circular category tiles, the benefits strip, the hero (image
+@@ -199,7 +200,9 @@ export default function FashionHome() {
+           <h2 className="fs-sec__h serif" id="fs-grid-h">{config.sections.productsTitle}</h2>
+           <span className="fs-sec__count">{grid.length} {grid.length === 1 ? 'style' : 'styles'}</span>
+         </header>
+-        {grid.length === 0 ? (
++        {grid.length === 0 && status === 'loading' ? (
++          <SkeletonGrid count={6} label="Loading the catalogue…" />
++        ) : grid.length === 0 ? (
+           <p className="fs-empty">{status === 'loading' ? 'Loading the catalogue…' : status === 'error' ? 'The fashion catalogue could not be loaded. Please try again shortly.' : 'The fashion store is being stocked — styles appear here as they go live.'}</p>
+         ) : (
+           <>
+diff --git a/src/fashion/FashionLayout.jsx b/src/fashion/FashionLayout.jsx
+index 25a9a05..166e592 100644
+--- a/src/fashion/FashionLayout.jsx
++++ b/src/fashion/FashionLayout.jsx
+@@ -4,6 +4,7 @@ import Icon from '../components/Icon.jsx';
+ import { BrandMark } from '../components/Logo.jsx';
+ import Footer from '../components/Footer.jsx';
+ import MobileTabBar from '../components/MobileTabBar.jsx';
++import MobileCartSummary from '../components/MobileCartSummary.jsx';
+ import StickyCats from '../components/StickyCats.jsx';
+ import Toasts from '../components/Toasts.jsx';
+ import { useStore } from '../lib/store.jsx';
+@@ -16,6 +17,7 @@ import { useStorefrontSection } from '../lib/storefrontSections.js';
+ import SearchSuggest, { SUGGEST_MAX, suggestKeys, RecentSearches, readRecentSearches, rememberSearch, clearRecentSearches } from '../components/SearchSuggest.jsx';
+ import VoiceSearch from '../components/VoiceSearch.jsx';
+ import { searchItems, didYouMean } from '../lib/searchMatch.js';
++import { SEARCH_HINTS, useRotatingHint } from '../lib/feel.js';
+ 
+ // ============================================================
+ // The fashion store shell — its own header (logo, search, account,
+@@ -58,6 +60,8 @@ export function FashionHeader({ onMenu }) {
+   const { views, tree } = useFashionCatalogue();
+   const [open, setOpen] = useState(false);
+   const [active, setActive] = useState(-1);
++  // The search box suggests real things to look for, turning while it is idle (2026-11-21).
++  const hint = useRotatingHint(SEARCH_HINTS.fashion, !open && !q);
+   const term = q.trim();
+   const found = open && term.length >= 2
+     ? searchItems(views, term, (v) => [v.name, v.brand, tree.byId.get(v.category_id)?.name]).map((v) => ({ key: v.id, href: `/fashion/p/${v.slug}`, name: v.name, brand: v.brand, image: v.image, price: v.price }))
+@@ -136,7 +140,7 @@ export function FashionHeader({ onMenu }) {
+       </div>
+       <form className="fs-search" role="search" onSubmit={submit}>
+         <Icon name="search" size={20} />
+-        <input type="search" value={q} onChange={(e) => { setQ(e.target.value); setOpen(true); setActive(-1); }} placeholder={config.header.searchPlaceholder || SEARCH_PLACEHOLDER} aria-label="Search fashion"
++        <input type="search" value={q} onChange={(e) => { setQ(e.target.value); setOpen(true); setActive(-1); }} placeholder={(config.header.searchPlaceholder && config.header.searchPlaceholder !== SEARCH_PLACEHOLDER ? config.header.searchPlaceholder : '') || hint || SEARCH_PLACEHOLDER} aria-label="Search fashion"
+           onFocus={() => { setOpen(true); setRecent(readRecentSearches('fashion')); }} onBlur={() => setOpen(false)} onKeyDown={keys} aria-expanded={found ? true : undefined} aria-controls={found ? 'fs-suggest' : undefined} />
+         <VoiceSearch onResult={spoken} />
+         <button type="submit" className="fs-search__go" aria-label="Search"><Icon name="search" size={22} /></button>
+@@ -225,7 +229,8 @@ function FashionStickyCats() {
+ 
+ function FashionTabBar() {
+   const wish = useFashionWishlist();
+-  return <MobileTabBar store="fashion" savedCount={wish.count} />;
++  // The floating cart bar rides on the tab bar here too (round 35, 2026-11-21).
++  return <MobileCartSummary tabbar={<MobileTabBar store="fashion" savedCount={wish.count} />} />;
+ }
+ 
+ function Shell() {
+diff --git a/src/fashion/FashionProductPage.jsx b/src/fashion/FashionProductPage.jsx
+index 7e70c2d..90b3360 100644
+--- a/src/fashion/FashionProductPage.jsx
++++ b/src/fashion/FashionProductPage.jsx
+@@ -27,6 +27,7 @@ import PdpDeliveryDate from '../components/pdp/PdpDeliveryDate.jsx';
+ import ProductDeliveryInfo from '../components/pdp/ProductDeliveryInfo.jsx';
+ import SizeGuide from './SizeGuide.jsx';
+ import { usePageMeta, priceTitle } from '../lib/pageMeta.js';
++import { SkeletonPdp } from '../components/Skeleton.jsx';
+ 
+ // ============================================================
+ // /fashion/p/<slug> — the product page.
+@@ -147,6 +148,8 @@ export default function FashionProductPage() {
+       crumbs: [...breadcrumbFor(tree, view.category_id ? tree.byId.get(view.category_id) : null), { name: view.name }] },
+   } : {}, [view?.price, liveStock, facts?.sku]);
+ 
++  // Still arriving (round 35, 2026-11-21): the page's shape, not a line of text.
++  if (!view && status === 'loading') return <div className="fs-listing"><SkeletonPdp /></div>;
+   if (!view) {
+     return (
+       <div className="fs-listing">
+diff --git a/src/homeliving/HomeLivingCategory.jsx b/src/homeliving/HomeLivingCategory.jsx
+index fa6ab2d..b8f92e0 100644
+--- a/src/homeliving/HomeLivingCategory.jsx
++++ b/src/homeliving/HomeLivingCategory.jsx
+@@ -9,6 +9,7 @@ import {
+ } from '../lib/homelivingListing.js';
+ import HomeLivingProductCard from './HomeLivingProductCard.jsx';
+ import LoadMore, { useShowMore } from '../components/LoadMore.jsx';
++import SkeletonGrid from '../components/Skeleton.jsx';
+ 
+ // ============================================================
+ // /homeliving/category/<slug> — the category listing. Every filter, the
+@@ -140,7 +141,9 @@ export function Listing({ title, trail, scope = null, intro = null, emptyCopy, b
+         {panel && <button type="button" className="hl-filters__scrim" aria-label="Close filters" onClick={() => setPanel(false)} />}
+         <FilterPanel state={state} options={options} onPatch={patch} onClear={clear} onClose={() => setPanel(false)} />
+         <div className="hl-listing__results">
+-          {results.length === 0 ? (
++          {results.length === 0 && status === 'loading' ? (
++            <SkeletonGrid count={6} label="Loading the catalogue…" />
++          ) : results.length === 0 ? (
+             <div className="hl-empty hl-empty--listing">
+               <p>{status === 'loading' ? 'Loading the catalogue…' : status === 'error' ? 'The Home & Living catalogue could not be loaded. Please try again shortly.' : count > 0 ? 'Nothing matches these filters.' : emptyCopy}</p>
+               {count > 0 && <button type="button" className="hl-btn" onClick={clear}>Clear filters</button>}
+diff --git a/src/homeliving/HomeLivingHome.jsx b/src/homeliving/HomeLivingHome.jsx
+index b8f02f9..83850a8 100644
+--- a/src/homeliving/HomeLivingHome.jsx
++++ b/src/homeliving/HomeLivingHome.jsx
+@@ -9,6 +9,7 @@ import RecentlyViewedHome from '../components/RecentlyViewedHome.jsx';
+ import BudgetChips from '../components/BudgetChips.jsx';
+ import OfferBanner from '../components/OfferBanner.jsx';
+ import { BagReminder } from '../components/HomeExtras.jsx';
++import SkeletonGrid from '../components/Skeleton.jsx';
+ 
+ // ============================================================
+ // /homeliving — the hero (to the top of the page, the shell's header floats
+@@ -182,7 +183,9 @@ function FeaturedRow({ products, status }) {
+         <div><h2 className="hl-sec__h serif" id="hl-featured-h">{title}</h2>{sub && <p className="hl-sec__sub">{sub}</p>}</div>
+         <Link to={link} className="hl-sec__link">{more} <Icon name="arrowRight" size={16} /></Link>
+       </header>
+-      {row.length === 0 ? (
++      {row.length === 0 && status === 'loading' ? (
++        <SkeletonGrid count={4} label="Loading the catalogue…" className="hl-skel-row" />
++      ) : row.length === 0 ? (
+         <p className="hl-empty">{status === 'loading' ? 'Loading the catalogue…' : status === 'error' ? 'The Home & Living catalogue could not be loaded. Please try again shortly.' : 'The Home & Living store is being stocked — products appear here as they go live.'}</p>
+       ) : (
+         <div className="hl-row">
+diff --git a/src/homeliving/HomeLivingLayout.jsx b/src/homeliving/HomeLivingLayout.jsx
+index 83be898..9ee9144 100644
+--- a/src/homeliving/HomeLivingLayout.jsx
++++ b/src/homeliving/HomeLivingLayout.jsx
+@@ -11,6 +11,8 @@ import SearchSuggest, { SUGGEST_MAX, suggestKeys, RecentSearches, readRecentSear
+ import { searchItems, didYouMean } from '../lib/searchMatch.js';
+ import VoiceSearch from '../components/VoiceSearch.jsx';
+ import { useHomeLivingWishlist } from '../lib/homelivingWishlist.js';
++import { SEARCH_HINTS, useRotatingHint } from '../lib/feel.js';
++import MobileCartSummary from '../components/MobileCartSummary.jsx';
+ 
+ // ============================================================
+ // The Home & Living store shell — its own header (menu, centred wordmark,
+@@ -119,6 +121,8 @@ export function SearchBar() {
+   const [q, setQ] = useState(() => new URLSearchParams(location.search).get('q') || '');
+   const [open, setOpen] = useState(false);
+   const [active, setActive] = useState(-1);
++  // The search box suggests real things to look for, turning while it is idle (2026-11-21).
++  const hint = useRotatingHint(SEARCH_HINTS.homeliving, !open && !q);
+   const term = q.trim();
+   const rows = homelivingSearchRows(products, categories);
+   const found = open && term.length >= 2 ? searchItems(rows, term) : null;
+@@ -134,7 +138,7 @@ export function SearchBar() {
+   return (
+     <div className="hl-search" role="search" aria-label="Search Home & Living">
+       <Icon name="search" size={22} />
+-      <input type="search" placeholder={SEARCH_PLACEHOLDER} aria-label="Search Home & Living" value={q}
++      <input type="search" placeholder={hint || SEARCH_PLACEHOLDER} aria-label="Search Home & Living" value={q}
+         onChange={(e) => { setQ(e.target.value); setOpen(true); setActive(-1); }} onFocus={() => { setOpen(true); setRecent(readRecentSearches('homeliving')); }} onBlur={() => setOpen(false)} onKeyDown={keys}
+         enterKeyHint="search" aria-expanded={found ? true : undefined} aria-controls={found ? 'hl-suggest' : undefined} />
+       <VoiceSearch onResult={spoken} />
+@@ -238,7 +242,9 @@ export default function HomeLivingLayout() {
+       {/* Fixed to the bottom of a phone; a static strip under the header on a wide
+           screen. The homepage mounts it under the hero instead (nothing sits above
+           the photograph), so it is the page's there. */}
+-      {!over && <BottomNav />}
++      {/* The floating cart bar rides on the bottom nav here too (round 35, 2026-11-21). */}
++      {/* On the store's own home the bottom nav is hidden by design; the cart bar still shows. */}
++      <MobileCartSummary tabbar={over ? <></> : <BottomNav />} />
+       <Drawer open={menu} onClose={() => setMenu(false)} />
+       <main className="hl-main"><Outlet /></main>
+       <Footer />
+diff --git a/src/homeliving/HomeLivingProductPage.jsx b/src/homeliving/HomeLivingProductPage.jsx
+index 1cadb5e..cc0e85c 100644
+--- a/src/homeliving/HomeLivingProductPage.jsx
++++ b/src/homeliving/HomeLivingProductPage.jsx
+@@ -21,6 +21,7 @@ import ProductOrigin from '../components/ProductOrigin.jsx';
+ import PdpDeliveryDate from '../components/pdp/PdpDeliveryDate.jsx';
+ import { usePageMeta, priceTitle } from '../lib/pageMeta.js';
+ import { useHomeLivingWishlist } from '../lib/homelivingWishlist.js';
++import { SkeletonPdp } from '../components/Skeleton.jsx';
+ 
+ // ============================================================
+ // /homeliving/p/<slug> — the product page.
+@@ -579,6 +580,8 @@ export default function HomeLivingProductPage() {
+       crumbs: [{ name: 'Home & Living', href: '/homeliving' }, ...(categories.find((c) => String(c.id) === String(view.category_id)) ? [{ name: categories.find((c) => String(c.id) === String(view.category_id)).name, href: `/homeliving/category/${categories.find((c) => String(c.id) === String(view.category_id)).slug}` }] : []), { name: view.name }] },
+   } : {}, [view?.price, liveStock]);
+ 
++  // Still arriving (round 35, 2026-11-21): the page's shape, not a line of text.
++  if (!view && status === 'loading') return <div className="hl-wrap hl-listing"><SkeletonPdp /></div>;
+   if (!view) {
+     return (
+       <div className="hl-wrap hl-listing">
+diff --git a/src/lib/feel.js b/src/lib/feel.js
+new file mode 100644
+index 0000000..53f039e
+--- /dev/null
++++ b/src/lib/feel.js
+@@ -0,0 +1,117 @@
++import { useEffect, useState } from 'react';
++
++// ============================================================
++// Feel (owner, 2026-11-21: "Blinkit/Zepto jaise" — the patterns, in SORA's own look).
++//   haptic()      a short tick on Android when something lands in the bag (iOS ignores it)
++//   flyToCart()   the product's picture flies into the bag icon, the count pops
++//   useRotatingHint()  the search box suggests a real thing to look for, turning every 2.6 s
++// Everything here stays still for a shopper whose device asks for less motion.
++// ============================================================
++
++export const reducedMotion = () => {
++  try { return typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch { return false; }
++};
++
++/** A light tap of the phone's motor. Never throws; does nothing where unsupported. */
++export function haptic(ms = 12) {
++  try { if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function' && !reducedMotion()) navigator.vibrate(ms); } catch { /* not allowed here */ }
++}
++
++/** The bag icon the picture should fly to: the bottom bar's on a phone, else the header's. */
++export function cartTarget(doc = typeof document !== 'undefined' ? document : null) {
++  if (!doc) return null;
++  const seen = (el) => { if (!el) return false; const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && r.bottom > 0 && r.top < (doc.defaultView?.innerHeight || 1e4); };
++  const picks = [
++    ...doc.querySelectorAll('nav.tabbar a[href="/cart"], .hl-nav a[href="/cart"]'),
++    ...doc.querySelectorAll('header a[href="/cart"], a[aria-label^="Cart"], a[aria-label*="cart" i]'),
++  ];
++  return picks.find(seen) || null;
++}
++
++/**
++ * Fly a copy of `from` (an <img>, or an element holding one) into the bag icon. Pure
++ * decoration: it is a detached copy, removed when it lands, and skipped entirely for
++ * reduced motion or where the Web Animations API is missing.
++ */
++export function flyToCart(from) {
++  try {
++    if (!from || reducedMotion() || typeof document === 'undefined') return;
++    const img = from.tagName === 'IMG' ? from : from.querySelector?.('img');
++    const target = cartTarget();
++    if (!img || !target || typeof img.animate !== 'function') return;
++    const a = img.getBoundingClientRect(); const b = target.getBoundingClientRect();
++    if (!a.width || !b.width) return;
++    const size = Math.min(72, a.width);
++    const ghost = img.cloneNode(false);
++    ghost.removeAttribute('srcset'); ghost.removeAttribute('sizes'); ghost.removeAttribute('loading');
++    ghost.setAttribute('aria-hidden', 'true'); ghost.alt = '';
++    Object.assign(ghost.style, {
++      position: 'fixed', left: `${a.left + a.width / 2 - size / 2}px`, top: `${a.top + a.height / 2 - size / 2}px`,
++      width: `${size}px`, height: `${size}px`, objectFit: 'cover', borderRadius: '50%', zIndex: 9999, pointerEvents: 'none',
++      boxShadow: '0 10px 24px rgba(0,0,0,.28)', border: '2px solid #fff', background: '#fff', margin: 0,
++    });
++    document.body.appendChild(ghost);
++    const dx = b.left + b.width / 2 - (a.left + a.width / 2);
++    const dy = b.top + b.height / 2 - (a.top + a.height / 2);
++    const run = ghost.animate([
++      { transform: 'translate(0, 0) scale(1)', opacity: 1 },
++      { transform: `translate(${dx * 0.45}px, ${dy * 0.45 - 90}px) scale(.8)`, opacity: 1, offset: 0.45 },
++      { transform: `translate(${dx}px, ${dy}px) scale(.18)`, opacity: 0.6 },
++    ], { duration: 650, easing: 'cubic-bezier(.45, 0, .2, 1)' });
++    const land = () => {
++      ghost.remove();
++      target.animate?.([{ transform: 'scale(1)' }, { transform: 'scale(1.22)' }, { transform: 'scale(1)' }], { duration: 320, easing: 'ease-out' });
++    };
++    run.onfinish = land; run.oncancel = () => ghost.remove();
++  } catch { /* decoration only */ }
++}
++
++/** What each store's search box suggests: real things in its catalogue. */
++// Checked against the live catalogue (2026-11-21): every word finds products in its store.
++export const SEARCH_HINTS = Object.freeze({
++  wellness: ['face wash', 'shampoo', 'serum', 'hair oil', 'body lotion', 'vitamin C'],
++  fashion: ['leather jacket', 'shawl', 'quilt', 'handbag', 'wallet', 'saree'],
++  homeliving: ['bedsheet', 'cushion cover', 'table cover'],
++});
++export const HINT_EVERY_MS = 2600;
++/** `Search "leather jacket"` for the hint at `i`. Pure. */
++export const hintText = (list, i) => (Array.isArray(list) && list.length ? `Search "${list[((i % list.length) + list.length) % list.length]}"` : '');
++
++/** The current hint, turning every HINT_EVERY_MS while `run` is true (paused while typing). */
++export function useRotatingHint(list, run = true) {
++  // -1 until the first turn: the page first shows its own placeholder (and so does the
++  // server-rendered page), then the hints begin.
++  const [i, setI] = useState(-1);
++  useEffect(() => {
++    if (!run || !Array.isArray(list) || list.length < 2 || reducedMotion()) return undefined;
++    const t = window.setInterval(() => { if (!document.hidden) setI((v) => v + 1); }, HINT_EVERY_MS);
++    return () => window.clearInterval(t);
++  }, [run, list]);
++  return i < 0 ? '' : hintText(list, i);
++}
++
++// ---- The press that added something -----------------------------------------------
++// Every add path tells the shopper with an "Added to cart" note (lib/store.jsx). Toasts.jsx
++// turns that note into the tick and the flying picture, from the last thing pressed — so
++// cards, product pages, the cart's add-ons and "Order again" all get it from one place.
++let lastPress = null;
++export function trackPresses(win = typeof window !== 'undefined' ? window : null) {
++  if (!win || win.__soraPresses) return;
++  win.__soraPresses = true;
++  win.addEventListener('pointerdown', (e) => { lastPress = { el: e.target, at: Date.now() }; }, { capture: true, passive: true });
++}
++const PRODUCT_SCOPES = '.v2-pc, .fs-card, .hl-card, .gs-card, [data-product], .v2-pdp-root, .hl-pdp, .fs-pdp, .cartrow, .sora-addons__item, article';
++/** The picture of the product around the last press (within 2 s), if any. */
++export function pressedPicture(now = Date.now()) {
++  if (!lastPress || now - lastPress.at > 2000 || !lastPress.el?.closest) return null;
++  const scope = lastPress.el.closest(PRODUCT_SCOPES);
++  if (!scope) return null;
++  const imgs = [...scope.querySelectorAll('img')].filter((i) => { const r = i.getBoundingClientRect(); return r.width > 24 && r.height > 24 && r.bottom > 0 && r.top < window.innerHeight; });
++  return imgs.sort((a, b) => b.getBoundingClientRect().width - a.getBoundingClientRect().width)[0] || null;
++}
++/** The tick and the flight for something just added. */
++export function celebrateAdd() {
++  haptic(14);
++  const img = pressedPicture();
++  if (img) flyToCart(img);
++}
+diff --git a/src/pages/Cart.jsx b/src/pages/Cart.jsx
+index d7cb078..285f0bb 100644
+--- a/src/pages/Cart.jsx
++++ b/src/pages/Cart.jsx
+@@ -13,6 +13,7 @@ import PromoRail from '../components/promo/PromoRail.jsx';
+ import { money } from '../lib/format.js';
+ import { getBestsellers } from '../data/products.js';
+ import { promotionsSource } from '../lib/promotions.js';
++import { CartSavings, BeforeCheckout } from '../components/CartExtras.jsx';
+ 
+ // ============================================================
+ // THE COUPON FIELD, AND WHY IT IS BACK
+@@ -39,7 +40,7 @@ import { promotionsSource } from '../lib/promotions.js';
+ export default function Cart() {
+   const {
+     cartDetailed, savedDetailed, dispatch, subtotal, mrpTotal, cartCount,
+-    blockedCartLines, couponCode, celebratePending,
++    blockedCartLines, couponCode, celebratePending, savings,
+   } = useStore();
+ 
+   // Cart has no delivery-method selector; its estimate mirrors the default
+@@ -109,6 +110,8 @@ export default function Cart() {
+       <div className="v2-wrap section-sm v2-cart-body">
+         <div className="cartlayout">
+           <div className="cartlayout__main">
++            {/* What this order saves, first thing on a phone (round 35, 2026-11-21). */}
++            <CartSavings breakdown={quote.breakdown} fallback={savings} />
+             <div className="cartlist">
+               {cartDetailed.map((l) => {
+                 // Four "Remove" buttons in a row tell a screen-reader user
+@@ -184,6 +187,8 @@ export default function Cart() {
+               })}
+             </div>
+ 
++            {/* Small add-ons, one tap each (round 35, 2026-11-21). */}
++            <BeforeCheckout />
+             {savedDetailed.length > 0 && <SavedList saved={savedDetailed} dispatch={dispatch} inline />}
+           </div>
+ 
+diff --git a/src/pages/Checkout.jsx b/src/pages/Checkout.jsx
+index 7464171..efb2a47 100644
+--- a/src/pages/Checkout.jsx
++++ b/src/pages/Checkout.jsx
+@@ -58,6 +58,8 @@ export default function Checkout() {
+   const [saveAsDefault, setSaveAsDefault] = useState(false);
+   const [savingAddr, setSavingAddr] = useState(false);
+   const [addrMsg, setAddrMsg] = useState('');
++  // The address as a card once a saved one is chosen and complete (round 35, 2026-11-21).
++  const [editAddr, setEditAddr] = useState(false);
+   const prefilled = useRef(false); // guarantees the one-time initial autofill
+ 
+   // Fill the form from the best available source. Only ever called from the
+@@ -106,6 +108,7 @@ export default function Checkout() {
+   // Explicit user action: load a saved address into the (still editable) form.
+   const selectAddress = (a) => {
+     setSelectedAddrId(a.id);
++    setEditAddr(false);
+     setErrors({});
+     setAddrMsg('');
+     setForm((f) => ({
+@@ -178,6 +181,9 @@ export default function Checkout() {
+   // Contact (email/phone) and the shipping address are now collected on the
+   // single first step, so their checks are combined into one validator. Still
+   // used defensively before payment (see placeOrder).
++  const addrComplete = Boolean(form.firstName.trim() && form.lastName.trim() && form.address.trim() && form.city.trim() && form.state.trim() && /^\d{6}$/.test(form.pin.trim()));
++  const compactAddr = Boolean(showSaved && selectedAddrId && addrComplete && !editAddr
++    && !['firstName', 'lastName', 'address', 'city', 'state', 'pin'].some((k) => errors[k]));
+   function validateShipping() {
+     const e = {};
+     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(form.email.trim())) e.email = 'Enter a valid email address.';
+@@ -558,28 +564,45 @@ export default function Checkout() {
+               <div className={`field ${errors.email ? 'field-error' : ''}`}><label className="label" htmlFor="checkout-email">Email address</label><input id="checkout-email" className="input" type="email" placeholder="you@email.com" value={form.email} onChange={setField('email')} />{errors.email && <span className="error-text">{errors.email}</span>}</div>
+               <div className={`field ${errors.phone ? 'field-error' : ''}`}><label className="label" htmlFor="checkout-phone">Phone number</label><input id="checkout-phone" className="input" type="tel" placeholder="+91 98765 43210" value={form.phone} onChange={setField('phone')} />{errors.phone && <span className="error-text">{errors.phone}</span>}</div>
+               <label className="check"><input type="checkbox" /><span className="check__box"><Icon name="check" size={13} /></span><span>Email me with news and offers</span></label>
+-              <div className="grid2">
+-                <div className={`field ${errors.firstName ? 'field-error' : ''}`}><label className="label" htmlFor="checkout-first-name">First name</label><input id="checkout-first-name" className="input" placeholder="First name" value={form.firstName} onChange={setField('firstName')} />{errors.firstName && <span className="error-text">{errors.firstName}</span>}</div>
+-                <div className={`field ${errors.lastName ? 'field-error' : ''}`}><label className="label" htmlFor="checkout-last-name">Last name</label><input id="checkout-last-name" className="input" placeholder="Last name" value={form.lastName} onChange={setField('lastName')} />{errors.lastName && <span className="error-text">{errors.lastName}</span>}</div>
+-              </div>
+-              <div className={`field ${errors.address ? 'field-error' : ''}`}><label className="label" htmlFor="checkout-address">Address</label><input id="checkout-address" className="input" placeholder="House no, street, area" value={form.address} onChange={setField('address')} />{errors.address && <span className="error-text">{errors.address}</span>}</div>
+-              <div className="field"><label className="label" htmlFor="checkout-apartment">Apartment, suite, etc. (optional)</label><input id="checkout-apartment" className="input" placeholder="Apartment, floor, unit" value={form.apartment} onChange={setField('apartment')} /></div>
+-              <div className="field"><label className="label" htmlFor="checkout-landmark">Landmark (optional)</label><input id="checkout-landmark" className="input" placeholder="Nearby landmark for the delivery agent" value={form.landmark} onChange={setField('landmark')} /></div>
+-              <div className="grid3">
+-                <div className={`field ${errors.city ? 'field-error' : ''}`}><label className="label" htmlFor="checkout-city">City</label><input id="checkout-city" className="input" placeholder="City" value={form.city} onChange={setField('city')} />{errors.city && <span className="error-text">{errors.city}</span>}</div>
+-                <div className={`field ${errors.state ? 'field-error' : ''}`}><label className="label" htmlFor="checkout-state">State</label><input id="checkout-state" className="input" placeholder="State" value={form.state} onChange={setField('state')} />{errors.state && <span className="error-text">{errors.state}</span>}</div>
+-                <div className={`field ${errors.pin ? 'field-error' : ''}`}><label className="label" htmlFor="checkout-pin">PIN code</label><input id="checkout-pin" className="input" placeholder="560001" inputMode="numeric" value={form.pin} onChange={setField('pin')} />{errors.pin && <span className="error-text">{errors.pin}</span>}</div>
+-              </div>
+-              {showSaved && (
+-                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 'var(--sp-3)', margin: 'var(--sp-2) 0 var(--sp-5)' }}>
+-                  <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+-                    <input type="checkbox" checked={saveAsDefault} onChange={(e) => setSaveAsDefault(e.target.checked)} /> Set as default
+-                  </label>
+-                  <button type="button" className="btn btn-sm btn-light" onClick={saveAddressToAccount} disabled={savingAddr}>
+-                    {savingAddr ? 'Saving…' : (selectedAddrId ? 'Update saved address' : 'Save this address to my account')}
+-                  </button>
+-                  {addrMsg && <span className="hint">{addrMsg}</span>}
++              {/* One tap (round 35, owner 2026-11-21): a saved address chosen and complete shows as a
++                  card — the form stays behind "Change", still filled, still checked before payment. */}
++              {compactAddr ? (
++                <div className="sora-shipto">
++                  <Icon name="mapPin" size={18} />
++                  <div className="sora-shipto__body">
++                    <span className="sora-shipto__label">Delivering to</span>
++                    <strong>{`${form.firstName} ${form.lastName}`.trim()}</strong>
++                    <span>{[form.address, form.apartment, form.landmark].filter(Boolean).join(', ')}</span>
++                    <span>{`${form.city}, ${form.state} – ${form.pin}`}</span>
++                  </div>
++                  <button type="button" className="linkbtn" onClick={() => setEditAddr(true)}>Change</button>
+                 </div>
++              ) : (
++                <>
++                <div className="grid2">
++                  <div className={`field ${errors.firstName ? 'field-error' : ''}`}><label className="label" htmlFor="checkout-first-name">First name</label><input id="checkout-first-name" className="input" placeholder="First name" value={form.firstName} onChange={setField('firstName')} />{errors.firstName && <span className="error-text">{errors.firstName}</span>}</div>
++                  <div className={`field ${errors.lastName ? 'field-error' : ''}`}><label className="label" htmlFor="checkout-last-name">Last name</label><input id="checkout-last-name" className="input" placeholder="Last name" value={form.lastName} onChange={setField('lastName')} />{errors.lastName && <span className="error-text">{errors.lastName}</span>}</div>
++                </div>
++                <div className={`field ${errors.address ? 'field-error' : ''}`}><label className="label" htmlFor="checkout-address">Address</label><input id="checkout-address" className="input" placeholder="House no, street, area" value={form.address} onChange={setField('address')} />{errors.address && <span className="error-text">{errors.address}</span>}</div>
++                <div className="field"><label className="label" htmlFor="checkout-apartment">Apartment, suite, etc. (optional)</label><input id="checkout-apartment" className="input" placeholder="Apartment, floor, unit" value={form.apartment} onChange={setField('apartment')} /></div>
++                <div className="field"><label className="label" htmlFor="checkout-landmark">Landmark (optional)</label><input id="checkout-landmark" className="input" placeholder="Nearby landmark for the delivery agent" value={form.landmark} onChange={setField('landmark')} /></div>
++                <div className="grid3">
++                  <div className={`field ${errors.city ? 'field-error' : ''}`}><label className="label" htmlFor="checkout-city">City</label><input id="checkout-city" className="input" placeholder="City" value={form.city} onChange={setField('city')} />{errors.city && <span className="error-text">{errors.city}</span>}</div>
++                  <div className={`field ${errors.state ? 'field-error' : ''}`}><label className="label" htmlFor="checkout-state">State</label><input id="checkout-state" className="input" placeholder="State" value={form.state} onChange={setField('state')} />{errors.state && <span className="error-text">{errors.state}</span>}</div>
++                  <div className={`field ${errors.pin ? 'field-error' : ''}`}><label className="label" htmlFor="checkout-pin">PIN code</label><input id="checkout-pin" className="input" placeholder="560001" inputMode="numeric" value={form.pin} onChange={setField('pin')} />{errors.pin && <span className="error-text">{errors.pin}</span>}</div>
++                </div>
++                {showSaved && (
++                  <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 'var(--sp-3)', margin: 'var(--sp-2) 0 var(--sp-5)' }}>
++                    <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
++                      <input type="checkbox" checked={saveAsDefault} onChange={(e) => setSaveAsDefault(e.target.checked)} /> Set as default
++                    </label>
++                    <button type="button" className="btn btn-sm btn-light" onClick={saveAddressToAccount} disabled={savingAddr}>
++                      {savingAddr ? 'Saving…' : (selectedAddrId ? 'Update saved address' : 'Save this address to my account')}
++                    </button>
++                    {addrMsg && <span className="hint">{addrMsg}</span>}
++                  </div>
++                )}
++                </>
+               )}
+               <button className="btn btn-lg v2-btn" onClick={() => validateShipping() && next()}>Continue to delivery <Icon name="arrowRight" size={18} /></button>
+             </section>
+diff --git a/src/pages/Home.jsx b/src/pages/Home.jsx
+index 9cdb09b..9504449 100644
+--- a/src/pages/Home.jsx
++++ b/src/pages/Home.jsx
+@@ -17,6 +17,7 @@ import { EditStrips } from '../fashion/FashionEdit.jsx';
+ import ShopByOccasion from '../components/ShopByOccasion.jsx';
+ import ViewedLike from '../components/ViewedLike.jsx';
+ import WinterDeals from '../components/WinterDeals.jsx';
++import OrderAgain from '../components/OrderAgain.jsx';
+ import { ShopByIngredient } from '../components/ShopExtras.jsx';
+ import { LuxuryBeds, Bedsheets } from '../components/HomeCategoryRails.jsx';
+ import RecentlyViewedHome from '../components/RecentlyViewedHome.jsx';
+@@ -84,6 +85,8 @@ export default function Home() {
+       <HomeTrustStrip />
+       {/* Something already in the bag: how many, and the way to it (HomeExtras.jsx). */}
+       <BagReminder phone={false} />
++      {/* Order again (round 35, 2026-11-21): a signed-in shopper's past wellness buys still on sale (OrderAgain.jsx). */}
++      <OrderAgain />
+       <HomeTiles />
+       {/* The round quick-nav row stays straight under the hero, above the offers (test-home-discovery D18). */}
+       <ExploreStores />
+diff --git a/src/styles/sora-ds.css b/src/styles/sora-ds.css
+index d03b4f3..66102fe 100644
+--- a/src/styles/sora-ds.css
++++ b/src/styles/sora-ds.css
+@@ -955,4 +955,100 @@ html.sora-wintertop .v2-hdr::after, html.sora-wintertop .sora-stickycats::after
+ .sora-winter__ghost { display: block; min-height: 150px; border-radius: 16px; background: rgba(255, 255, 255, .08); border: 1px solid rgba(255, 255, 255, .12); }
+ .sora-winter__ghost--hero { grid-row: span 2; }
+ @media (min-width: 760px) { .sora-winter__ghost { min-height: 250px; } .sora-winter__ghost--hero { grid-row: auto; } }
+-.fs .sora-winter__ghost { border-radius: 0 !important; }
+\ No newline at end of file
++.fs .sora-winter__ghost { border-radius: 0 !important; }
++/* ============================================================
++   The floating cart bar, round 35 (owner, 2026-11-21: Blinkit/Zepto patterns, SORA's look):
++   a rounded forest pill floating just above the bottom navigation, the last things added
++   as overlapping pictures, the MRP saving in gold, a bump when something lands.
++   ============================================================ */
++@media screen and (max-width: 900px) {
++  .v2-cart-dock--active { pointer-events: none; }
++  .v2-cart-dock--active > * { pointer-events: auto; }
++  .v2-cart-dock--active > .hl-nav { position: static; }
++  .v2-cart-dock--active > .v2-mobile-cart {
++    margin: 0 10px 8px; width: auto; border-radius: 16px; gap: 10px;
++    padding: 8px 10px 8px 12px; box-shadow: 0 10px 26px rgba(20, 38, 28, .28), 0 0 0 1px rgba(255, 255, 255, .06) inset;
++    animation: cb-in .38s cubic-bezier(.2, .9, .3, 1.2) both;
++  }
++  .v2-mobile-cart--bump { animation: cb-bump .45s cubic-bezier(.3, 1.6, .5, 1) both !important; }
++  @keyframes cb-in { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
++  @keyframes cb-bump { 0% { transform: scale(1); } 40% { transform: scale(1.04); } 100% { transform: scale(1); } }
++  .v2-mobile-cart__thumbs { display: flex; flex: none; padding-left: 2px; }
++  .v2-mobile-cart__thumbs img {
++    width: 34px; height: 34px; border-radius: 50%; object-fit: cover; background: #fff;
++    border: 2px solid var(--slv2-cta-primary-bg, #1F3A2E); margin-left: -12px; position: relative; z-index: calc(3 - var(--i));
++  }
++  .v2-mobile-cart__thumbs img:first-child { margin-left: 0; }
++  .v2-mobile-cart__totals { flex: 1; flex-wrap: wrap; row-gap: 0; column-gap: 8px; }
++  .v2-mobile-cart__saved { flex-basis: 100%; font-size: 11px; line-height: 14px; font-weight: 600; color: #F2C14E; letter-spacing: .02em; }
++  .v2-mobile-cart__subtotal { font-size: 17px; line-height: 22px; }
++  .v2-mobile-cart__link { padding: 0 12px; min-height: 40px; border-radius: 10px; background: rgba(255, 255, 255, .14); }
++}
++@media (prefers-reduced-motion: reduce) { .v2-cart-dock--active > .v2-mobile-cart, .v2-mobile-cart--bump { animation: none !important; } }
++
++/* The card's − qty + once the product is in the bag (round 35, 2026-11-21). Same footprint as
++   the button it replaces, so the grid never jumps. */
++.v2-pc__step {
++  display: grid; grid-template-columns: 38px 1fr 38px; align-items: center; height: 34px; width: 100%;
++  border-radius: var(--slv2-r-ui); background: var(--slv2-cta-primary-bg); color: var(--slv2-cta-primary-text);
++  font-family: var(--slv2-sans); animation: pc-step .28s cubic-bezier(.3, 1.4, .5, 1) both;
++}
++.v2-pc__step button { height: 100%; display: grid; place-items: center; background: none; border: 0; color: inherit; cursor: pointer; border-radius: var(--slv2-r-ui); }
++.v2-pc__step button:hover:not(:disabled) { background: rgba(255, 255, 255, .12); }
++.v2-pc__step button:disabled { opacity: .45; cursor: not-allowed; }
++.v2-pc__step button:focus-visible { outline: 2px solid #fff; outline-offset: -3px; }
++.v2-pc__step span { text-align: center; font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
++@keyframes pc-step { from { transform: scale(.92); opacity: .4; } to { transform: none; opacity: 1; } }
++@media (min-width: 768px) { .v2-pc__step { height: 42px; grid-template-columns: 44px 1fr 44px; } }
++@media (prefers-reduced-motion: reduce) { .v2-pc__step { animation: none; } }
++
++/* The cart's savings line and its "Before you checkout" row (round 35, 2026-11-21). */
++.sora-saved {
++  display: flex; align-items: center; gap: 8px; margin: 0 0 14px; padding: 10px 14px; border-radius: 10px;
++  background: #E8F4EC; color: #1E5B3A; font-size: 14px; border: 1px solid #CFE6D7;
++  animation: sv-in .5s cubic-bezier(.2, .9, .3, 1.1) both;
++}
++.sora-saved b { font-weight: 800; }
++@keyframes sv-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
++.sora-addons { margin: 22px 0 6px; }
++.sora-addons__h { margin: 0; font-family: var(--slv2-serif, Georgia, serif); font-size: 20px; font-weight: 600; }
++.sora-addons__sub { margin: 2px 0 10px; font-size: 13px; color: #565959; }
++.sora-addons__row {
++  display: grid; grid-auto-flow: column; grid-auto-columns: 132px; gap: 10px; margin: 0; padding: 2px 2px 8px; list-style: none;
++  overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; scrollbar-width: none;
++}
++.sora-addons__row::-webkit-scrollbar { display: none; }
++.sora-addons__item { display: flex; flex-direction: column; gap: 5px; padding: 8px; border: 1px solid var(--slv2-line, #E6E2D8); border-radius: 12px; background: var(--slv2-paper, #fff); scroll-snap-align: start; }
++.sora-addons__pic { display: block; aspect-ratio: 1; overflow: hidden; border-radius: 8px; }
++.sora-addons__name { font-size: 12px; line-height: 1.3; color: inherit; text-decoration: none; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 2.6em; }
++.sora-addons__price { font-size: 13px; font-weight: 700; }
++.sora-addons__price s { margin-left: 5px; font-size: 11px; font-weight: 400; color: #6B6B6B; }
++.sora-addons__add {
++  margin-top: auto; display: inline-flex; align-items: center; justify-content: center; gap: 4px; height: 32px; border-radius: 8px;
++  background: #fff; color: var(--slv2-cta-primary-bg, #1F3A2E); border: 1.5px solid var(--slv2-cta-primary-bg, #1F3A2E);
++  font-size: 12px; font-weight: 700; cursor: pointer; transition: background .15s ease, color .15s ease, transform .1s ease;
++}
++.sora-addons__add:hover { background: var(--slv2-cta-primary-bg, #1F3A2E); color: #fff; }
++.sora-addons__add:active { transform: scale(.95); }
++@media (prefers-reduced-motion: reduce) { .sora-saved { animation: none; } }
++
++/* Checkout: the chosen saved address as one card (round 35, 2026-11-21). */
++.sora-shipto {
++  display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: start; margin: 4px 0 18px; padding: 14px;
++  border: 1.5px solid var(--slv2-cta-primary-bg, #1F3A2E); border-radius: 12px; background: #F4F8F5;
++  animation: sv-in .35s ease both;
++}
++.sora-shipto > svg { margin-top: 2px; color: var(--slv2-cta-primary-bg, #1F3A2E); }
++.sora-shipto__body { display: grid; gap: 2px; font-size: 14px; line-height: 1.4; min-width: 0; }
++.sora-shipto__label { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #4F6357; }
++.sora-shipto .linkbtn { font-weight: 700; }
++
++/* The product page skeleton (round 35, 2026-11-21). */
++.sora-skel-pdp { display: grid; gap: 18px; padding: 12px 0 32px; }
++.sora-skel-pdp__img { aspect-ratio: 1; width: 100%; max-width: 560px; border-radius: 4px; }
++.sora-skel-pdp__info { display: grid; gap: 12px; }
++.sora-skel-pdp__title { height: 22px; width: 90%; border-radius: 4px; }
++.sora-skel-pdp__title--2 { width: 60%; }
++.sora-skel-pdp__btn { height: 48px; width: 100%; max-width: 360px; border-radius: 4px; }
++@media (min-width: 900px) { .sora-skel-pdp { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 40px; } }
++.hl-skel-row .sora-skel-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }

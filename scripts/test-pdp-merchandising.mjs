@@ -84,7 +84,7 @@ run('PDP media rejects failed catalogue URLs and exposes a real image viewer', (
   const lightbox = readFileSync(new URL('../src/components/pdp/ProductLightbox.jsx', import.meta.url), 'utf8');
   assert.match(productImage, /onImageError\?\.\(originalSrc\)/, 'original image failures must reach the gallery owner');
   assert.match(gallery, /failedUrls\.has\(frame\.url\)/, 'failed catalogue frames must leave the rendered grid');
-  assert.match(mainGallery, /ProductLightbox/, 'the primary PDP gallery must open the viewer');
+  assert.match(mainGallery, /ProductLightbox|GalleryZoom/, 'the primary PDP gallery must open the viewer (GalleryZoom since 2026-11-21: pinch to zoom too)');
   assert.match(lightbox, /aria-modal="true"/);
   assert.match(lightbox, /event\.key === 'Escape'/);
   assert.match(lightbox, /ArrowRight/);

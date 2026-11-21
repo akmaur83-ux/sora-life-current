@@ -17,6 +17,7 @@ import { EditStrips } from '../fashion/FashionEdit.jsx';
 import ShopByOccasion from '../components/ShopByOccasion.jsx';
 import ViewedLike from '../components/ViewedLike.jsx';
 import WinterDeals from '../components/WinterDeals.jsx';
+import OrderAgain from '../components/OrderAgain.jsx';
 import { ShopByIngredient } from '../components/ShopExtras.jsx';
 import { LuxuryBeds, Bedsheets } from '../components/HomeCategoryRails.jsx';
 import RecentlyViewedHome from '../components/RecentlyViewedHome.jsx';
@@ -84,6 +85,8 @@ export default function Home() {
       <HomeTrustStrip />
       {/* Something already in the bag: how many, and the way to it (HomeExtras.jsx). */}
       <BagReminder phone={false} />
+      {/* Order again (round 35, 2026-11-21): a signed-in shopper's past wellness buys still on sale (OrderAgain.jsx). */}
+      <OrderAgain />
       <HomeTiles />
       {/* The round quick-nav row stays straight under the hero, above the offers (test-home-discovery D18). */}
       <ExploreStores />

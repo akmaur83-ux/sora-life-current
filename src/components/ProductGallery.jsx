@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import ProductImage from './ProductImage.jsx';
-import ProductLightbox from './pdp/ProductLightbox.jsx';
+import { GalleryZoom } from '../homeliving/HomeLivingProductPage.jsx';
 import { productGallery } from '../data/products.js';
 
 // ============================================================
@@ -126,13 +126,13 @@ export default function ProductGallery({ product, children }) {
       )}
 
       {lightboxOpen && (
-        <ProductLightbox
-          product={product}
-          frames={frames}
-          active={idx}
-          onChange={setActive}
+        // The full-screen viewer with pinch to zoom, swipe between pictures and drag down to
+        // close — the one Fashion and Home & Living use (round 35, 2026-11-21).
+        <GalleryZoom
+          images={frames.map((f) => ({ url: f.url, alt: f.alt || product.name }))}
+          start={idx}
+          name={product.name}
           onClose={() => setLightboxOpen(false)}
-          onImageError={rejectFrame}
         />
       )}
     </div>

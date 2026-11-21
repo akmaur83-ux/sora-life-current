@@ -13,6 +13,7 @@ import PromoRail from '../components/promo/PromoRail.jsx';
 import { money } from '../lib/format.js';
 import { getBestsellers } from '../data/products.js';
 import { promotionsSource } from '../lib/promotions.js';
+import { CartSavings, BeforeCheckout } from '../components/CartExtras.jsx';
 
 // ============================================================
 // THE COUPON FIELD, AND WHY IT IS BACK
@@ -39,7 +40,7 @@ import { promotionsSource } from '../lib/promotions.js';
 export default function Cart() {
   const {
     cartDetailed, savedDetailed, dispatch, subtotal, mrpTotal, cartCount,
-    blockedCartLines, couponCode, celebratePending,
+    blockedCartLines, couponCode, celebratePending, savings,
   } = useStore();
 
   // Cart has no delivery-method selector; its estimate mirrors the default
@@ -109,6 +110,8 @@ export default function Cart() {
       <div className="v2-wrap section-sm v2-cart-body">
         <div className="cartlayout">
           <div className="cartlayout__main">
+            {/* What this order saves, first thing on a phone (round 35, 2026-11-21). */}
+            <CartSavings breakdown={quote.breakdown} fallback={savings} />
             <div className="cartlist">
               {cartDetailed.map((l) => {
                 // Four "Remove" buttons in a row tell a screen-reader user
@@ -184,6 +187,8 @@ export default function Cart() {
               })}
             </div>
 
+            {/* Small add-ons, one tap each (round 35, 2026-11-21). */}
+            <BeforeCheckout />
             {savedDetailed.length > 0 && <SavedList saved={savedDetailed} dispatch={dispatch} inline />}
           </div>
 

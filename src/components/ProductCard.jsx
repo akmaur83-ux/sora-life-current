@@ -5,6 +5,7 @@ import PriceTag from './PriceTag.jsx';
 import { useStore } from '../lib/store.jsx';
 import { categoryBySlug } from '../data/categories.js';
 import { isPurchasable, UNAVAILABLE_LABEL } from '../data/products.js';
+import { haptic } from '../lib/feel.js';
 
 // ============================================================================
 // SORA LIFE V2 — PRODUCT CARD
@@ -41,7 +42,15 @@ function pickBadge(product, out) {
 }
 
 export default function ProductCard({ product, mediaLoading = 'lazy', mediaFetchPriority }) {
-  const { addToCart, toggleWish, isWished } = useStore();
+  const { addToCart, toggleWish, isWished, cart, dispatch } = useStore();
+  // In the bag already (round 35, 2026-11-21: Blinkit/Zepto's stepper): the card's button
+  // becomes − qty + for that line, so the bag changes without leaving the list. The line
+  // is the plain one "Add to cart" makes (no pack chosen); a pack picked on the product
+  // page is a different line and leaves the card as it was.
+  const line = Array.isArray(cart) ? cart.find((l) => !l.catalogue && l.key === String(product.id)) : null;
+  const atStock = line && Number.isFinite(product.stock) && product.stock > 0 && line.qty >= product.stock;
+  const less = () => { haptic(); if (line.qty <= 1) dispatch({ type: 'REMOVE', key: line.key }); else dispatch({ type: 'SET_QTY', key: line.key, qty: line.qty - 1 }); };
+  const more = () => { haptic(); dispatch({ type: 'SET_QTY', key: line.key, qty: line.qty + 1 }); };
   const buyable = isPurchasable(product);
   const wished = isWished(product.id);
   const out = product.stock === 0;
@@ -104,6 +113,12 @@ export default function ProductCard({ product, mediaLoading = 'lazy', mediaFetch
             <button type="button" className="v2-pc__cta v2-pc__cta--out" disabled aria-disabled="true">
               {UNAVAILABLE_LABEL}
             </button>
+          ) : line ? (
+            <div className="v2-pc__step" role="group" aria-label={`${product.name} in your bag`}>
+              <button type="button" onClick={less} aria-label={line.qty <= 1 ? `Remove ${product.name} from bag` : `One less ${product.name}`}><Icon name={line.qty <= 1 ? 'trash' : 'minus'} size={14} stroke={1.8} /></button>
+              <span aria-live="polite">{line.qty}</span>
+              <button type="button" onClick={more} disabled={atStock} aria-label={`One more ${product.name}`}><Icon name="plus" size={14} stroke={1.8} /></button>
+            </div>
           ) : (
             <button type="button" className="v2-pc__cta" onClick={() => addToCart(product)}>
               <Icon name="bag" size={14} stroke={1.6} /> Add to cart

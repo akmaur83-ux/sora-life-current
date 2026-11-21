@@ -4,6 +4,7 @@ import Icon from '../components/Icon.jsx';
 import { BrandMark } from '../components/Logo.jsx';
 import Footer from '../components/Footer.jsx';
 import MobileTabBar from '../components/MobileTabBar.jsx';
+import MobileCartSummary from '../components/MobileCartSummary.jsx';
 import StickyCats from '../components/StickyCats.jsx';
 import Toasts from '../components/Toasts.jsx';
 import { useStore } from '../lib/store.jsx';
@@ -16,6 +17,7 @@ import { useStorefrontSection } from '../lib/storefrontSections.js';
 import SearchSuggest, { SUGGEST_MAX, suggestKeys, RecentSearches, readRecentSearches, rememberSearch, clearRecentSearches } from '../components/SearchSuggest.jsx';
 import VoiceSearch from '../components/VoiceSearch.jsx';
 import { searchItems, didYouMean } from '../lib/searchMatch.js';
+import { SEARCH_HINTS, useRotatingHint } from '../lib/feel.js';
 
 // ============================================================
 // The fashion store shell — its own header (logo, search, account,
@@ -58,6 +60,8 @@ export function FashionHeader({ onMenu }) {
   const { views, tree } = useFashionCatalogue();
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
+  // The search box suggests real things to look for, turning while it is idle (2026-11-21).
+  const hint = useRotatingHint(SEARCH_HINTS.fashion, !open && !q);
   const term = q.trim();
   const found = open && term.length >= 2
     ? searchItems(views, term, (v) => [v.name, v.brand, tree.byId.get(v.category_id)?.name]).map((v) => ({ key: v.id, href: `/fashion/p/${v.slug}`, name: v.name, brand: v.brand, image: v.image, price: v.price }))
@@ -136,7 +140,7 @@ export function FashionHeader({ onMenu }) {
       </div>
       <form className="fs-search" role="search" onSubmit={submit}>
         <Icon name="search" size={20} />
-        <input type="search" value={q} onChange={(e) => { setQ(e.target.value); setOpen(true); setActive(-1); }} placeholder={config.header.searchPlaceholder || SEARCH_PLACEHOLDER} aria-label="Search fashion"
+        <input type="search" value={q} onChange={(e) => { setQ(e.target.value); setOpen(true); setActive(-1); }} placeholder={(config.header.searchPlaceholder && config.header.searchPlaceholder !== SEARCH_PLACEHOLDER ? config.header.searchPlaceholder : '') || hint || SEARCH_PLACEHOLDER} aria-label="Search fashion"
           onFocus={() => { setOpen(true); setRecent(readRecentSearches('fashion')); }} onBlur={() => setOpen(false)} onKeyDown={keys} aria-expanded={found ? true : undefined} aria-controls={found ? 'fs-suggest' : undefined} />
         <VoiceSearch onResult={spoken} />
         <button type="submit" className="fs-search__go" aria-label="Search"><Icon name="search" size={22} /></button>
@@ -225,7 +229,8 @@ function FashionStickyCats() {
 
 function FashionTabBar() {
   const wish = useFashionWishlist();
-  return <MobileTabBar store="fashion" savedCount={wish.count} />;
+  // The floating cart bar rides on the tab bar here too (round 35, 2026-11-21).
+  return <MobileCartSummary tabbar={<MobileTabBar store="fashion" savedCount={wish.count} />} />;
 }
 
 function Shell() {

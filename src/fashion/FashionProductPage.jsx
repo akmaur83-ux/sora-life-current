@@ -27,6 +27,7 @@ import PdpDeliveryDate from '../components/pdp/PdpDeliveryDate.jsx';
 import ProductDeliveryInfo from '../components/pdp/ProductDeliveryInfo.jsx';
 import SizeGuide from './SizeGuide.jsx';
 import { usePageMeta, priceTitle } from '../lib/pageMeta.js';
+import { SkeletonPdp } from '../components/Skeleton.jsx';
 
 // ============================================================
 // /fashion/p/<slug> — the product page.
@@ -147,6 +148,8 @@ export default function FashionProductPage() {
       crumbs: [...breadcrumbFor(tree, view.category_id ? tree.byId.get(view.category_id) : null), { name: view.name }] },
   } : {}, [view?.price, liveStock, facts?.sku]);
 
+  // Still arriving (round 35, 2026-11-21): the page's shape, not a line of text.
+  if (!view && status === 'loading') return <div className="fs-listing"><SkeletonPdp /></div>;
   if (!view) {
     return (
       <div className="fs-listing">

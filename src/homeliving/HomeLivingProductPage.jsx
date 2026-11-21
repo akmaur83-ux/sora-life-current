@@ -21,6 +21,7 @@ import ProductOrigin from '../components/ProductOrigin.jsx';
 import PdpDeliveryDate from '../components/pdp/PdpDeliveryDate.jsx';
 import { usePageMeta, priceTitle } from '../lib/pageMeta.js';
 import { useHomeLivingWishlist } from '../lib/homelivingWishlist.js';
+import { SkeletonPdp } from '../components/Skeleton.jsx';
 
 // ============================================================
 // /homeliving/p/<slug> — the product page.
@@ -579,6 +580,8 @@ export default function HomeLivingProductPage() {
       crumbs: [{ name: 'Home & Living', href: '/homeliving' }, ...(categories.find((c) => String(c.id) === String(view.category_id)) ? [{ name: categories.find((c) => String(c.id) === String(view.category_id)).name, href: `/homeliving/category/${categories.find((c) => String(c.id) === String(view.category_id)).slug}` }] : []), { name: view.name }] },
   } : {}, [view?.price, liveStock]);
 
+  // Still arriving (round 35, 2026-11-21): the page's shape, not a line of text.
+  if (!view && status === 'loading') return <div className="hl-wrap hl-listing"><SkeletonPdp /></div>;
   if (!view) {
     return (
       <div className="hl-wrap hl-listing">

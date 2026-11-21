@@ -9,6 +9,7 @@ import {
 } from '../lib/homelivingListing.js';
 import HomeLivingProductCard from './HomeLivingProductCard.jsx';
 import LoadMore, { useShowMore } from '../components/LoadMore.jsx';
+import SkeletonGrid from '../components/Skeleton.jsx';
 
 // ============================================================
 // /homeliving/category/<slug> — the category listing. Every filter, the
@@ -140,7 +141,9 @@ export function Listing({ title, trail, scope = null, intro = null, emptyCopy, b
         {panel && <button type="button" className="hl-filters__scrim" aria-label="Close filters" onClick={() => setPanel(false)} />}
         <FilterPanel state={state} options={options} onPatch={patch} onClear={clear} onClose={() => setPanel(false)} />
         <div className="hl-listing__results">
-          {results.length === 0 ? (
+          {results.length === 0 && status === 'loading' ? (
+            <SkeletonGrid count={6} label="Loading the catalogue…" />
+          ) : results.length === 0 ? (
             <div className="hl-empty hl-empty--listing">
               <p>{status === 'loading' ? 'Loading the catalogue…' : status === 'error' ? 'The Home & Living catalogue could not be loaded. Please try again shortly.' : count > 0 ? 'Nothing matches these filters.' : emptyCopy}</p>
               {count > 0 && <button type="button" className="hl-btn" onClick={clear}>Clear filters</button>}

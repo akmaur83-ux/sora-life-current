@@ -23,6 +23,7 @@ import { DEFAULT_FASHION_STOREFRONT, normalizeFashionStorefront } from '../lib/s
 import { useStorefrontSection } from '../lib/storefrontSections.js';
 import WinterDeals from '../components/WinterDeals.jsx';
 import LoadMore, { useRememberedShowMore } from '../components/LoadMore.jsx';
+import SkeletonGrid from '../components/Skeleton.jsx';
 
 // ============================================================
 // /fashion — circular category tiles, the benefits strip, the hero (image
@@ -199,7 +200,9 @@ export default function FashionHome() {
           <h2 className="fs-sec__h serif" id="fs-grid-h">{config.sections.productsTitle}</h2>
           <span className="fs-sec__count">{grid.length} {grid.length === 1 ? 'style' : 'styles'}</span>
         </header>
-        {grid.length === 0 ? (
+        {grid.length === 0 && status === 'loading' ? (
+          <SkeletonGrid count={6} label="Loading the catalogue…" />
+        ) : grid.length === 0 ? (
           <p className="fs-empty">{status === 'loading' ? 'Loading the catalogue…' : status === 'error' ? 'The fashion catalogue could not be loaded. Please try again shortly.' : 'The fashion store is being stocked — styles appear here as they go live.'}</p>
         ) : (
           <>

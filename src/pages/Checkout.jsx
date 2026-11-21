@@ -58,6 +58,8 @@ export default function Checkout() {
   const [saveAsDefault, setSaveAsDefault] = useState(false);
   const [savingAddr, setSavingAddr] = useState(false);
   const [addrMsg, setAddrMsg] = useState('');
+  // The address as a card once a saved one is chosen and complete (round 35, 2026-11-21).
+  const [editAddr, setEditAddr] = useState(false);
   const prefilled = useRef(false); // guarantees the one-time initial autofill
 
   // Fill the form from the best available source. Only ever called from the
@@ -106,6 +108,7 @@ export default function Checkout() {
   // Explicit user action: load a saved address into the (still editable) form.
   const selectAddress = (a) => {
     setSelectedAddrId(a.id);
+    setEditAddr(false);
     setErrors({});
     setAddrMsg('');
     setForm((f) => ({
@@ -178,6 +181,9 @@ export default function Checkout() {
   // Contact (email/phone) and the shipping address are now collected on the
   // single first step, so their checks are combined into one validator. Still
   // used defensively before payment (see placeOrder).
+  const addrComplete = Boolean(form.firstName.trim() && form.lastName.trim() && form.address.trim() && form.city.trim() && form.state.trim() && /^\d{6}$/.test(form.pin.trim()));
+  const compactAddr = Boolean(showSaved && selectedAddrId && addrComplete && !editAddr
+    && !['firstName', 'lastName', 'address', 'city', 'state', 'pin'].some((k) => errors[k]));
   function validateShipping() {
     const e = {};
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(form.email.trim())) e.email = 'Enter a valid email address.';
@@ -558,28 +564,45 @@ export default function Checkout() {
               <div className={`field ${errors.email ? 'field-error' : ''}`}><label className="label" htmlFor="checkout-email">Email address</label><input id="checkout-email" className="input" type="email" placeholder="you@email.com" value={form.email} onChange={setField('email')} />{errors.email && <span className="error-text">{errors.email}</span>}</div>
               <div className={`field ${errors.phone ? 'field-error' : ''}`}><label className="label" htmlFor="checkout-phone">Phone number</label><input id="checkout-phone" className="input" type="tel" placeholder="+91 98765 43210" value={form.phone} onChange={setField('phone')} />{errors.phone && <span className="error-text">{errors.phone}</span>}</div>
               <label className="check"><input type="checkbox" /><span className="check__box"><Icon name="check" size={13} /></span><span>Email me with news and offers</span></label>
-              <div className="grid2">
-                <div className={`field ${errors.firstName ? 'field-error' : ''}`}><label className="label" htmlFor="checkout-first-name">First name</label><input id="checkout-first-name" className="input" placeholder="First name" value={form.firstName} onChange={setField('firstName')} />{errors.firstName && <span className="error-text">{errors.firstName}</span>}</div>
-                <div className={`field ${errors.lastName ? 'field-error' : ''}`}><label className="label" htmlFor="checkout-last-name">Last name</label><input id="checkout-last-name" className="input" placeholder="Last name" value={form.lastName} onChange={setField('lastName')} />{errors.lastName && <span className="error-text">{errors.lastName}</span>}</div>
-              </div>
-              <div className={`field ${errors.address ? 'field-error' : ''}`}><label className="label" htmlFor="checkout-address">Address</label><input id="checkout-address" className="input" placeholder="House no, street, area" value={form.address} onChange={setField('address')} />{errors.address && <span className="error-text">{errors.address}</span>}</div>
-              <div className="field"><label className="label" htmlFor="checkout-apartment">Apartment, suite, etc. (optional)</label><input id="checkout-apartment" className="input" placeholder="Apartment, floor, unit" value={form.apartment} onChange={setField('apartment')} /></div>
-              <div className="field"><label className="label" htmlFor="checkout-landmark">Landmark (optional)</label><input id="checkout-landmark" className="input" placeholder="Nearby landmark for the delivery agent" value={form.landmark} onChange={setField('landmark')} /></div>
-              <div className="grid3">
-                <div className={`field ${errors.city ? 'field-error' : ''}`}><label className="label" htmlFor="checkout-city">City</label><input id="checkout-city" className="input" placeholder="City" value={form.city} onChange={setField('city')} />{errors.city && <span className="error-text">{errors.city}</span>}</div>
-                <div className={`field ${errors.state ? 'field-error' : ''}`}><label className="label" htmlFor="checkout-state">State</label><input id="checkout-state" className="input" placeholder="State" value={form.state} onChange={setField('state')} />{errors.state && <span className="error-text">{errors.state}</span>}</div>
-                <div className={`field ${errors.pin ? 'field-error' : ''}`}><label className="label" htmlFor="checkout-pin">PIN code</label><input id="checkout-pin" className="input" placeholder="560001" inputMode="numeric" value={form.pin} onChange={setField('pin')} />{errors.pin && <span className="error-text">{errors.pin}</span>}</div>
-              </div>
-              {showSaved && (
-                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 'var(--sp-3)', margin: 'var(--sp-2) 0 var(--sp-5)' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <input type="checkbox" checked={saveAsDefault} onChange={(e) => setSaveAsDefault(e.target.checked)} /> Set as default
-                  </label>
-                  <button type="button" className="btn btn-sm btn-light" onClick={saveAddressToAccount} disabled={savingAddr}>
-                    {savingAddr ? 'Saving…' : (selectedAddrId ? 'Update saved address' : 'Save this address to my account')}
-                  </button>
-                  {addrMsg && <span className="hint">{addrMsg}</span>}
+              {/* One tap (round 35, owner 2026-11-21): a saved address chosen and complete shows as a
+                  card — the form stays behind "Change", still filled, still checked before payment. */}
+              {compactAddr ? (
+                <div className="sora-shipto">
+                  <Icon name="mapPin" size={18} />
+                  <div className="sora-shipto__body">
+                    <span className="sora-shipto__label">Delivering to</span>
+                    <strong>{`${form.firstName} ${form.lastName}`.trim()}</strong>
+                    <span>{[form.address, form.apartment, form.landmark].filter(Boolean).join(', ')}</span>
+                    <span>{`${form.city}, ${form.state} – ${form.pin}`}</span>
+                  </div>
+                  <button type="button" className="linkbtn" onClick={() => setEditAddr(true)}>Change</button>
                 </div>
+              ) : (
+                <>
+                <div className="grid2">
+                  <div className={`field ${errors.firstName ? 'field-error' : ''}`}><label className="label" htmlFor="checkout-first-name">First name</label><input id="checkout-first-name" className="input" placeholder="First name" value={form.firstName} onChange={setField('firstName')} />{errors.firstName && <span className="error-text">{errors.firstName}</span>}</div>
+                  <div className={`field ${errors.lastName ? 'field-error' : ''}`}><label className="label" htmlFor="checkout-last-name">Last name</label><input id="checkout-last-name" className="input" placeholder="Last name" value={form.lastName} onChange={setField('lastName')} />{errors.lastName && <span className="error-text">{errors.lastName}</span>}</div>
+                </div>
+                <div className={`field ${errors.address ? 'field-error' : ''}`}><label className="label" htmlFor="checkout-address">Address</label><input id="checkout-address" className="input" placeholder="House no, street, area" value={form.address} onChange={setField('address')} />{errors.address && <span className="error-text">{errors.address}</span>}</div>
+                <div className="field"><label className="label" htmlFor="checkout-apartment">Apartment, suite, etc. (optional)</label><input id="checkout-apartment" className="input" placeholder="Apartment, floor, unit" value={form.apartment} onChange={setField('apartment')} /></div>
+                <div className="field"><label className="label" htmlFor="checkout-landmark">Landmark (optional)</label><input id="checkout-landmark" className="input" placeholder="Nearby landmark for the delivery agent" value={form.landmark} onChange={setField('landmark')} /></div>
+                <div className="grid3">
+                  <div className={`field ${errors.city ? 'field-error' : ''}`}><label className="label" htmlFor="checkout-city">City</label><input id="checkout-city" className="input" placeholder="City" value={form.city} onChange={setField('city')} />{errors.city && <span className="error-text">{errors.city}</span>}</div>
+                  <div className={`field ${errors.state ? 'field-error' : ''}`}><label className="label" htmlFor="checkout-state">State</label><input id="checkout-state" className="input" placeholder="State" value={form.state} onChange={setField('state')} />{errors.state && <span className="error-text">{errors.state}</span>}</div>
+                  <div className={`field ${errors.pin ? 'field-error' : ''}`}><label className="label" htmlFor="checkout-pin">PIN code</label><input id="checkout-pin" className="input" placeholder="560001" inputMode="numeric" value={form.pin} onChange={setField('pin')} />{errors.pin && <span className="error-text">{errors.pin}</span>}</div>
+                </div>
+                {showSaved && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 'var(--sp-3)', margin: 'var(--sp-2) 0 var(--sp-5)' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <input type="checkbox" checked={saveAsDefault} onChange={(e) => setSaveAsDefault(e.target.checked)} /> Set as default
+                    </label>
+                    <button type="button" className="btn btn-sm btn-light" onClick={saveAddressToAccount} disabled={savingAddr}>
+                      {savingAddr ? 'Saving…' : (selectedAddrId ? 'Update saved address' : 'Save this address to my account')}
+                    </button>
+                    {addrMsg && <span className="hint">{addrMsg}</span>}
+                  </div>
+                )}
+                </>
               )}
               <button className="btn btn-lg v2-btn" onClick={() => validateShipping() && next()}>Continue to delivery <Icon name="arrowRight" size={18} /></button>
             </section>

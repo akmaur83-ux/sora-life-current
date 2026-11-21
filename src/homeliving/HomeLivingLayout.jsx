@@ -11,6 +11,8 @@ import SearchSuggest, { SUGGEST_MAX, suggestKeys, RecentSearches, readRecentSear
 import { searchItems, didYouMean } from '../lib/searchMatch.js';
 import VoiceSearch from '../components/VoiceSearch.jsx';
 import { useHomeLivingWishlist } from '../lib/homelivingWishlist.js';
+import { SEARCH_HINTS, useRotatingHint } from '../lib/feel.js';
+import MobileCartSummary from '../components/MobileCartSummary.jsx';
 
 // ============================================================
 // The Home & Living store shell — its own header (menu, centred wordmark,
@@ -119,6 +121,8 @@ export function SearchBar() {
   const [q, setQ] = useState(() => new URLSearchParams(location.search).get('q') || '');
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
+  // The search box suggests real things to look for, turning while it is idle (2026-11-21).
+  const hint = useRotatingHint(SEARCH_HINTS.homeliving, !open && !q);
   const term = q.trim();
   const rows = homelivingSearchRows(products, categories);
   const found = open && term.length >= 2 ? searchItems(rows, term) : null;
@@ -134,7 +138,7 @@ export function SearchBar() {
   return (
     <div className="hl-search" role="search" aria-label="Search Home & Living">
       <Icon name="search" size={22} />
-      <input type="search" placeholder={SEARCH_PLACEHOLDER} aria-label="Search Home & Living" value={q}
+      <input type="search" placeholder={hint || SEARCH_PLACEHOLDER} aria-label="Search Home & Living" value={q}
         onChange={(e) => { setQ(e.target.value); setOpen(true); setActive(-1); }} onFocus={() => { setOpen(true); setRecent(readRecentSearches('homeliving')); }} onBlur={() => setOpen(false)} onKeyDown={keys}
         enterKeyHint="search" aria-expanded={found ? true : undefined} aria-controls={found ? 'hl-suggest' : undefined} />
       <VoiceSearch onResult={spoken} />
@@ -238,7 +242,9 @@ export default function HomeLivingLayout() {
       {/* Fixed to the bottom of a phone; a static strip under the header on a wide
           screen. The homepage mounts it under the hero instead (nothing sits above
           the photograph), so it is the page's there. */}
-      {!over && <BottomNav />}
+      {/* The floating cart bar rides on the bottom nav here too (round 35, 2026-11-21). */}
+      {/* On the store's own home the bottom nav is hidden by design; the cart bar still shows. */}
+      <MobileCartSummary tabbar={over ? <></> : <BottomNav />} />
       <Drawer open={menu} onClose={() => setMenu(false)} />
       <main className="hl-main"><Outlet /></main>
       <Footer />
