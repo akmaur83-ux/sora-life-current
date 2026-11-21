@@ -1,0 +1,30 @@
+diff --git a/src/styles/sora-ds.css b/src/styles/sora-ds.css
+index 66102fe..ad80e51 100644
+--- a/src/styles/sora-ds.css
++++ b/src/styles/sora-ds.css
+@@ -1052,3 +1052,25 @@ html.sora-wintertop .v2-hdr::after, html.sora-wintertop .sora-stickycats::after
+ .sora-skel-pdp__btn { height: 48px; width: 100%; max-width: 360px; border-radius: 4px; }
+ @media (min-width: 900px) { .sora-skel-pdp { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 40px; } }
+ .hl-skel-row .sora-skel-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
++
++/* ============================================================
++   Winter top, light to dark (owner, 2026-11-21: "blinkit jaise ... uper light then niche dark
++   blue"). The store bar and header start in a clear sky blue, the chips a shade deeper, and
++   the band keeps darkening into night navy at its foot. White text stays at 5:1 or more.
++   ============================================================ */
++html.sora-wintertop .sora-storebar { background: #3B70B8; border-color: rgba(255, 255, 255, .12); }
++html.sora-wintertop .sora-storebar__store { color: #FFFFFF; }
++html.sora-wintertop .sora-storebar__store.is-on { background: #2F5FA3; color: #FFFFFF; }
++html.sora-wintertop .v2-ann { background: #3567AE; color: #FFFFFF; }
++html.sora-wintertop .v2-hdr { background: linear-gradient(180deg, #3B70B8 0%, #3769B2 100%); border-color: rgba(255, 255, 255, .12); }
++html.sora-wintertop .v2-hdr .v2-hdr__act, html.sora-wintertop .v2-hdr .v2-hdr__act svg { color: #FFFFFF; }
++html.sora-wintertop .v2-hdr .v2-hdr__count, html.sora-wintertop .v2-hdr [class*="badge"] { box-shadow: 0 0 0 2px #3769B2; }
++html.sora-wintertop .sora-stickycats { background: #3567AE; border-color: rgba(255, 255, 255, .12); }
++html.sora-wintertop .sora-stickycats a { background: rgba(255, 255, 255, .14) !important; color: #FFFFFF !important; border-color: rgba(255, 255, 255, .38) !important; }
++html.sora-wintertop .sora-winter {
++  background:
++    radial-gradient(90% 40% at 50% 0%, rgba(255, 255, 255, .10), rgba(255, 255, 255, 0) 70%),
++    linear-gradient(180deg, #3567AE 0%, #2A579C 22%, #1F4787 48%, #163670 72%, #0E2247 100%);
++}
++/* Away from the homepage (the Fashion home) the band darkens the same way, from a lighter top. */
++.sora-winter { background: linear-gradient(180deg, #3B70B8 0%, #2A579C 25%, #1B3F7C 60%, #0E2247 100%); }

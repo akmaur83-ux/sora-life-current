@@ -195,5 +195,10 @@ test('speed: the band reads the small deal view, draws before its data, and fetc
   assert.match(read('supabase/migrations/0049_catalogue_deal_rows.sql'), /with \(security_invoker = true\)/);
   assert.doesNotMatch(read('supabase/migrations/0049_catalogue_deal_rows.sql'), /security definer/i);
 });
+test('round 36: the winter top runs light to dark — sky blue header, night navy at the band\'s foot; white text at 5:1+', () => {
+  const css = read('src/styles/sora-ds.css');
+  assert.match(css, /html\.sora-wintertop \.v2-hdr \{ background: linear-gradient\(180deg, #3B70B8 0%, #3769B2 100%\);/);
+  assert.match(css, /linear-gradient\(180deg, #3567AE 0%, #2A579C 22%, #1F4787 48%, #163670 72%, #0E2247 100%\)/);
+});
 if (failed) { console.log(`\n${failed} failed`); process.exit(1); }
 console.log('\nall passed');
