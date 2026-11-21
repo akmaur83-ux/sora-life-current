@@ -117,33 +117,59 @@ function installHearts() {
   return () => document.removeEventListener('click', onClick, true);
 }
 
-// ---- 11 · sheets close by dragging them down -------------------------------------
-// [panel selector, the control that closes it]
-export const SHEETS = [['.fs-sheet__panel', '.fs-sheet__x'], ['.v2-fd__panel', '.v2-fd__scrim'], ['.hl-filters__panel, .hl-filters', '.hl-filters__scrim']];
+// ---- 11 · sheets and drawers close by swiping them the way they came in ---------------
+// [panel, the control that closes it, the direction it leaves in]. Bug 2026-11-21: every panel
+// was dragged downwards, but the wellness filters come from the right and the fashion and home
+// filters from the left — a drawer slid down, then snapped back open.
+export const SHEETS = [
+  ['.fs-sheet__panel', '.fs-sheet__x', 'down'],
+  ['.v2-fd.is-open .v2-fd__panel', '.v2-fd__scrim', 'right'],
+  ['.fs-listing__body.has-panel .fs-filters', '.fs-filters__x', 'left'],
+  ['.hl-listing__body.has-panel .hl-filters', '.hl-filters__x', 'left'],
+];
+export const SWIPE_CLOSE_AT = 90;
+/** How far the finger has gone in the panel's leaving direction (never negative). Pure. */
+export const along = (dir, dx, dy) => Math.max(0, dir === 'down' ? dy : dir === 'right' ? dx : -dx);
+const shift = (dir, d) => (dir === 'down' ? `translate3d(0, ${d}, 0)` : `translate3d(${dir === 'right' ? '' : '-'}${d}, 0, 0)`);
 function installSheetDrag() {
   let s = null;
   const onStart = (e) => {
-    const t = e.touches?.[0]; if (!t) return;
-    for (const [sel, close] of SHEETS) {
+    const t = e.touches?.[0]; if (!t || window.matchMedia('(min-width: 900px)').matches) return;
+    if (e.target.closest?.('input, select, textarea, [role="slider"]')) return;
+    for (const [sel, close, dir] of SHEETS) {
       const panel = e.target.closest?.(sel);
       if (!panel) continue;
-      const scroller = e.target.closest('[class*="body"], [class*="list"], ul') || panel;
-      if (scroller.scrollTop > 0 || panel.scrollTop > 0) return;
-      if (window.matchMedia('(min-width: 900px)').matches) return;
-      s = { panel, close, y0: t.clientY, dy: 0 }; return;
+      if (dir === 'down') {
+        const scroller = e.target.closest('[class*="body"], [class*="list"], ul') || panel;
+        if (scroller.scrollTop > 0 || panel.scrollTop > 0) return;
+      }
+      s = { panel, close, dir, x0: t.clientX, y0: t.clientY, d: 0, lock: null }; return;
     }
   };
   const onMove = (e) => {
     if (!s) return; const t = e.touches?.[0]; if (!t) return;
-    s.dy = Math.max(0, t.clientY - s.y0);
-    if (s.dy > 6) { s.panel.style.transition = 'none'; s.panel.style.transform = `translate3d(0, ${s.dy}px, 0)`; }
+    const dx = t.clientX - s.x0; const dy = t.clientY - s.y0;
+    if (s.lock == null) {
+      if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
+      // Only a swipe along the leaving axis moves the panel; anything else is the shopper scrolling.
+      s.lock = (s.dir === 'down') === (Math.abs(dy) > Math.abs(dx));
+      if (!s.lock) { s = null; return; }
+    }
+    s.d = along(s.dir, dx, dy);
+    s.panel.style.transition = 'none'; s.panel.style.transform = shift(s.dir, `${s.d}px`);
   };
   const onEnd = () => {
-    if (!s) return; const { panel, close, dy } = s; s = null;
-    panel.style.transition = 'transform .28s cubic-bezier(.3, 1.2, .5, 1)';
-    if (dy > 110) {
-      panel.style.transform = 'translate3d(0, 100%, 0)';
-      window.setTimeout(() => { panel.style.transform = ''; panel.style.transition = ''; panel.closest('[role="dialog"]')?.querySelector(close)?.click(); }, 200);
+    if (!s) return; const { panel, close, dir, d, lock } = s; s = null;
+    if (!lock) return;
+    panel.style.transition = 'transform .26s cubic-bezier(.3, 1.2, .5, 1)';
+    if (d > SWIPE_CLOSE_AT) {
+      panel.style.transform = shift(dir, '100%');
+      window.setTimeout(() => {
+        const root = panel.closest('[role="dialog"]') || panel.parentElement;
+        const ctl = panel.querySelector(close) || root?.querySelector(close);
+        panel.style.transform = ''; panel.style.transition = '';
+        ctl?.click();
+      }, 200);
     } else { panel.style.transform = ''; window.setTimeout(() => { panel.style.transition = ''; }, 300); }
   };
   document.addEventListener('touchstart', onStart, { passive: true });

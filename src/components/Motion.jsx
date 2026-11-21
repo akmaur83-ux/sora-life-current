@@ -25,10 +25,10 @@ export default function Motion() {
     if (first.current) { first.current = false; return; }
     if (reducedMotion() || document.documentElement.classList.contains('vt-running')) return;
     const main = document.querySelector('main');
-    main?.animate?.(navType === 'POP'
-      ? [{ opacity: 0.55 }, { opacity: 1 }]
-      : [{ opacity: 0.35, transform: 'translate3d(0, 10px, 0)' }, { opacity: 1, transform: 'none' }],
-    { duration: 280, easing: 'cubic-bezier(.2, .8, .2, 1)' });
+    // Opacity only (bug 2026-11-21): a transform on <main>, even for 280 ms, makes it the box that
+    // position:fixed children (the product page's buy bar, filter drawers) are placed in, so they
+    // jumped down the page and back.
+    main?.animate?.([{ opacity: navType === 'POP' ? 0.55 : 0.35 }, { opacity: 1 }], { duration: 280, easing: 'cubic-bezier(.2, .8, .2, 1)' });
   }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 10 · card picture → product page picture.

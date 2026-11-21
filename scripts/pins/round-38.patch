@@ -1,0 +1,257 @@
+diff --git a/src/components/Motion.jsx b/src/components/Motion.jsx
+index 4f30f54..6b3c12c 100644
+--- a/src/components/Motion.jsx
++++ b/src/components/Motion.jsx
+@@ -25,10 +25,10 @@ export default function Motion() {
+     if (first.current) { first.current = false; return; }
+     if (reducedMotion() || document.documentElement.classList.contains('vt-running')) return;
+     const main = document.querySelector('main');
+-    main?.animate?.(navType === 'POP'
+-      ? [{ opacity: 0.55 }, { opacity: 1 }]
+-      : [{ opacity: 0.35, transform: 'translate3d(0, 10px, 0)' }, { opacity: 1, transform: 'none' }],
+-    { duration: 280, easing: 'cubic-bezier(.2, .8, .2, 1)' });
++    // Opacity only (bug 2026-11-21): a transform on <main>, even for 280 ms, makes it the box that
++    // position:fixed children (the product page's buy bar, filter drawers) are placed in, so they
++    // jumped down the page and back.
++    main?.animate?.([{ opacity: navType === 'POP' ? 0.55 : 0.35 }, { opacity: 1 }], { duration: 280, easing: 'cubic-bezier(.2, .8, .2, 1)' });
+   }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
+ 
+   // 10 · card picture → product page picture.
+diff --git a/src/fashion/FashionProductPage.jsx b/src/fashion/FashionProductPage.jsx
+index 90b3360..cfb1ed1 100644
+--- a/src/fashion/FashionProductPage.jsx
++++ b/src/fashion/FashionProductPage.jsx
+@@ -115,10 +115,12 @@ function DeliveryBlock() {
+ /**
+  * One-size pieces (shawls, stoles, caps) open ready to buy, as a marketplace page does: the only
+  * size, and the first colour in stock (or the only one). A garment with several sizes waits for
+- * the customer to choose both; whatever the URL names always wins.
++ * the customer to choose the size (a single colour is chosen for them); whatever the URL names always wins.
+  */
+ export function defaultSelection(view, sel) {
+-  if (view.sizes.length !== 1) return sel;
++  // Bug 2026-11-21: a jacket made in one colour only (Black) still asked "Choose a colour" after
++  // the size — a tap on the only swatch the shopper could make. The only colour is chosen for them.
++  if (view.sizes.length !== 1) return !sel.colour && view.swatches.length === 1 ? { ...sel, colour: view.swatches[0].colour } : sel;
+   const size = sel.size ?? view.sizes[0];
+   let colour = sel.colour;
+   if (!colour) {
+diff --git a/src/fashion/FashionVariantPicker.jsx b/src/fashion/FashionVariantPicker.jsx
+index e6b0e79..b4612dc 100644
+--- a/src/fashion/FashionVariantPicker.jsx
++++ b/src/fashion/FashionVariantPicker.jsx
+@@ -55,7 +55,9 @@ export function VariantPicker({ view, size, colour, onChange, compact = false })
+ // Quick-add sheet: the picker in a bottom sheet, one Add button.
+ // ---------------------------------------------------------------
+ export function VariantSheet({ view, onAdd, onClose }) {
+-  const [sel, setSel] = useState({ size: null, colour: null });
++  // A single size or a single colour is chosen up front (bug 2026-11-21: one-colour jackets made
++  // the shopper tap the only swatch before Add would work).
++  const [sel, setSel] = useState(() => ({ size: view.sizes.length === 1 ? view.sizes[0] : null, colour: view.swatches.length === 1 ? view.swatches[0].colour : null }));
+   const st = selectionState(view, sel);
+   useEffect(() => {
+     const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+diff --git a/src/homeliving/HomeLivingProductPage.jsx b/src/homeliving/HomeLivingProductPage.jsx
+index cc0e85c..9db2d06 100644
+--- a/src/homeliving/HomeLivingProductPage.jsx
++++ b/src/homeliving/HomeLivingProductPage.jsx
+@@ -552,9 +552,11 @@ export function BuyNowButton({ st, onBuy, className = '' }) {
+   );
+ }
+ 
+-/** The only size, and the first colour that can be bought in it; anything the URL names wins. */
++/** The only size, and the first colour that can be bought in it (or the only colour); anything the URL names wins. */
+ export function oneSizeDefault(view, sel) {
+-  if (!view || !Array.isArray(view.sizes) || view.sizes.length !== 1) return sel;
++  if (!view || !Array.isArray(view.sizes)) return sel;
++  // Several sizes: the shopper picks the size; a single colour is picked for them (bug 2026-11-21).
++  if (view.sizes.length !== 1) return !sel.colour && (view.swatches || []).length === 1 ? { ...sel, colour: view.swatches[0].colour } : sel;
+   const size = sel.size ?? view.sizes[0];
+   if (sel.colour || !(view.swatches || []).length) return { ...sel, size };
+   const live = view.swatches.find((sw) => selectionState(view, { size, colour: sw.colour }).canAdd);
+diff --git a/src/lib/motion.js b/src/lib/motion.js
+index aa5e25d..39e4e77 100644
+--- a/src/lib/motion.js
++++ b/src/lib/motion.js
+@@ -117,33 +117,59 @@ function installHearts() {
+   return () => document.removeEventListener('click', onClick, true);
+ }
+ 
+-// ---- 11 · sheets close by dragging them down -------------------------------------
+-// [panel selector, the control that closes it]
+-export const SHEETS = [['.fs-sheet__panel', '.fs-sheet__x'], ['.v2-fd__panel', '.v2-fd__scrim'], ['.hl-filters__panel, .hl-filters', '.hl-filters__scrim']];
++// ---- 11 · sheets and drawers close by swiping them the way they came in ---------------
++// [panel, the control that closes it, the direction it leaves in]. Bug 2026-11-21: every panel
++// was dragged downwards, but the wellness filters come from the right and the fashion and home
++// filters from the left — a drawer slid down, then snapped back open.
++export const SHEETS = [
++  ['.fs-sheet__panel', '.fs-sheet__x', 'down'],
++  ['.v2-fd.is-open .v2-fd__panel', '.v2-fd__scrim', 'right'],
++  ['.fs-listing__body.has-panel .fs-filters', '.fs-filters__x', 'left'],
++  ['.hl-listing__body.has-panel .hl-filters', '.hl-filters__x', 'left'],
++];
++export const SWIPE_CLOSE_AT = 90;
++/** How far the finger has gone in the panel's leaving direction (never negative). Pure. */
++export const along = (dir, dx, dy) => Math.max(0, dir === 'down' ? dy : dir === 'right' ? dx : -dx);
++const shift = (dir, d) => (dir === 'down' ? `translate3d(0, ${d}, 0)` : `translate3d(${dir === 'right' ? '' : '-'}${d}, 0, 0)`);
+ function installSheetDrag() {
+   let s = null;
+   const onStart = (e) => {
+-    const t = e.touches?.[0]; if (!t) return;
+-    for (const [sel, close] of SHEETS) {
++    const t = e.touches?.[0]; if (!t || window.matchMedia('(min-width: 900px)').matches) return;
++    if (e.target.closest?.('input, select, textarea, [role="slider"]')) return;
++    for (const [sel, close, dir] of SHEETS) {
+       const panel = e.target.closest?.(sel);
+       if (!panel) continue;
+-      const scroller = e.target.closest('[class*="body"], [class*="list"], ul') || panel;
+-      if (scroller.scrollTop > 0 || panel.scrollTop > 0) return;
+-      if (window.matchMedia('(min-width: 900px)').matches) return;
+-      s = { panel, close, y0: t.clientY, dy: 0 }; return;
++      if (dir === 'down') {
++        const scroller = e.target.closest('[class*="body"], [class*="list"], ul') || panel;
++        if (scroller.scrollTop > 0 || panel.scrollTop > 0) return;
++      }
++      s = { panel, close, dir, x0: t.clientX, y0: t.clientY, d: 0, lock: null }; return;
+     }
+   };
+   const onMove = (e) => {
+     if (!s) return; const t = e.touches?.[0]; if (!t) return;
+-    s.dy = Math.max(0, t.clientY - s.y0);
+-    if (s.dy > 6) { s.panel.style.transition = 'none'; s.panel.style.transform = `translate3d(0, ${s.dy}px, 0)`; }
++    const dx = t.clientX - s.x0; const dy = t.clientY - s.y0;
++    if (s.lock == null) {
++      if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
++      // Only a swipe along the leaving axis moves the panel; anything else is the shopper scrolling.
++      s.lock = (s.dir === 'down') === (Math.abs(dy) > Math.abs(dx));
++      if (!s.lock) { s = null; return; }
++    }
++    s.d = along(s.dir, dx, dy);
++    s.panel.style.transition = 'none'; s.panel.style.transform = shift(s.dir, `${s.d}px`);
+   };
+   const onEnd = () => {
+-    if (!s) return; const { panel, close, dy } = s; s = null;
+-    panel.style.transition = 'transform .28s cubic-bezier(.3, 1.2, .5, 1)';
+-    if (dy > 110) {
+-      panel.style.transform = 'translate3d(0, 100%, 0)';
+-      window.setTimeout(() => { panel.style.transform = ''; panel.style.transition = ''; panel.closest('[role="dialog"]')?.querySelector(close)?.click(); }, 200);
++    if (!s) return; const { panel, close, dir, d, lock } = s; s = null;
++    if (!lock) return;
++    panel.style.transition = 'transform .26s cubic-bezier(.3, 1.2, .5, 1)';
++    if (d > SWIPE_CLOSE_AT) {
++      panel.style.transform = shift(dir, '100%');
++      window.setTimeout(() => {
++        const root = panel.closest('[role="dialog"]') || panel.parentElement;
++        const ctl = panel.querySelector(close) || root?.querySelector(close);
++        panel.style.transform = ''; panel.style.transition = '';
++        ctl?.click();
++      }, 200);
+     } else { panel.style.transform = ''; window.setTimeout(() => { panel.style.transition = ''; }, 300); }
+   };
+   document.addEventListener('touchstart', onStart, { passive: true });
+diff --git a/src/pages/Checkout.jsx b/src/pages/Checkout.jsx
+index efb2a47..692a903 100644
+--- a/src/pages/Checkout.jsx
++++ b/src/pages/Checkout.jsx
+@@ -197,6 +197,17 @@ export default function Checkout() {
+     setErrors(e);
+     return Object.keys(e).length === 0;
+   }
++  // Bug 2026-11-21: the button sits under the form, so on a phone a wrong email or phone at the top
++  // showed its message off-screen and the tap seemed to do nothing. Bring the first one into view.
++  // (The checks themselves are validateShipping's, unchanged.)
++  function showFirstError() {
++    window.requestAnimationFrame(() => {
++      const el = document.querySelector('.field-error input, .field-error select, .field-error textarea');
++      if (!el) return;
++      el.scrollIntoView({ block: 'center', behavior: 'smooth' });
++      el.focus({ preventScroll: true });
++    });
++  }
+   // Payment UX state
+   const [processing, setProcessing] = useState(false);
+   const [payError, setPayError] = useState('');
+@@ -604,7 +615,7 @@ export default function Checkout() {
+                 )}
+                 </>
+               )}
+-              <button className="btn btn-lg v2-btn" onClick={() => validateShipping() && next()}>Continue to delivery <Icon name="arrowRight" size={18} /></button>
++              <button className="btn btn-lg v2-btn" onClick={() => { if (validateShipping()) next(); else showFirstError(); }}>Continue to delivery <Icon name="arrowRight" size={18} /></button>
+             </section>
+           )}
+ 
+diff --git a/src/styles/sora-ds.css b/src/styles/sora-ds.css
+index c6e3a49..9864aff 100644
+--- a/src/styles/sora-ds.css
++++ b/src/styles/sora-ds.css
+@@ -832,7 +832,7 @@ html.sora-wintertop .v2-hdr { position: sticky; }
+     radial-gradient(1.2px 1.2px at 38% 65%, rgba(255, 255, 255, .45) 50%, transparent 51%),
+     radial-gradient(1.8px 1.8px at 63% 20%, rgba(255, 255, 255, .5) 50%, transparent 51%),
+     radial-gradient(1.2px 1.2px at 86% 55%, rgba(255, 255, 255, .45) 50%, transparent 51%),
+-    linear-gradient(180deg, rgba(27, 63, 124, .97), rgba(14, 34, 71, .98));
++    linear-gradient(180deg, #1B3F7C, #0E2247); /* solid: footer text showed through (2026-11-21) */
+   background-size: 120px 60px, 140px 60px, 110px 60px, 130px 60px, 100% 100%;
+   animation: tw-snow 7s linear infinite;
+   -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+@@ -1110,7 +1110,7 @@ html.is-scrolled .v2-hdr, html.is-scrolled .fs-hdr, html.is-scrolled .hl-hdr { b
+ 
+ /* 11 · sheets rise with a little spring (and close by dragging down: motion.js). */
+ @media (max-width: 899px) {
+-  .fs-sheet__panel { animation: sheet-up .44s cubic-bezier(.25, 1.25, .5, 1) both; }
++  .fs-sheet__panel { animation: sheet-up .44s cubic-bezier(.25, 1.25, .5, 1) backwards; } /* not "both": a finished fill would pin transform and beat the swipe-to-close (2026-11-21) */
+   .v2-fd__panel { transition-timing-function: cubic-bezier(.25, 1.2, .5, 1) !important; }
+ }
+ @keyframes sheet-up { from { transform: translate3d(0, 100%, 0); } to { transform: none; } }
+@@ -1121,13 +1121,13 @@ html.is-scrolled .v2-hdr, html.is-scrolled .fs-hdr, html.is-scrolled .hl-hdr { b
+ @keyframes flurry { to { transform: translate3d(var(--x), 105vh, 0) rotate(180deg); opacity: .25; } }
+ 
+ /* 14 · a coupon going on: the ticket stamps in and glows once. */
+-.cartcoupon__applied { animation: coupon-in .6s cubic-bezier(.3, 1.45, .5, 1) both; }
++.cartcoupon__applied { animation: coupon-in .6s cubic-bezier(.3, 1.45, .5, 1) backwards; }
+ @keyframes coupon-in { 0% { transform: scale(.85) rotate(-2deg); opacity: 0; } 60% { transform: scale(1.03) rotate(.5deg); opacity: 1; } 100% { transform: none; } }
+ .cartcoupon__appliedcode { animation: coupon-glow 1.4s ease .35s 1; }
+ @keyframes coupon-glow { 0%, 100% { text-shadow: none; } 40% { text-shadow: 0 0 10px rgba(242, 193, 78, .9); } }
+ 
+ /* 16 · the homepage hero's words arrive one after another on each slide. */
+-.hx-hero__slide[aria-hidden="false"] .hx-eyebrow, .hx-hero__slide[aria-hidden="false"] .hx-hero__title > span, .hx-hero__slide[aria-hidden="false"] .hx-btn { animation: hero-in .75s cubic-bezier(.2, .8, .2, 1) both; }
++.hx-hero__slide[aria-hidden="false"] .hx-eyebrow, .hx-hero__slide[aria-hidden="false"] .hx-hero__title > span, .hx-hero__slide[aria-hidden="false"] .hx-btn { animation: hero-in .75s cubic-bezier(.2, .8, .2, 1) backwards; }
+ .hx-hero__slide[aria-hidden="false"] .hx-hero__title > span { display: inline-block; animation-delay: .1s; }
+ .hx-hero__slide[aria-hidden="false"] .hx-hero__title > span + span { animation-delay: .22s; }
+ .hx-hero__slide[aria-hidden="false"] .hx-btn { animation-delay: .34s; }
+@@ -1135,20 +1135,20 @@ html.is-scrolled .v2-hdr, html.is-scrolled .fs-hdr, html.is-scrolled .hl-hdr { b
+ 
+ /* 17 · the offer clock's numbers flip as they change. */
+ .hx-offer__clock { perspective: 400px; }
+-.hx-offer__clock b { display: inline-block; animation: flip-in .45s cubic-bezier(.3, 1.3, .5, 1) both; transform-origin: 50% 0; backface-visibility: hidden; }
++.hx-offer__clock b { display: inline-block; animation: flip-in .45s cubic-bezier(.3, 1.3, .5, 1) backwards; transform-origin: 50% 0; backface-visibility: hidden; }
+ @keyframes flip-in { from { transform: rotateX(-90deg); opacity: .4; } to { transform: none; opacity: 1; } }
+ 
+ /* 18 · search: a warm ring when the box is in use; suggestions arrive one after another. */
+ .v2-hdr__searchbox, .fs-search, .hl-search { transition: box-shadow .2s ease; }
+ .v2-hdr__searchbox:focus-within, .fs-search:focus-within, .hl-search:focus-within { box-shadow: 0 0 0 3px rgba(242, 193, 78, .45); }
+-.v2-hdr__suggest-item, [role="listbox"] > [role="option"] { animation: sug-in .32s cubic-bezier(.2, .8, .2, 1) both; }
++.v2-hdr__suggest-item, [role="listbox"] > [role="option"] { animation: sug-in .32s cubic-bezier(.2, .8, .2, 1) backwards; }
+ .v2-hdr__suggest-item:nth-child(2), [role="listbox"] > [role="option"]:nth-child(2) { animation-delay: .04s; }
+ .v2-hdr__suggest-item:nth-child(3), [role="listbox"] > [role="option"]:nth-child(3) { animation-delay: .08s; }
+ .v2-hdr__suggest-item:nth-child(4), [role="listbox"] > [role="option"]:nth-child(4) { animation-delay: .12s; }
+ .v2-hdr__suggest-item:nth-child(5), [role="listbox"] > [role="option"]:nth-child(5) { animation-delay: .16s; }
+ .v2-hdr__suggest-item:nth-child(n+6), [role="listbox"] > [role="option"]:nth-child(n+6) { animation-delay: .2s; }
+ @keyframes sug-in { from { opacity: 0; transform: translate3d(0, 6px, 0); } to { opacity: 1; transform: none; } }
+-.search-overlay > * { animation: sug-in .3s cubic-bezier(.2, .8, .2, 1) both; }
++.search-overlay > * { animation: sug-in .3s cubic-bezier(.2, .8, .2, 1) backwards; }
+ 
+ /* 10 · the card's picture growing into the product page's (View Transitions; Chrome). */
+ .fs-gallery__slide.is-on img, .hl-gallery__slide.is-on img, .pdp__zoom-trigger img { view-transition-name: sora-hero; }
+@@ -1177,8 +1177,10 @@ html.is-scrolled .v2-hdr, html.is-scrolled .fs-hdr, html.is-scrolled .hl-hdr { b
+ @media (prefers-reduced-motion: reduce) { .sora-empty__swing, .sora-empty__snow circle { animation: none; } .sora-empty__snow { display: none; } }
+ 
+ /* 12 · amounts roll like an odometer when they change (RollNumber.jsx). */
+-.roll { display: inline-flex; overflow: hidden; vertical-align: bottom; line-height: inherit; }
++/* inline-block, not inline-flex: flex items are blockified, so the amount read as "₹ 2 , 8 8 0" to
++   screen readers and copy-paste (bug 2026-11-21). */
++.roll { display: inline-block; overflow: hidden; vertical-align: bottom; line-height: inherit; white-space: nowrap; }
+ .roll > span { display: inline-block; white-space: pre; }
+-.roll > .roll__d { animation: roll-in .42s cubic-bezier(.3, 1.3, .5, 1) both; }
++.roll > .roll__d { animation: roll-in .42s cubic-bezier(.3, 1.3, .5, 1) backwards; }
+ @keyframes roll-in { from { transform: translate3d(0, 85%, 0); opacity: 0; } to { transform: none; opacity: 1; } }
+ @media (prefers-reduced-motion: reduce) { .roll > .roll__d { animation: none !important; } }

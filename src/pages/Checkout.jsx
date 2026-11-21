@@ -197,6 +197,17 @@ export default function Checkout() {
     setErrors(e);
     return Object.keys(e).length === 0;
   }
+  // Bug 2026-11-21: the button sits under the form, so on a phone a wrong email or phone at the top
+  // showed its message off-screen and the tap seemed to do nothing. Bring the first one into view.
+  // (The checks themselves are validateShipping's, unchanged.)
+  function showFirstError() {
+    window.requestAnimationFrame(() => {
+      const el = document.querySelector('.field-error input, .field-error select, .field-error textarea');
+      if (!el) return;
+      el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      el.focus({ preventScroll: true });
+    });
+  }
   // Payment UX state
   const [processing, setProcessing] = useState(false);
   const [payError, setPayError] = useState('');
@@ -604,7 +615,7 @@ export default function Checkout() {
                 )}
                 </>
               )}
-              <button className="btn btn-lg v2-btn" onClick={() => validateShipping() && next()}>Continue to delivery <Icon name="arrowRight" size={18} /></button>
+              <button className="btn btn-lg v2-btn" onClick={() => { if (validateShipping()) next(); else showFirstError(); }}>Continue to delivery <Icon name="arrowRight" size={18} /></button>
             </section>
           )}
 

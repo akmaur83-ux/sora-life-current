@@ -75,5 +75,52 @@ test('order confirmation snows in winter; countdown digits flip; empty bag and w
   assert.match(read('src/main.jsx'), /<Motion \/>/);
 });
 
+// ---- Round 38 bug fixes (owner 2026-11-21: "bugs find krke fix kro") ----------------
+test('panels close by swiping the way they came in: quick-add down, wellness filters right, fashion/home filters left', () => {
+  const m = loadModule('src/lib/motion.js', { isWinterSeason: () => true });
+  assert.deepEqual(m.SHEETS.map((x) => x[2]), ['down', 'right', 'left', 'left']);
+  assert.equal(m.along('down', 5, 120), 120);
+  assert.equal(m.along('down', 0, -40), 0, 'never negative');
+  assert.equal(m.along('right', 100, 3), 100);
+  assert.equal(m.along('left', -100, 3), 100);
+  assert.equal(m.along('left', 100, 3), 0);
+  const s = read('src/lib/motion.js');
+  assert.match(s, /if \(e\.target\.closest\?\.\('input, select, textarea, \[role="slider"\]'\)\) return;/, 'a slider is never a swipe');
+  assert.match(s, /s\.lock = \(s\.dir === 'down'\) === \(Math\.abs\(dy\) > Math\.abs\(dx\)\);/, 'scrolling across is not a swipe');
+});
+test('entrance animations never pin transform after they end (the swipe and the press still work)', () => {
+  assert.doesNotMatch(motionBlock, /animation: (sheet-up|coupon-in|hero-in|flip-in|sug-in|roll-in) [^;]* both;/);
+  assert.match(motionBlock, /\.fs-sheet__panel \{ animation: sheet-up [^;]* backwards; \}/);
+});
+test('the page fade is opacity only, so fixed bars inside <main> never jump', () => {
+  const s = read('src/components/Motion.jsx');
+  assert.match(s, /main\?\.animate\?\.\(\[\{ opacity: navType === 'POP' \? 0\.55 : 0\.35 \}, \{ opacity: 1 \}\]/);
+  assert.doesNotMatch(s.slice(s.indexOf('main?.animate'), s.indexOf('main?.animate') + 200), /transform/);
+});
+test('the odometer is inline-block, so the amount reads as one word', () => {
+  assert.match(css, /\.roll \{ display: inline-block;/);
+  assert.doesNotMatch(css, /\.roll \{ display: inline-flex/);
+});
+test('a one-colour garment never asks the shopper to choose its colour', () => {
+  const view = { sizes: ['S', 'M'], swatches: [{ colour: 'Black' }], variants: [] };
+  const pdp = read('src/fashion/FashionProductPage.jsx');
+  const fn = pdp.slice(pdp.indexOf('export function defaultSelection'), pdp.indexOf('export default function FashionProductPage'));
+  const defaultSelection = new Function(`${fn.replace('export ', '')}; return defaultSelection;`)();
+  assert.deepEqual(defaultSelection(view, { size: null, colour: null }), { size: null, colour: 'Black' });
+  assert.deepEqual(defaultSelection(view, { size: 'M', colour: null }), { size: 'M', colour: 'Black' });
+  assert.deepEqual(defaultSelection({ ...view, swatches: [{ colour: 'Black' }, { colour: 'Brown' }] }, { size: null, colour: null }), { size: null, colour: null }, 'two colours: the shopper chooses');
+  assert.match(read('src/fashion/FashionVariantPicker.jsx'), /useState\(\(\) => \(\{ size: view\.sizes\.length === 1 \? view\.sizes\[0\] : null, colour: view\.swatches\.length === 1 \? view\.swatches\[0\]\.colour : null \}\)\)/);
+  const hl = read('src/homeliving/HomeLivingProductPage.jsx');
+  assert.match(hl, /if \(view\.sizes\.length !== 1\) return !sel\.colour && \(view\.swatches \|\| \[\]\)\.length === 1 \? \{ \.\.\.sel, colour: view\.swatches\[0\]\.colour \} : sel;/);
+});
+test('checkout: a wrong field the shopper cannot see is brought into view; the checks are unchanged', () => {
+  const c = read('src/pages/Checkout.jsx');
+  assert.match(c, /onClick=\{\(\) => \{ if \(validateShipping\(\)\) next\(\); else showFirstError\(\); \}\}/);
+  assert.match(c, /document\.querySelector\('\.field-error input, \.field-error select, \.field-error textarea'\)/);
+});
+test('the winter tab bar is solid, so footer text never shows through', () => {
+  assert.match(css, /linear-gradient\(180deg, #1B3F7C, #0E2247\); \/\* solid/);
+});
+
 console.log(failed ? `\n${failed} failed` : '\nall passed');
 process.exit(failed ? 1 : 0);

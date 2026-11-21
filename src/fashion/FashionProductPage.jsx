@@ -115,10 +115,12 @@ function DeliveryBlock() {
 /**
  * One-size pieces (shawls, stoles, caps) open ready to buy, as a marketplace page does: the only
  * size, and the first colour in stock (or the only one). A garment with several sizes waits for
- * the customer to choose both; whatever the URL names always wins.
+ * the customer to choose the size (a single colour is chosen for them); whatever the URL names always wins.
  */
 export function defaultSelection(view, sel) {
-  if (view.sizes.length !== 1) return sel;
+  // Bug 2026-11-21: a jacket made in one colour only (Black) still asked "Choose a colour" after
+  // the size — a tap on the only swatch the shopper could make. The only colour is chosen for them.
+  if (view.sizes.length !== 1) return !sel.colour && view.swatches.length === 1 ? { ...sel, colour: view.swatches[0].colour } : sel;
   const size = sel.size ?? view.sizes[0];
   let colour = sel.colour;
   if (!colour) {

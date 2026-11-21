@@ -55,7 +55,9 @@ export function VariantPicker({ view, size, colour, onChange, compact = false })
 // Quick-add sheet: the picker in a bottom sheet, one Add button.
 // ---------------------------------------------------------------
 export function VariantSheet({ view, onAdd, onClose }) {
-  const [sel, setSel] = useState({ size: null, colour: null });
+  // A single size or a single colour is chosen up front (bug 2026-11-21: one-colour jackets made
+  // the shopper tap the only swatch before Add would work).
+  const [sel, setSel] = useState(() => ({ size: view.sizes.length === 1 ? view.sizes[0] : null, colour: view.swatches.length === 1 ? view.swatches[0].colour : null }));
   const st = selectionState(view, sel);
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onClose(); };

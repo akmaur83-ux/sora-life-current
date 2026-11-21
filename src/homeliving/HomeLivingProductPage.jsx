@@ -552,9 +552,11 @@ export function BuyNowButton({ st, onBuy, className = '' }) {
   );
 }
 
-/** The only size, and the first colour that can be bought in it; anything the URL names wins. */
+/** The only size, and the first colour that can be bought in it (or the only colour); anything the URL names wins. */
 export function oneSizeDefault(view, sel) {
-  if (!view || !Array.isArray(view.sizes) || view.sizes.length !== 1) return sel;
+  if (!view || !Array.isArray(view.sizes)) return sel;
+  // Several sizes: the shopper picks the size; a single colour is picked for them (bug 2026-11-21).
+  if (view.sizes.length !== 1) return !sel.colour && (view.swatches || []).length === 1 ? { ...sel, colour: view.swatches[0].colour } : sel;
   const size = sel.size ?? view.sizes[0];
   if (sel.colour || !(view.swatches || []).length) return { ...sel, size };
   const live = view.swatches.find((sw) => selectionState(view, { size, colour: sw.colour }).canAdd);
