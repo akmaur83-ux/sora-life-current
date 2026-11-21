@@ -4,6 +4,7 @@ import { useStore } from '../lib/store.jsx';
 import { money } from '../lib/format.js';
 import Icon from './Icon.jsx';
 import MobileTabBar from './MobileTabBar.jsx';
+import RollNumber from './RollNumber.jsx';
 
 // The phone's floating cart bar, sitting on the bottom navigation.
 // Round 35 (owner, 2026-11-21: "Blinkit/Zepto jaise" — the pattern, SORA's look): it now
@@ -46,7 +47,7 @@ export default function MobileCartSummary({ tabbar = null }) {
               covered a meaningful slice of a 390px screen. */}
           <div className="v2-mobile-cart__totals" aria-live="polite" aria-atomic="true">
             <strong className="v2-mobile-cart__subtotal">
-              <span className="sr-only">Item subtotal </span>{money(subtotal)}
+              <span className="sr-only">Item subtotal </span><RollNumber text={money(subtotal)} />
             </strong>
             <span className="v2-mobile-cart__count">
               {cartCount} {cartCount === 1 ? 'item' : 'items'}

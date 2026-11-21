@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
+import { snowFlurry } from '../lib/motion.js';
+import { isWinterSeason } from '../lib/winterDeals.js';
 
 // ============================================================
 // Order-confirmed celebration — the success icon plus a short,
@@ -49,6 +51,8 @@ export default function OrderCelebration() {
   // Reduced motion: no particles at all — just the static success state.
   // Mobile: fewer particles, shorter travel (scaled below).
   const [showParticles, setShowParticles] = useState(!reduced);
+  // In winter the confirmation also gets a short fall of snow (2026-11-21); none for reduced motion.
+  useEffect(() => { if (!reduced && isWinterSeason()) snowFlurry(26); }, [reduced]);
 
   const { burst, drift, scale } = useMemo(() => ({
     burst: reduced ? [] : (isNarrow ? PARTICLES.filter((_, i) => i % 2 === 0) : PARTICLES),

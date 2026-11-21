@@ -380,7 +380,7 @@ console.log('\n— Wiring —');
 await test('one ScrollManager, inside <BrowserRouter> (every storefront and the admin are under it); the old per-shell resets are gone', () => {
   const main = read('src/main.jsx');
   assert.match(main, /import ScrollManager from '\.\/components\/ScrollManager\.jsx';/);
-  assert.match(main, /<BrowserRouter>\s*\{\/\*[\s\S]*?\*\/\}\s*<ScrollManager \/>\s*<CustomerAuthProvider>/, 'the first child of the router');
+  assert.match(main, /<BrowserRouter>\s*\{\/\*[\s\S]*?\*\/\}\s*<ScrollManager \/>\s*(?:\{\/\*[^*]*\*\/\}\s*<Motion \/>\s*)?<CustomerAuthProvider>/, 'the first child of the router (round 37: the site-wide motion sits right after it)');
   const files = [];
   const walk = (dir) => { for (const f of readdirSync(resolve(ROOT, dir))) { const rel = `${dir}/${f}`; if (statSync(resolve(ROOT, rel)).isDirectory()) walk(rel); else if (/\.(jsx?|mjs)$/.test(f)) files.push(rel); } };
   walk('src');

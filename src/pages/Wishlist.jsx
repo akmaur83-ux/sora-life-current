@@ -6,6 +6,7 @@ import { useStore } from '../lib/store.jsx';
 import { productById, getBestsellers } from '../data/products.js';
 import ShareList from '../components/ShareList.jsx';
 import PriceDrops from '../components/PriceDrops.jsx';
+import EmptyArt from '../components/EmptyArt.jsx';
 
 export default function Wishlist() {
   const { wishlist, addToCart } = useStore();
@@ -23,7 +24,7 @@ export default function Wishlist() {
         </div></div>
         <div className="container section-sm">
           <div className="state">
-            <span className="state-ic"><Icon name="heart" size={32} /></span>
+            <EmptyArt kind="heart" />
             <h3>Your wishlist is empty</h3>
             <p>Save the products you love by tapping the heart — they&apos;ll live here for later.</p>
             <Link to="/shop" className="btn">Find something you love <Icon name="arrowRight" size={18} /></Link>

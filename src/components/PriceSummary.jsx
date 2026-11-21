@@ -1,4 +1,5 @@
 import { money } from '../lib/format.js';
+import RollNumber from './RollNumber.jsx';
 
 // ============================================================
 // Detailed order price summary.
@@ -19,7 +20,7 @@ function Row({ label, value, tone, strong, note }) {
         {label}
         {note && <span className="psum__note">{note}</span>}
       </span>
-      <span className="psum__value">{value}</span>
+      <span className="psum__value">{strong && typeof value === 'string' ? <RollNumber text={value} /> : value}</span>
     </div>
   );
 }

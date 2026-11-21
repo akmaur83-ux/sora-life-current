@@ -32,7 +32,7 @@ export default function OfferBanner({ wrap = '' }) {
       <p className="hx-offer__t"><Icon name="gift" size={18} /> {o.title}{o.code && <button type="button" className="hx-offer__code" onClick={copy} aria-label={`Copy code ${o.code}`}>{copied ? 'Copied ✓' : o.code}</button>}</p>
       <p className="hx-offer__clock" aria-label={`Ends in ${left.d} days ${left.h} hours ${left.m} minutes`}>
         <span>Ends in</span>
-        {[['d', left.d], ['h', left.h], ['m', left.m], ['s', left.s]].map(([k, v]) => <b key={k} aria-hidden="true">{k === 'd' ? v : pad(v)}<i>{k}</i></b>)}
+        {[['d', left.d], ['h', left.h], ['m', left.m], ['s', left.s]].map(([k, v]) => <b key={`${k}-${v}`} aria-hidden="true">{k === 'd' ? v : pad(v)}<i>{k}</i></b>)}
       </p>
       {/* Spread the word (2026-11-10): the offer page, carrying the code (PromoCard.jsx promo links). */}
       <p className="hx-offer__acts">

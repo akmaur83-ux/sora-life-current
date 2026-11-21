@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App.jsx';
 import ScrollManager from './components/ScrollManager.jsx';
+import Motion from './components/Motion.jsx';
 import SiteAssist from './components/SiteAssist.jsx';
 import AppShell from './components/AppShell.jsx';
 import StoreBar from './components/StoreBar.jsx';
@@ -112,6 +113,8 @@ function Root() {
         {/* Scroll on navigation for every storefront and the admin: top on a new page,
             back/forward restored, #hash to its anchor, query-only changes left alone. */}
         <ScrollManager />
+        {/* Site-wide movement, only transform/opacity, nothing under reduced motion (2026-11-21). */}
+        <Motion />
         <CustomerAuthProvider>
           <StoreProvider>
             {/* One bar across the top of every store (StoreBar.jsx, 2026-11-13 redesign). */}

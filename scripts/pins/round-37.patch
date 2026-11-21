@@ -1,0 +1,610 @@
+diff --git a/src/components/EmptyArt.jsx b/src/components/EmptyArt.jsx
+new file mode 100644
+index 0000000..b21ecc1
+--- /dev/null
++++ b/src/components/EmptyArt.jsx
+@@ -0,0 +1,30 @@
++// ============================================================
++// Empty-state art (round 37, owner 2026-11-21): an empty bag (or a heart) drawn here,
++// swinging gently from a hook while a few snowflakes fall behind it — SORA's own drawing,
++// no stock art, no words. Transform-only movement; still under reduced motion.
++// ============================================================
++const FLAKES = [[18, 0, 3], [44, 1.1, 2], [78, .5, 3], [96, 1.6, 2], [30, 2.1, 2], [64, 2.6, 3]];
++
++export default function EmptyArt({ kind = 'bag' }) {
++  return (
++    <span className="sora-empty" aria-hidden="true">
++      <svg viewBox="0 0 120 110" width="120" height="110">
++        <g className="sora-empty__snow">
++          {FLAKES.map(([x, d, r], i) => <circle key={i} cx={x} cy="-6" r={r} style={{ animationDelay: `${d}s` }} />)}
++        </g>
++        <path d="M60 4 v10" className="sora-empty__string" />
++        <g className="sora-empty__swing">
++          {kind === 'heart' ? (
++            <path d="M60 98 C 30 78, 22 60, 30 46 C 38 33, 54 35, 60 47 C 66 35, 82 33, 90 46 C 98 60, 90 78, 60 98 Z" className="sora-empty__shape" />
++          ) : (
++            <>
++              <path d="M44 40 C 44 22, 76 22, 76 40" className="sora-empty__handle" />
++              <path d="M30 38 H 90 L 96 98 H 24 Z" className="sora-empty__shape" />
++              <path d="M30 38 H 90" className="sora-empty__rim" />
++            </>
++          )}
++        </g>
++      </svg>
++    </span>
++  );
++}
+diff --git a/src/components/MobileCartSummary.jsx b/src/components/MobileCartSummary.jsx
+index d785e48..8b62799 100644
+--- a/src/components/MobileCartSummary.jsx
++++ b/src/components/MobileCartSummary.jsx
+@@ -4,6 +4,7 @@ import { useStore } from '../lib/store.jsx';
+ import { money } from '../lib/format.js';
+ import Icon from './Icon.jsx';
+ import MobileTabBar from './MobileTabBar.jsx';
++import RollNumber from './RollNumber.jsx';
+ 
+ // The phone's floating cart bar, sitting on the bottom navigation.
+ // Round 35 (owner, 2026-11-21: "Blinkit/Zepto jaise" — the pattern, SORA's look): it now
+@@ -46,7 +47,7 @@ export default function MobileCartSummary({ tabbar = null }) {
+               covered a meaningful slice of a 390px screen. */}
+           <div className="v2-mobile-cart__totals" aria-live="polite" aria-atomic="true">
+             <strong className="v2-mobile-cart__subtotal">
+-              <span className="sr-only">Item subtotal </span>{money(subtotal)}
++              <span className="sr-only">Item subtotal </span><RollNumber text={money(subtotal)} />
+             </strong>
+             <span className="v2-mobile-cart__count">
+               {cartCount} {cartCount === 1 ? 'item' : 'items'}
+diff --git a/src/components/Motion.jsx b/src/components/Motion.jsx
+new file mode 100644
+index 0000000..4f30f54
+--- /dev/null
++++ b/src/components/Motion.jsx
+@@ -0,0 +1,61 @@
++import { useEffect, useLayoutEffect, useRef } from 'react';
++import { flushSync } from 'react-dom';
++import { useLocation, useNavigate, useNavigationType } from 'react-router-dom';
++import { installMotion, reducedMotion, REVEAL_CARDS } from '../lib/motion.js';
++
++// ============================================================
++// Motion (owner, 2026-11-21: "sab add kro"): mounts the site-wide movements (lib/motion.js)
++// and the two that follow the route:
++//   9  · a new page fades in (and rises a touch when it is a new page, not "back");
++//   10 · on a phone or desktop Chrome, a product card's picture grows into the product
++//        page's main picture (the View Transitions API). Elsewhere: a normal page change.
++// ============================================================
++const PRODUCT_PATH = /^\/(?:product|fashion\/p|homeliving\/p)\/[^/?#]+/;
++
++export default function Motion() {
++  const { pathname } = useLocation();
++  const navType = useNavigationType();
++  const navigate = useNavigate();
++  const first = useRef(true);
++
++  useEffect(() => installMotion(), []);
++
++  // 9 · page fade.
++  useLayoutEffect(() => {
++    if (first.current) { first.current = false; return; }
++    if (reducedMotion() || document.documentElement.classList.contains('vt-running')) return;
++    const main = document.querySelector('main');
++    main?.animate?.(navType === 'POP'
++      ? [{ opacity: 0.55 }, { opacity: 1 }]
++      : [{ opacity: 0.35, transform: 'translate3d(0, 10px, 0)' }, { opacity: 1, transform: 'none' }],
++    { duration: 280, easing: 'cubic-bezier(.2, .8, .2, 1)' });
++  }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
++
++  // 10 · card picture → product page picture.
++  useEffect(() => {
++    if (typeof document.startViewTransition !== 'function') return undefined;
++    const onClick = (e) => {
++      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || reducedMotion()) return;
++      const a = e.target.closest?.('a[href]');
++      if (!a || a.target === '_blank' || a.origin !== window.location.origin) return;
++      const href = a.getAttribute('href');
++      if (!PRODUCT_PATH.test(href || '')) return;
++      const card = a.closest(REVEAL_CARDS);
++      const img = card?.querySelector('img');
++      if (!img || !img.complete) return;
++      e.preventDefault();
++      img.style.viewTransitionName = 'sora-hero';
++      document.documentElement.classList.add('vt-running');
++      const vt = document.startViewTransition(() => {
++        img.style.viewTransitionName = '';
++        flushSync(() => navigate(href));
++      });
++      const done = () => document.documentElement.classList.remove('vt-running');
++      vt.finished.then(done, done);
++    };
++    document.addEventListener('click', onClick, true);
++    return () => document.removeEventListener('click', onClick, true);
++  }, [navigate]);
++
++  return null;
++}
+diff --git a/src/components/OfferBanner.jsx b/src/components/OfferBanner.jsx
+index 155f67e..54cc6fb 100644
+--- a/src/components/OfferBanner.jsx
++++ b/src/components/OfferBanner.jsx
+@@ -32,7 +32,7 @@ export default function OfferBanner({ wrap = '' }) {
+       <p className="hx-offer__t"><Icon name="gift" size={18} /> {o.title}{o.code && <button type="button" className="hx-offer__code" onClick={copy} aria-label={`Copy code ${o.code}`}>{copied ? 'Copied ✓' : o.code}</button>}</p>
+       <p className="hx-offer__clock" aria-label={`Ends in ${left.d} days ${left.h} hours ${left.m} minutes`}>
+         <span>Ends in</span>
+-        {[['d', left.d], ['h', left.h], ['m', left.m], ['s', left.s]].map(([k, v]) => <b key={k} aria-hidden="true">{k === 'd' ? v : pad(v)}<i>{k}</i></b>)}
++        {[['d', left.d], ['h', left.h], ['m', left.m], ['s', left.s]].map(([k, v]) => <b key={`${k}-${v}`} aria-hidden="true">{k === 'd' ? v : pad(v)}<i>{k}</i></b>)}
+       </p>
+       {/* Spread the word (2026-11-10): the offer page, carrying the code (PromoCard.jsx promo links). */}
+       <p className="hx-offer__acts">
+diff --git a/src/components/OrderCelebration.jsx b/src/components/OrderCelebration.jsx
+index 4f4caed..a81c6f2 100644
+--- a/src/components/OrderCelebration.jsx
++++ b/src/components/OrderCelebration.jsx
+@@ -1,4 +1,6 @@
+ import { useEffect, useMemo, useState } from 'react';
++import { snowFlurry } from '../lib/motion.js';
++import { isWinterSeason } from '../lib/winterDeals.js';
+ 
+ // ============================================================
+ // Order-confirmed celebration — the success icon plus a short,
+@@ -49,6 +51,8 @@ export default function OrderCelebration() {
+   // Reduced motion: no particles at all — just the static success state.
+   // Mobile: fewer particles, shorter travel (scaled below).
+   const [showParticles, setShowParticles] = useState(!reduced);
++  // In winter the confirmation also gets a short fall of snow (2026-11-21); none for reduced motion.
++  useEffect(() => { if (!reduced && isWinterSeason()) snowFlurry(26); }, [reduced]);
+ 
+   const { burst, drift, scale } = useMemo(() => ({
+     burst: reduced ? [] : (isNarrow ? PARTICLES.filter((_, i) => i % 2 === 0) : PARTICLES),
+diff --git a/src/components/PriceSummary.jsx b/src/components/PriceSummary.jsx
+index 46858df..6545f1f 100644
+--- a/src/components/PriceSummary.jsx
++++ b/src/components/PriceSummary.jsx
+@@ -1,4 +1,5 @@
+ import { money } from '../lib/format.js';
++import RollNumber from './RollNumber.jsx';
+ 
+ // ============================================================
+ // Detailed order price summary.
+@@ -19,7 +20,7 @@ function Row({ label, value, tone, strong, note }) {
+         {label}
+         {note && <span className="psum__note">{note}</span>}
+       </span>
+-      <span className="psum__value">{value}</span>
++      <span className="psum__value">{strong && typeof value === 'string' ? <RollNumber text={value} /> : value}</span>
+     </div>
+   );
+ }
+diff --git a/src/components/RollNumber.jsx b/src/components/RollNumber.jsx
+new file mode 100644
+index 0000000..3851e23
+--- /dev/null
++++ b/src/components/RollNumber.jsx
+@@ -0,0 +1,28 @@
++import { useRef } from 'react';
++
++// ============================================================
++// RollNumber (round 37, owner 2026-11-21): an amount whose changed digits roll in from
++// below, like an odometer, when it changes. The text is exactly the amount (each changed
++// character simply re-mounts with a CSS roll), so readers and copy-paste see "₹6,030".
++// Only characters that are new since the amount last changed roll; nothing rolls on first show,
++// and reduced motion keeps everything still (CSS).
++// ============================================================
++export const rollKeys = (text) => { const c = [...String(text ?? '')]; return c.map((ch, i) => `${c.length - i}-${ch}`); };
++
++export default function RollNumber({ text }) {
++  // { text, keys, fresh }: `fresh` holds the keys that rolled in with the latest change and
++  // stays until the amount changes again, so other re-renders never cut a roll short.
++  const memo = useRef(null);
++  const value = String(text ?? '');
++  const keys = rollKeys(value);
++  const m = memo.current;
++  if (!m) memo.current = { text: value, keys, fresh: new Set() };
++  else if (m.text !== value) { const old = new Set(m.keys); memo.current = { text: value, keys, fresh: new Set(keys.filter((k) => !old.has(k))) }; }
++  const { fresh } = memo.current;
++  const chars = [...value];
++  return (
++    <span className="roll">
++      {chars.map((ch, i) => <span key={keys[i]} className={fresh.has(keys[i]) && /\d/.test(ch) ? 'roll__d' : undefined}>{ch}</span>)}
++    </span>
++  );
++}
+diff --git a/src/lib/motion.js b/src/lib/motion.js
+new file mode 100644
+index 0000000..aa5e25d
+--- /dev/null
++++ b/src/lib/motion.js
+@@ -0,0 +1,204 @@
++// ============================================================
++// Motion (owner, 2026-11-21: "animations add kro … sab add kro"). The site-wide movements,
++// installed once by components/Motion.jsx. Rules every piece here keeps:
++//   · only transform and opacity animate (the GPU's job: no repaint, no layout);
++//   · nothing is hidden unless this code is running to reveal it (no JS, no hiding);
++//   · nothing moves for a shopper whose device asks for less motion;
++//   · decoration never blocks a tap or changes what a button does.
++// ============================================================
++import { isWinterSeason } from './winterDeals.js';
++
++export const reducedMotion = () => {
++  try { return typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch { return false; }
++};
++
++// ---- 1, 2, 4 · reveal on scroll --------------------------------------------------
++// Sections and product cards below the fold rise in as they reach the screen; cards in one
++// row arrive one after another. Things already on screen are never hidden.
++export const REVEAL_SECTIONS = 'main section, main .fs-sec, main .hl-sec, main .gs-sec';
++export const REVEAL_CARDS = '.v2-pc, .fs-card, .hl-card, .gs-card, .sora-bc__card, .sora-addons__item, .hx-pcard';
++const NEVER = '.sora-winter, header, nav, footer, [role="dialog"], .v2-cart-dock, .tabbar';
++const STAGGER_MS = 45;
++const STAGGER_MAX = 7;
++
++/** Whether an element should get the reveal: below the fold, not inside something that has it. Pure-ish. */
++export function wantsReveal(el, viewportH) {
++  if (!el || el.dataset.rv || el.closest(NEVER)) return false;
++  const parentRv = el.parentElement && el.parentElement.closest('[data-rv="1"].rv');
++  if (parentRv && !el.matches(REVEAL_CARDS)) return false;
++  const r = el.getBoundingClientRect();
++  return r.height > 0 && r.top > viewportH * 0.9;
++}
++
++function installReveal() {
++  if (typeof IntersectionObserver !== 'function') return () => {};
++  let batch = 0;
++  const io = new IntersectionObserver((entries) => {
++    batch = 0;
++    for (const e of entries) {
++      if (!e.isIntersecting) continue;
++      const el = e.target;
++      if (el.matches(REVEAL_CARDS)) { el.style.setProperty('--rv-d', `${Math.min(batch, STAGGER_MAX) * STAGGER_MS}ms`); batch += 1; }
++      el.classList.add('rv-in');
++      io.unobserve(el);
++      // Once in, the classes go, so the element is exactly as it was before (hover transforms etc.).
++      window.setTimeout(() => { el.classList.remove('rv', 'rv-in'); el.style.removeProperty('--rv-d'); }, 1400);
++    }
++  }, { rootMargin: '0px 0px -6% 0px', threshold: 0.01 });
++  const scan = () => {
++    const h = window.innerHeight;
++    for (const el of document.querySelectorAll(`${REVEAL_SECTIONS}, ${REVEAL_CARDS}`)) {
++      if (el.dataset.rv) continue;
++      if (wantsReveal(el, h)) { el.dataset.rv = '1'; el.classList.add('rv'); io.observe(el); } else el.dataset.rv = '0';
++    }
++  };
++  let queued = 0;
++  const later = () => { if (queued) return; queued = window.setTimeout(() => { queued = 0; scan(); }, 120); };
++  const mo = new MutationObserver(later);
++  mo.observe(document.body, { childList: true, subtree: true });
++  scan();
++  return () => { mo.disconnect(); io.disconnect(); window.clearTimeout(queued); };
++}
++
++// ---- 3 · the header settles as the page scrolls ----------------------------------
++function installHeaderShrink() {
++  let on = false; let raf = 0;
++  const check = () => { raf = 0; const next = window.scrollY > 48; if (next !== on) { on = next; document.documentElement.classList.toggle('is-scrolled', on); } };
++  const onScroll = () => { if (!raf) raf = window.requestAnimationFrame(check); };
++  window.addEventListener('scroll', onScroll, { passive: true });
++  check();
++  return () => { window.removeEventListener('scroll', onScroll); document.documentElement.classList.remove('is-scrolled'); };
++}
++
++// ---- 7 · ripple from the finger on the main buttons ------------------------------
++export const RIPPLE = '.btn, .v2-pc__cta, .fs-btn, .hl-btn, .hx-btn, .sora-addons__add, .v2-mobile-cart__link, .fs-btn--add, .pdp__add, .v2-checkout-root button[type="submit"]';
++function installRipple() {
++  const onDown = (e) => {
++    const btn = e.target.closest?.(RIPPLE);
++    if (!btn || btn.disabled || e.button > 0) return;
++    const r = btn.getBoundingClientRect();
++    if (getComputedStyle(btn).position === 'static') btn.style.position = 'relative';
++    const box = document.createElement('span'); box.className = 'sora-ripple'; box.setAttribute('aria-hidden', 'true');
++    const dot = document.createElement('i');
++    const size = Math.max(r.width, r.height) * 2.2;
++    Object.assign(dot.style, { width: `${size}px`, height: `${size}px`, left: `${e.clientX - r.left - size / 2}px`, top: `${e.clientY - r.top - size / 2}px` });
++    box.appendChild(dot); btn.appendChild(box);
++    window.setTimeout(() => box.remove(), 650);
++  };
++  document.addEventListener('pointerdown', onDown, { passive: true });
++  return () => document.removeEventListener('pointerdown', onDown);
++}
++
++// ---- 6 · the heart: a pop and a little burst when saved, a shrink when unsaved -----
++export const HEARTS = '.v2-pc__wish, .fs-heart, .hl-card__heart, .hl-gallery__heart, .pdp__bbwish, .pdp__wish, [aria-label*="wishlist" i][aria-pressed]';
++function installHearts() {
++  const onClick = (e) => {
++    const btn = e.target.closest?.(HEARTS);
++    if (!btn) return;
++    window.setTimeout(() => {
++      const on = btn.getAttribute('aria-pressed') === 'true';
++      const svg = btn.querySelector('svg');
++      svg?.animate?.(on
++        ? [{ transform: 'scale(1)' }, { transform: 'scale(1.45)' }, { transform: 'scale(.9)' }, { transform: 'scale(1)' }]
++        : [{ transform: 'scale(1)' }, { transform: 'scale(.7)' }, { transform: 'scale(1)' }], { duration: on ? 520 : 300, easing: 'cubic-bezier(.3, 1.5, .5, 1)' });
++      if (!on) return;
++      const r = btn.getBoundingClientRect();
++      for (let i = 0; i < 6; i += 1) {
++        const s = document.createElement('span'); s.className = 'sora-heartbit'; s.textContent = '♥'; s.setAttribute('aria-hidden', 'true');
++        Object.assign(s.style, { left: `${r.left + r.width / 2}px`, top: `${r.top + r.height / 2}px` });
++        document.body.appendChild(s);
++        const a = (Math.PI * 2 * i) / 6 - Math.PI / 2; const d = 26 + (i % 2) * 8;
++        const run = s.animate([{ transform: 'translate(-50%, -50%) scale(.4)', opacity: 1 }, { transform: `translate(calc(-50% + ${Math.cos(a) * d}px), calc(-50% + ${Math.sin(a) * d}px)) scale(1)`, opacity: 0 }], { duration: 560, easing: 'cubic-bezier(.2, .8, .3, 1)' });
++        run.onfinish = () => s.remove(); run.oncancel = () => s.remove();
++      }
++    }, 0);
++  };
++  document.addEventListener('click', onClick, true);
++  return () => document.removeEventListener('click', onClick, true);
++}
++
++// ---- 11 · sheets close by dragging them down -------------------------------------
++// [panel selector, the control that closes it]
++export const SHEETS = [['.fs-sheet__panel', '.fs-sheet__x'], ['.v2-fd__panel', '.v2-fd__scrim'], ['.hl-filters__panel, .hl-filters', '.hl-filters__scrim']];
++function installSheetDrag() {
++  let s = null;
++  const onStart = (e) => {
++    const t = e.touches?.[0]; if (!t) return;
++    for (const [sel, close] of SHEETS) {
++      const panel = e.target.closest?.(sel);
++      if (!panel) continue;
++      const scroller = e.target.closest('[class*="body"], [class*="list"], ul') || panel;
++      if (scroller.scrollTop > 0 || panel.scrollTop > 0) return;
++      if (window.matchMedia('(min-width: 900px)').matches) return;
++      s = { panel, close, y0: t.clientY, dy: 0 }; return;
++    }
++  };
++  const onMove = (e) => {
++    if (!s) return; const t = e.touches?.[0]; if (!t) return;
++    s.dy = Math.max(0, t.clientY - s.y0);
++    if (s.dy > 6) { s.panel.style.transition = 'none'; s.panel.style.transform = `translate3d(0, ${s.dy}px, 0)`; }
++  };
++  const onEnd = () => {
++    if (!s) return; const { panel, close, dy } = s; s = null;
++    panel.style.transition = 'transform .28s cubic-bezier(.3, 1.2, .5, 1)';
++    if (dy > 110) {
++      panel.style.transform = 'translate3d(0, 100%, 0)';
++      window.setTimeout(() => { panel.style.transform = ''; panel.style.transition = ''; panel.closest('[role="dialog"]')?.querySelector(close)?.click(); }, 200);
++    } else { panel.style.transform = ''; window.setTimeout(() => { panel.style.transition = ''; }, 300); }
++  };
++  document.addEventListener('touchstart', onStart, { passive: true });
++  document.addEventListener('touchmove', onMove, { passive: true });
++  document.addEventListener('touchend', onEnd, { passive: true });
++  document.addEventListener('touchcancel', onEnd, { passive: true });
++  return () => { for (const [n, f] of [['touchstart', onStart], ['touchmove', onMove], ['touchend', onEnd], ['touchcancel', onEnd]]) document.removeEventListener(n, f); };
++}
++
++// ---- 20 · pull down at the very top: a flurry of snow (winter only) ---------------
++function installPullSnow() {
++  let y0 = null; let fired = false;
++  const onStart = (e) => { y0 = window.scrollY <= 0 ? e.touches?.[0]?.clientY ?? null : null; fired = false; };
++  const onMove = (e) => {
++    if (y0 == null || fired || window.scrollY > 0) return;
++    const y = e.touches?.[0]?.clientY; if (y == null || y - y0 < 70) return;
++    fired = true; snowFlurry();
++  };
++  document.addEventListener('touchstart', onStart, { passive: true });
++  document.addEventListener('touchmove', onMove, { passive: true });
++  return () => { document.removeEventListener('touchstart', onStart); document.removeEventListener('touchmove', onMove); };
++}
++/** A short shower of snowflakes from the top of the screen. */
++export function snowFlurry(count = 14) {
++  if (reducedMotion() || typeof document === 'undefined') return;
++  const box = document.createElement('div'); box.className = 'sora-flurry'; box.setAttribute('aria-hidden', 'true');
++  for (let i = 0; i < count; i += 1) {
++    const f = document.createElement('i');
++    f.style.left = `${(i * 37 + 11) % 100}%`; f.style.setProperty('--s', `${4 + (i % 4) * 2}px`);
++    f.style.setProperty('--d', `${1.4 + (i % 5) * 0.25}s`); f.style.setProperty('--delay', `${(i % 7) * 0.08}s`); f.style.setProperty('--x', `${(i % 2 ? -1 : 1) * (10 + (i % 3) * 12)}px`);
++    box.appendChild(f);
++  }
++  document.body.appendChild(box);
++  window.setTimeout(() => box.remove(), 3000);
++}
++
++/** Install everything once; returns the undo. Nothing at all under reduced motion. */
++export function installMotion() {
++  if (typeof window === 'undefined' || reducedMotion()) return () => {};
++  const undo = [installReveal(), installHeaderShrink(), installRipple(), installHearts(), installSheetDrag()];
++  if (isWinterSeason()) undo.push(installPullSnow());
++  return () => undo.forEach((u) => u && u());
++}
++
++// ---- 15 · a cart row slides away before it is removed ----------------------------
++/** Slide `el` out and fold its height, then call `done` (at once under reduced motion). */
++export function leave(el, done) {
++  if (!el || reducedMotion() || typeof el.animate !== 'function') { done(); return; }
++  const h = el.getBoundingClientRect().height;
++  const out = el.animate([{ transform: 'none', opacity: 1 }, { transform: 'translate3d(-40%, 0, 0)', opacity: 0 }], { duration: 220, easing: 'cubic-bezier(.4, 0, 1, 1)', fill: 'forwards' });
++  out.onfinish = () => {
++    const fold = el.animate([{ height: `${h}px`, marginBottom: getComputedStyle(el).marginBottom }, { height: '0px', marginBottom: '0px' }], { duration: 180, easing: 'ease-out', fill: 'forwards' });
++    el.style.overflow = 'hidden';
++    fold.onfinish = done; fold.oncancel = done;
++  };
++  out.oncancel = done;
++}
++
+diff --git a/src/main.jsx b/src/main.jsx
+index fc0dfef..b154add 100644
+--- a/src/main.jsx
++++ b/src/main.jsx
+@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
+ import { BrowserRouter } from 'react-router-dom';
+ import App from './App.jsx';
+ import ScrollManager from './components/ScrollManager.jsx';
++import Motion from './components/Motion.jsx';
+ import SiteAssist from './components/SiteAssist.jsx';
+ import AppShell from './components/AppShell.jsx';
+ import StoreBar from './components/StoreBar.jsx';
+@@ -112,6 +113,8 @@ function Root() {
+         {/* Scroll on navigation for every storefront and the admin: top on a new page,
+             back/forward restored, #hash to its anchor, query-only changes left alone. */}
+         <ScrollManager />
++        {/* Site-wide movement, only transform/opacity, nothing under reduced motion (2026-11-21). */}
++        <Motion />
+         <CustomerAuthProvider>
+           <StoreProvider>
+             {/* One bar across the top of every store (StoreBar.jsx, 2026-11-13 redesign). */}
+diff --git a/src/pages/Cart.jsx b/src/pages/Cart.jsx
+index 285f0bb..510a7c1 100644
+--- a/src/pages/Cart.jsx
++++ b/src/pages/Cart.jsx
+@@ -14,6 +14,8 @@ import { money } from '../lib/format.js';
+ import { getBestsellers } from '../data/products.js';
+ import { promotionsSource } from '../lib/promotions.js';
+ import { CartSavings, BeforeCheckout } from '../components/CartExtras.jsx';
++import { leave } from '../lib/motion.js';
++import EmptyArt from '../components/EmptyArt.jsx';
+ 
+ // ============================================================
+ // THE COUPON FIELD, AND WHY IT IS BACK
+@@ -76,7 +78,8 @@ export default function Cart() {
+       <div className="v2-cart-root">
+         <div className="v2-wrap v2-cart-empty">
+         <div className="state">
+-          <span className="state-ic"><Icon name="bag" size={32} /></span>
++          {/* 19 · an empty bag swinging in the snow (EmptyArt.jsx, 2026-11-21). */}
++          <EmptyArt kind="bag" />
+           {/* The page still needs its one heading when the cart is empty. It
+               was an <h3>, so /cart had no h1 at all in this state. Same words,
+               same size — the class keeps the visual weight the state design
+@@ -179,7 +182,7 @@ export default function Cart() {
+                         ><Icon name="plus" size={15} /></button>
+                       </div>
+                       <button className="linkbtn" aria-label={`Save ${who} for later`} onClick={() => dispatch({ type: 'SAVE_LATER', key: l.key })}><Icon name="heart" size={15} /> Save for later</button>
+-                      <button className="linkbtn linkbtn--danger" aria-label={`Remove ${who} from cart`} onClick={() => dispatch({ type: 'REMOVE', key: l.key })}><Icon name="trash" size={15} /> Remove</button>
++                      <button className="linkbtn linkbtn--danger" aria-label={`Remove ${who} from cart`} onClick={(e) => leave(e.currentTarget.closest('.cartrow'), () => dispatch({ type: 'REMOVE', key: l.key }))}><Icon name="trash" size={15} /> Remove</button>
+                     </div>
+                   </div>
+                 </div>
+diff --git a/src/pages/Wishlist.jsx b/src/pages/Wishlist.jsx
+index 7f082ac..f86d766 100644
+--- a/src/pages/Wishlist.jsx
++++ b/src/pages/Wishlist.jsx
+@@ -6,6 +6,7 @@ import { useStore } from '../lib/store.jsx';
+ import { productById, getBestsellers } from '../data/products.js';
+ import ShareList from '../components/ShareList.jsx';
+ import PriceDrops from '../components/PriceDrops.jsx';
++import EmptyArt from '../components/EmptyArt.jsx';
+ 
+ export default function Wishlist() {
+   const { wishlist, addToCart } = useStore();
+@@ -23,7 +24,7 @@ export default function Wishlist() {
+         </div></div>
+         <div className="container section-sm">
+           <div className="state">
+-            <span className="state-ic"><Icon name="heart" size={32} /></span>
++            <EmptyArt kind="heart" />
+             <h3>Your wishlist is empty</h3>
+             <p>Save the products you love by tapping the heart — they&apos;ll live here for later.</p>
+             <Link to="/shop" className="btn">Find something you love <Icon name="arrowRight" size={18} /></Link>
+diff --git a/src/styles/sora-ds.css b/src/styles/sora-ds.css
+index ad80e51..c6e3a49 100644
+--- a/src/styles/sora-ds.css
++++ b/src/styles/sora-ds.css
+@@ -1074,3 +1074,111 @@ html.sora-wintertop .sora-winter {
+ }
+ /* Away from the homepage (the Fashion home) the band darkens the same way, from a lighter top. */
+ .sora-winter { background: linear-gradient(180deg, #3B70B8 0%, #2A579C 25%, #1B3F7C 60%, #0E2247 100%); }
++
++/* ============================================================
++   Motion (owner, 2026-11-21: "animations add kro … sab add kro"). lib/motion.js and
++   components/Motion.jsx drive the moving parts; these are their looks. Transform and
++   opacity only; all still under reduced motion; all visible in print.
++   ============================================================ */
++/* 1, 2, 4 · reveal on scroll (the classes exist only while motion.js is revealing). */
++.rv { opacity: 0; transform: translate3d(0, 22px, 0); }
++.rv.rv-in { opacity: 1; transform: none; transition: opacity .55s ease var(--rv-d, 0ms), transform .65s cubic-bezier(.2, .8, .2, 1) var(--rv-d, 0ms); }
++@media print { .rv { opacity: 1 !important; transform: none !important; } }
++
++/* 3 · the header settles when the page scrolls: a shadow, the sparrow a touch smaller. */
++header .logo img, header .logo__img, header [class*="__brand"] img { transition: transform .28s cubic-bezier(.2, .8, .2, 1); transform-origin: left center; }
++html.is-scrolled header .logo img, html.is-scrolled header .logo__img, html.is-scrolled header [class*="__brand"] img { transform: scale(.88); }
++.v2-hdr, .fs-hdr, .hl-hdr { transition: box-shadow .25s ease; }
++html.is-scrolled .v2-hdr, html.is-scrolled .fs-hdr, html.is-scrolled .hl-hdr { box-shadow: 0 6px 18px rgba(16, 32, 60, .14); }
++
++/* 5 · a press you can feel on every main control. */
++.btn:active:not(:disabled), .fs-btn:active:not(:disabled), .hl-btn:active:not(:disabled), .hx-btn:active, .hx-more:active,
++.v2-pc__cta:active:not(:disabled), .sora-addons__add:active, .v2-mobile-cart__link:active, .fs-chip:active, .sora-stickycats a:active,
++.tabbar__item:active, .sora-bc__card:active, .hx-offer__go:active, .linkbtn:active { transform: scale(.96); }
++
++/* 7 · the ripple from the finger. */
++.sora-ripple { position: absolute; inset: 0; overflow: hidden; border-radius: inherit; pointer-events: none; }
++.sora-ripple i { position: absolute; border-radius: 50%; background: currentColor; opacity: .22; transform: scale(0); animation: sora-ripple .6s cubic-bezier(.2, .8, .2, 1) forwards; }
++@keyframes sora-ripple { to { transform: scale(1); opacity: 0; } }
++
++/* 6 · the heart's little burst. */
++.sora-heartbit { position: fixed; z-index: 9999; color: #E0245E; font-size: 12px; line-height: 1; pointer-events: none; }
++
++/* 8 · a chosen chip or filter pops into place. */
++.fs-chip.is-on, .sora-stickycats a.is-on, .v2-fd [aria-pressed="true"], .hl-filters [aria-pressed="true"], .fs-filters [aria-pressed="true"] { animation: chip-on .34s cubic-bezier(.3, 1.5, .5, 1); }
++@keyframes chip-on { 0% { transform: scale(.92); } 60% { transform: scale(1.05); } 100% { transform: none; } }
++
++/* 11 · sheets rise with a little spring (and close by dragging down: motion.js). */
++@media (max-width: 899px) {
++  .fs-sheet__panel { animation: sheet-up .44s cubic-bezier(.25, 1.25, .5, 1) both; }
++  .v2-fd__panel { transition-timing-function: cubic-bezier(.25, 1.2, .5, 1) !important; }
++}
++@keyframes sheet-up { from { transform: translate3d(0, 100%, 0); } to { transform: none; } }
++
++/* 13 · winter snow over the order confirmation (and 20 · the pull-down flurry). */
++.sora-flurry { position: fixed; left: 0; right: 0; top: 0; height: 100vh; pointer-events: none; z-index: 9998; overflow: hidden; }
++.sora-flurry i { position: absolute; top: -14px; width: var(--s); height: var(--s); border-radius: 50%; background: radial-gradient(circle, #fff 0 45%, rgba(255, 255, 255, .6) 60%, transparent 72%); box-shadow: 0 0 2px rgba(30, 60, 110, .35); animation: flurry var(--d) cubic-bezier(.3, .1, .6, 1) var(--delay) forwards; }
++@keyframes flurry { to { transform: translate3d(var(--x), 105vh, 0) rotate(180deg); opacity: .25; } }
++
++/* 14 · a coupon going on: the ticket stamps in and glows once. */
++.cartcoupon__applied { animation: coupon-in .6s cubic-bezier(.3, 1.45, .5, 1) both; }
++@keyframes coupon-in { 0% { transform: scale(.85) rotate(-2deg); opacity: 0; } 60% { transform: scale(1.03) rotate(.5deg); opacity: 1; } 100% { transform: none; } }
++.cartcoupon__appliedcode { animation: coupon-glow 1.4s ease .35s 1; }
++@keyframes coupon-glow { 0%, 100% { text-shadow: none; } 40% { text-shadow: 0 0 10px rgba(242, 193, 78, .9); } }
++
++/* 16 · the homepage hero's words arrive one after another on each slide. */
++.hx-hero__slide[aria-hidden="false"] .hx-eyebrow, .hx-hero__slide[aria-hidden="false"] .hx-hero__title > span, .hx-hero__slide[aria-hidden="false"] .hx-btn { animation: hero-in .75s cubic-bezier(.2, .8, .2, 1) both; }
++.hx-hero__slide[aria-hidden="false"] .hx-hero__title > span { display: inline-block; animation-delay: .1s; }
++.hx-hero__slide[aria-hidden="false"] .hx-hero__title > span + span { animation-delay: .22s; }
++.hx-hero__slide[aria-hidden="false"] .hx-btn { animation-delay: .34s; }
++@keyframes hero-in { from { opacity: .25; transform: translate3d(0, 14px, 0); } to { opacity: 1; transform: none; } }
++
++/* 17 · the offer clock's numbers flip as they change. */
++.hx-offer__clock { perspective: 400px; }
++.hx-offer__clock b { display: inline-block; animation: flip-in .45s cubic-bezier(.3, 1.3, .5, 1) both; transform-origin: 50% 0; backface-visibility: hidden; }
++@keyframes flip-in { from { transform: rotateX(-90deg); opacity: .4; } to { transform: none; opacity: 1; } }
++
++/* 18 · search: a warm ring when the box is in use; suggestions arrive one after another. */
++.v2-hdr__searchbox, .fs-search, .hl-search { transition: box-shadow .2s ease; }
++.v2-hdr__searchbox:focus-within, .fs-search:focus-within, .hl-search:focus-within { box-shadow: 0 0 0 3px rgba(242, 193, 78, .45); }
++.v2-hdr__suggest-item, [role="listbox"] > [role="option"] { animation: sug-in .32s cubic-bezier(.2, .8, .2, 1) both; }
++.v2-hdr__suggest-item:nth-child(2), [role="listbox"] > [role="option"]:nth-child(2) { animation-delay: .04s; }
++.v2-hdr__suggest-item:nth-child(3), [role="listbox"] > [role="option"]:nth-child(3) { animation-delay: .08s; }
++.v2-hdr__suggest-item:nth-child(4), [role="listbox"] > [role="option"]:nth-child(4) { animation-delay: .12s; }
++.v2-hdr__suggest-item:nth-child(5), [role="listbox"] > [role="option"]:nth-child(5) { animation-delay: .16s; }
++.v2-hdr__suggest-item:nth-child(n+6), [role="listbox"] > [role="option"]:nth-child(n+6) { animation-delay: .2s; }
++@keyframes sug-in { from { opacity: 0; transform: translate3d(0, 6px, 0); } to { opacity: 1; transform: none; } }
++.search-overlay > * { animation: sug-in .3s cubic-bezier(.2, .8, .2, 1) both; }
++
++/* 10 · the card's picture growing into the product page's (View Transitions; Chrome). */
++.fs-gallery__slide.is-on img, .hl-gallery__slide.is-on img, .pdp__zoom-trigger img { view-transition-name: sora-hero; }
++::view-transition-group(sora-hero) { animation-duration: .42s; animation-timing-function: cubic-bezier(.2, .8, .2, 1); }
++::view-transition-old(root), ::view-transition-new(root) { animation-duration: .25s; }
++
++@media (prefers-reduced-motion: reduce) {
++  .rv { opacity: 1 !important; transform: none !important; }
++  .fs-chip.is-on, .sora-stickycats a.is-on, .v2-fd [aria-pressed="true"], .hl-filters [aria-pressed="true"], .fs-sheet__panel, .cartcoupon__applied, .cartcoupon__appliedcode,
++  .hx-hero__slide .hx-eyebrow, .hx-hero__slide .hx-hero__title > span, .hx-hero__slide .hx-btn, .hx-offer__clock b, .v2-hdr__suggest-item, [role="listbox"] > [role="option"], .search-overlay > * { animation: none !important; }
++  html.is-scrolled header .logo img, html.is-scrolled header .logo__img, html.is-scrolled header [class*="__brand"] img { transform: none; }
++  .sora-ripple, .sora-flurry, .sora-heartbit { display: none !important; }
++}
++
++/* 19 · the empty-state art. */
++.sora-empty { display: inline-grid; place-items: center; width: 120px; height: 110px; margin: 0 auto 6px; }
++.sora-empty svg { overflow: visible; }
++.sora-empty__string { stroke: #B8B2A3; stroke-width: 1.5; }
++.sora-empty__swing { transform-box: view-box; transform-origin: 60px 14px; animation: empty-swing 3.2s ease-in-out infinite; }
++@keyframes empty-swing { 0%, 100% { transform: rotate(-6deg); } 50% { transform: rotate(6deg); } }
++.sora-empty__shape { fill: #F3EEE3; stroke: var(--slv2-cta-primary-bg, #1F3A2E); stroke-width: 2.5; stroke-linejoin: round; }
++.sora-empty__handle { fill: none; stroke: var(--slv2-cta-primary-bg, #1F3A2E); stroke-width: 2.5; stroke-linecap: round; }
++.sora-empty__rim { stroke: #C4A671; stroke-width: 3; }
++.sora-empty__snow circle { fill: #9FB6D9; opacity: .7; animation: empty-snow 3.2s linear infinite; }
++@keyframes empty-snow { from { transform: translate3d(0, 0, 0); opacity: 0; } 15% { opacity: .75; } to { transform: translate3d(6px, 120px, 0); opacity: 0; } }
++@media (prefers-reduced-motion: reduce) { .sora-empty__swing, .sora-empty__snow circle { animation: none; } .sora-empty__snow { display: none; } }
++
++/* 12 · amounts roll like an odometer when they change (RollNumber.jsx). */
++.roll { display: inline-flex; overflow: hidden; vertical-align: bottom; line-height: inherit; }
++.roll > span { display: inline-block; white-space: pre; }
++.roll > .roll__d { animation: roll-in .42s cubic-bezier(.3, 1.3, .5, 1) both; }
++@keyframes roll-in { from { transform: translate3d(0, 85%, 0); opacity: 0; } to { transform: none; opacity: 1; } }
++@media (prefers-reduced-motion: reduce) { .roll > .roll__d { animation: none !important; } }

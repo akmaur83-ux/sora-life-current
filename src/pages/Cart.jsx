@@ -14,6 +14,8 @@ import { money } from '../lib/format.js';
 import { getBestsellers } from '../data/products.js';
 import { promotionsSource } from '../lib/promotions.js';
 import { CartSavings, BeforeCheckout } from '../components/CartExtras.jsx';
+import { leave } from '../lib/motion.js';
+import EmptyArt from '../components/EmptyArt.jsx';
 
 // ============================================================
 // THE COUPON FIELD, AND WHY IT IS BACK
@@ -76,7 +78,8 @@ export default function Cart() {
       <div className="v2-cart-root">
         <div className="v2-wrap v2-cart-empty">
         <div className="state">
-          <span className="state-ic"><Icon name="bag" size={32} /></span>
+          {/* 19 · an empty bag swinging in the snow (EmptyArt.jsx, 2026-11-21). */}
+          <EmptyArt kind="bag" />
           {/* The page still needs its one heading when the cart is empty. It
               was an <h3>, so /cart had no h1 at all in this state. Same words,
               same size — the class keeps the visual weight the state design
@@ -179,7 +182,7 @@ export default function Cart() {
                         ><Icon name="plus" size={15} /></button>
                       </div>
                       <button className="linkbtn" aria-label={`Save ${who} for later`} onClick={() => dispatch({ type: 'SAVE_LATER', key: l.key })}><Icon name="heart" size={15} /> Save for later</button>
-                      <button className="linkbtn linkbtn--danger" aria-label={`Remove ${who} from cart`} onClick={() => dispatch({ type: 'REMOVE', key: l.key })}><Icon name="trash" size={15} /> Remove</button>
+                      <button className="linkbtn linkbtn--danger" aria-label={`Remove ${who} from cart`} onClick={(e) => leave(e.currentTarget.closest('.cartrow'), () => dispatch({ type: 'REMOVE', key: l.key }))}><Icon name="trash" size={15} /> Remove</button>
                     </div>
                   </div>
                 </div>
