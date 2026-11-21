@@ -10492,7 +10492,7 @@ html.sora-wintertop .v2-hdr { position: sticky; }
     radial-gradient(1.2px 1.2px at 38% 65%, rgba(255, 255, 255, .45) 50%, transparent 51%),
     radial-gradient(1.8px 1.8px at 63% 20%, rgba(255, 255, 255, .5) 50%, transparent 51%),
     radial-gradient(1.2px 1.2px at 86% 55%, rgba(255, 255, 255, .45) 50%, transparent 51%),
-    linear-gradient(180deg, rgba(27, 63, 124, .97), rgba(14, 34, 71, .98));
+    linear-gradient(180deg, #1B3F7C, #0E2247); /* solid: footer text showed through (2026-11-21) */
   background-size: 120px 60px, 140px 60px, 110px 60px, 130px 60px, 100% 100%;
   animation: tw-snow 7s linear infinite;
   -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
@@ -10770,7 +10770,7 @@ html.is-scrolled .v2-hdr, html.is-scrolled .fs-hdr, html.is-scrolled .hl-hdr { b
 
 /* 11 · sheets rise with a little spring (and close by dragging down: motion.js). */
 @media (max-width: 899px) {
-  .fs-sheet__panel { animation: sheet-up .44s cubic-bezier(.25, 1.25, .5, 1) both; }
+  .fs-sheet__panel { animation: sheet-up .44s cubic-bezier(.25, 1.25, .5, 1) backwards; } /* not "both": a finished fill would pin transform and beat the swipe-to-close (2026-11-21) */
   .v2-fd__panel { transition-timing-function: cubic-bezier(.25, 1.2, .5, 1) !important; }
 }
 @keyframes sheet-up { from { transform: translate3d(0, 100%, 0); } to { transform: none; } }
@@ -10781,13 +10781,13 @@ html.is-scrolled .v2-hdr, html.is-scrolled .fs-hdr, html.is-scrolled .hl-hdr { b
 @keyframes flurry { to { transform: translate3d(var(--x), 105vh, 0) rotate(180deg); opacity: .25; } }
 
 /* 14 · a coupon going on: the ticket stamps in and glows once. */
-.cartcoupon__applied { animation: coupon-in .6s cubic-bezier(.3, 1.45, .5, 1) both; }
+.cartcoupon__applied { animation: coupon-in .6s cubic-bezier(.3, 1.45, .5, 1) backwards; }
 @keyframes coupon-in { 0% { transform: scale(.85) rotate(-2deg); opacity: 0; } 60% { transform: scale(1.03) rotate(.5deg); opacity: 1; } 100% { transform: none; } }
 .cartcoupon__appliedcode { animation: coupon-glow 1.4s ease .35s 1; }
 @keyframes coupon-glow { 0%, 100% { text-shadow: none; } 40% { text-shadow: 0 0 10px rgba(242, 193, 78, .9); } }
 
 /* 16 · the homepage hero's words arrive one after another on each slide. */
-.hx-hero__slide[aria-hidden="false"] .hx-eyebrow, .hx-hero__slide[aria-hidden="false"] .hx-hero__title > span, .hx-hero__slide[aria-hidden="false"] .hx-btn { animation: hero-in .75s cubic-bezier(.2, .8, .2, 1) both; }
+.hx-hero__slide[aria-hidden="false"] .hx-eyebrow, .hx-hero__slide[aria-hidden="false"] .hx-hero__title > span, .hx-hero__slide[aria-hidden="false"] .hx-btn { animation: hero-in .75s cubic-bezier(.2, .8, .2, 1) backwards; }
 .hx-hero__slide[aria-hidden="false"] .hx-hero__title > span { display: inline-block; animation-delay: .1s; }
 .hx-hero__slide[aria-hidden="false"] .hx-hero__title > span + span { animation-delay: .22s; }
 .hx-hero__slide[aria-hidden="false"] .hx-btn { animation-delay: .34s; }
@@ -10795,20 +10795,20 @@ html.is-scrolled .v2-hdr, html.is-scrolled .fs-hdr, html.is-scrolled .hl-hdr { b
 
 /* 17 · the offer clock's numbers flip as they change. */
 .hx-offer__clock { perspective: 400px; }
-.hx-offer__clock b { display: inline-block; animation: flip-in .45s cubic-bezier(.3, 1.3, .5, 1) both; transform-origin: 50% 0; backface-visibility: hidden; }
+.hx-offer__clock b { display: inline-block; animation: flip-in .45s cubic-bezier(.3, 1.3, .5, 1) backwards; transform-origin: 50% 0; backface-visibility: hidden; }
 @keyframes flip-in { from { transform: rotateX(-90deg); opacity: .4; } to { transform: none; opacity: 1; } }
 
 /* 18 · search: a warm ring when the box is in use; suggestions arrive one after another. */
 .v2-hdr__searchbox, .fs-search, .hl-search { transition: box-shadow .2s ease; }
 .v2-hdr__searchbox:focus-within, .fs-search:focus-within, .hl-search:focus-within { box-shadow: 0 0 0 3px rgba(242, 193, 78, .45); }
-.v2-hdr__suggest-item, [role="listbox"] > [role="option"] { animation: sug-in .32s cubic-bezier(.2, .8, .2, 1) both; }
+.v2-hdr__suggest-item, [role="listbox"] > [role="option"] { animation: sug-in .32s cubic-bezier(.2, .8, .2, 1) backwards; }
 .v2-hdr__suggest-item:nth-child(2), [role="listbox"] > [role="option"]:nth-child(2) { animation-delay: .04s; }
 .v2-hdr__suggest-item:nth-child(3), [role="listbox"] > [role="option"]:nth-child(3) { animation-delay: .08s; }
 .v2-hdr__suggest-item:nth-child(4), [role="listbox"] > [role="option"]:nth-child(4) { animation-delay: .12s; }
 .v2-hdr__suggest-item:nth-child(5), [role="listbox"] > [role="option"]:nth-child(5) { animation-delay: .16s; }
 .v2-hdr__suggest-item:nth-child(n+6), [role="listbox"] > [role="option"]:nth-child(n+6) { animation-delay: .2s; }
 @keyframes sug-in { from { opacity: 0; transform: translate3d(0, 6px, 0); } to { opacity: 1; transform: none; } }
-.search-overlay > * { animation: sug-in .3s cubic-bezier(.2, .8, .2, 1) both; }
+.search-overlay > * { animation: sug-in .3s cubic-bezier(.2, .8, .2, 1) backwards; }
 
 /* 10 · the card's picture growing into the product page's (View Transitions; Chrome). */
 .fs-gallery__slide.is-on img, .hl-gallery__slide.is-on img, .pdp__zoom-trigger img { view-transition-name: sora-hero; }
@@ -10837,9 +10837,11 @@ html.is-scrolled .v2-hdr, html.is-scrolled .fs-hdr, html.is-scrolled .hl-hdr { b
 @media (prefers-reduced-motion: reduce) { .sora-empty__swing, .sora-empty__snow circle { animation: none; } .sora-empty__snow { display: none; } }
 
 /* 12 · amounts roll like an odometer when they change (RollNumber.jsx). */
-.roll { display: inline-flex; overflow: hidden; vertical-align: bottom; line-height: inherit; }
+/* inline-block, not inline-flex: flex items are blockified, so the amount read as "₹ 2 , 8 8 0" to
+   screen readers and copy-paste (bug 2026-11-21). */
+.roll { display: inline-block; overflow: hidden; vertical-align: bottom; line-height: inherit; white-space: nowrap; }
 .roll > span { display: inline-block; white-space: pre; }
-.roll > .roll__d { animation: roll-in .42s cubic-bezier(.3, 1.3, .5, 1) both; }
+.roll > .roll__d { animation: roll-in .42s cubic-bezier(.3, 1.3, .5, 1) backwards; }
 @keyframes roll-in { from { transform: translate3d(0, 85%, 0); opacity: 0; } to { transform: none; opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .roll > .roll__d { animation: none !important; } }
 
