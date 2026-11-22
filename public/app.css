@@ -10050,6 +10050,12 @@ body .fs .hx-ans .hx-ans__cta { background: #D9B26A; color: #121A16; }
 .sora-origin__in { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; font-weight: 600; color: #1E3A2F; background: #EEF5EF; border: 1px solid rgba(30, 58, 47, .15); }
 .sora-origin__care { display: inline-flex; align-items: center; gap: 4px; font-weight: 600; color: #8A5A12; text-decoration: none; }
 .sora-origin__care:hover { text-decoration: underline; }
+/* Creator Game (2026-11-22): "First sold by …" under a product's name. */
+.sora-discoverer { display: flex; align-items: center; gap: 6px; margin: 4px 0 10px; font-size: 12.5px; color: #6B5A2E; animation: sora-disc-in .35s ease backwards; }
+@keyframes sora-disc-in { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .sora-discoverer { animation: none; } }
+.sora-discoverer svg { color: #C79A45; flex: none; }
+.sora-discoverer b { font-weight: 700; color: #3B2F14; }
 .sora-guide { padding: 18px 0 56px; background: #fff; }
 .sora-guide .container { max-width: 760px; }
 .sora-guide__head { padding: 18px 0 6px; }
