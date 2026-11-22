@@ -128,5 +128,31 @@ test('the game CSS is deferred (never render-blocking) and stills for reduced mo
   for (const k of c.matchAll(/@keyframes [\w-]+ \{([\s\S]*?)\}\s*\n/g)) assert.doesNotMatch(k[1], /\b(width|height|top|left|margin|padding)\s*:/, 'keyframes animate transform/opacity only');
 });
 
+test('second pass (owner: "beautiful n attractive … animations ke sath"): every movement is opt-in, once, and paused off screen', () => {
+  const c = read('src/styles/creator-game.css');
+  const page = read('src/components/creator/CreatorGamePage.jsx');
+  const m = read('src/components/creator/gameMotion.js');
+  // The page turns motion on only when the visitor has not asked for less of it.
+  assert.match(page, /useEffect\(\(\) => \{ setMotion\(motionOk\(\)\); \}, \[\]\);/);
+  assert.match(m, /export const motionOk = \(\) => typeof window !== 'undefined' && !reducedMotion\(\);/);
+  // Hidden-until-seen applies only under .cg--motion, so no-JS / reduced motion shows everything.
+  assert.match(c, /\.cg--motion \.cg-reveal \{ opacity: 0;/);
+  assert.doesNotMatch(c.replace(/\.cg--motion[^{]*\{[^}]*\}/g, ''), /\.cg-reveal[^{]*\{[^}]*opacity: 0/);
+  // Loops pause while their section is off screen.
+  assert.match(c, /\.cg--motion \.cg-reveal:not\(\.is-live\) \*[\s\S]*?animation-play-state: paused;/);
+  // Every animation rule in the game section sits under .cg--motion (cha-ching has its own reduced-motion stop).
+  const gameRules = c.slice(0, c.indexOf('/* ---------- Keyframes'));
+  for (const rule of gameRules.matchAll(/([^{}]+)\{[^}]*\banimation:\s*(?!none)[^}]*\}/g)) assert.match(rule[1], /\.cg--motion/, `unguarded animation: ${rule[1].trim().slice(0, 80)}`);
+  assert.match(c, /@media \(prefers-reduced-motion: reduce\) \{[\s\S]*animation: none !important;/);
+  // Entrances keep no transform once done (backwards, never both/forwards), except the one-shot particle bursts.
+  for (const a of c.matchAll(/animation:[^;]*\b(both|forwards)\b[^;]*;/g)) assert.match(a[0], /cg-bit|cc-bit/, a[0]);
+});
+test('podium and count-up: the top three stand on steps; numbers climb only when seen', () => {
+  const page = read('src/components/creator/CreatorGamePage.jsx');
+  assert.match(page, /const podium = \[top\.find\(\(m\) => m\.pos === 2\), top\.find\(\(m\) => m\.pos === 1\), top\.find\(\(m\) => m\.pos === 3\)\]\.filter\(Boolean\);/);
+  const m = read('src/components/creator/gameMotion.js');
+  assert.match(m, /if \(!run \|\| !motionOk\(\) \|\| to === 0\) \{ setV\(to\); return undefined; \}/);
+});
+
 console.log(failed ? `\n${failed} failed` : '\nall passed');
 process.exit(failed ? 1 : 0);
