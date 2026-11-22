@@ -1,0 +1,15 @@
+diff --git a/src/styles/creator-game.css b/src/styles/creator-game.css
+index 2245d9a..ca55d59 100644
+--- a/src/styles/creator-game.css
++++ b/src/styles/creator-game.css
+@@ -15,7 +15,9 @@
+    (.is-live) and pause otherwise.
+    ============================================================ */
+ 
+-.crp.crp--studio .cg { display: grid; gap: 22px; --gold: #C79A45; --gold-2: #E4C482; --gold-3: #F7E2A8; --forest: #1E3A2F; --forest-deep: #0F2018; --cream: #F6F3EB; }
++/* Tokens on the portal root, not .cg: the cha-ching layer sits outside the game tab. */
++.crp.crp--studio { --gold: #C79A45; --gold-2: #E4C482; --gold-3: #F7E2A8; --forest: #1E3A2F; --forest-deep: #0F2018; --cream: #F6F3EB; }
++.crp.crp--studio .cg { display: grid; gap: 22px; }
+ .crp.crp--studio .cg-eyebrow { margin: 0 0 4px; font-size: 11.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--s-gold-ink); }
+ .crp.crp--studio .cg-panel-h { margin: 0 0 6px; font-size: 20px; line-height: 1.2; color: var(--s-ink); }
+ .crp.crp--studio .cg-note { margin: 8px 0 0; font-size: 13px; line-height: 1.55; color: var(--s-ink-3); }
