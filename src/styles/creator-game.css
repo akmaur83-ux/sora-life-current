@@ -561,7 +561,7 @@
 .crp .lu-medal b { font-size: 26px; line-height: 1.05; }
 .crp .lu-medal small { font-size: 12px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: rgba(59, 47, 20, .75); }
 .crp .lu-medal__shine { position: absolute; top: -20%; bottom: -20%; left: -70%; width: 45%; background: linear-gradient(105deg, transparent, rgba(255, 255, 255, .85), transparent); transform: rotate(8deg); }
-.crp .lu-h { margin: 22px 0 6px; font-size: 30px; line-height: 1.15; color: #F6F3EB; }
+.crp .lu-h, .crp.crp--studio .lu-card .lu-h { margin: 22px 0 6px; font-size: 30px; line-height: 1.15; color: #F6F3EB; }
 .crp .lu-sub { margin: 0; font-size: 14.5px; color: rgba(246, 243, 235, .8); }
 .crp .lu-sub b { color: #F7E2A8; }
 .crp .lu-btn { margin-top: 24px; min-width: 200px; }
@@ -596,5 +596,5 @@
   .crp.crp--studio .cg-teaser__medal { width: 60px; height: 60px; }
   .crp.crp--studio .cg-teaser__go { grid-column: 1 / -1; width: 100%; }
   .crp .lu-medal { width: 128px; height: 128px; }
-  .crp .lu-h { font-size: 26px; }
+  .crp .lu-h, .crp.crp--studio .lu-card .lu-h { font-size: 26px; }
 }
