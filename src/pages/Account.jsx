@@ -1,10 +1,9 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import Icon from '../components/Icon.jsx';
 import ProductImage from '../components/ProductImage.jsx';
 import { useStore } from '../lib/store.jsx';
 import { useCustomerAuth } from '../lib/customerAuth.jsx';
-import CreatorOnboarding from './account/CreatorOnboarding.jsx';
 import { supabase } from '../lib/supabase.js';
 import { listAddresses, createAddress, updateAddress, deleteAddress, setDefaultAddress } from '../lib/customerData.js';
 import { enabledOAuthProviders, signInWithProvider, PROVIDER_LABELS } from '../lib/oauth.js';
@@ -15,6 +14,12 @@ import { fulfillmentStatusLabel, safeTrackingUrl } from '../lib/orderFulfillment
 import { useConsumerCare } from '../lib/consumerCare.js';
 import { waNumber } from '../components/SiteAssist.jsx';
 import InstallApp from '../components/InstallApp.jsx';
+
+// The Creator Program tab is its own chunk (2026-11-22): most account visits never open it.
+const CreatorOnboardingChunk = lazy(() => import('./account/CreatorOnboarding.jsx'));
+function CreatorOnboarding() {
+  return <Suspense fallback={<p className="muted" role="status" style={{ padding: 'var(--sp-6) 0' }}>Loading…</p>}><CreatorOnboardingChunk /></Suspense>;
+}
 
 // Format an ISO timestamp the same way the rest of the app does (en-IN).
 function fmtOrderDate(iso) {

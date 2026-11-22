@@ -31,7 +31,12 @@ import Sell from './pages/Sell.jsx';
 import LeatherCare from './pages/LeatherCare.jsx';
 import Gifts from './pages/Gifts.jsx';
 import { ShawlCare, GuidesHub } from './pages/CareGuides.jsx';
-import CreatorPortal from './pages/CreatorPortal.jsx';
+// Creator portal: its own chunk (2026-11-22). It was ~11% of the bundle every shopper downloaded,
+// for the handful of people who use it. Only /creator fetches it now.
+const CreatorPortalChunk = lazy(() => import('./pages/CreatorPortal.jsx'));
+function CreatorPortal() {
+  return <Suspense fallback={<AdminChunkLoading />}><CreatorPortalChunk /></Suspense>;
+}
 import CreatorAttribution from './components/CreatorAttribution.jsx';
 import NotFound from './pages/NotFound.jsx';
 import AdminLogin from './pages/AdminLogin.jsx';
