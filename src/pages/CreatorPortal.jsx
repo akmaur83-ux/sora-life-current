@@ -9,7 +9,10 @@ import {
   getMyCreatorEarnings, getMyKyc, submitKyc, uploadKycDocument, requestPayout, getMyPayouts,
   getMyCreatorStanding, getMyCreatorRewards, claimLevelReward, getCreatorLeaderboard, getMyActivitySeries, getMyRecentClicks, getLevelRewardsCatalog,
   getCreatorTerms, termsArePublished, getMyTermsAcceptance, acceptCreatorTerms,
+  getMyCreatorGame, claimVanityCode,
 } from '../lib/creatorApi.js';
+import CreatorGamePage from '../components/creator/CreatorGamePage.jsx';
+import ChaChing from '../components/creator/ChaChing.jsx';
 import CreatorEarningsPage from '../components/creator/CreatorEarningsPage.jsx';
 import CreatorLinksPage from '../components/creator/CreatorLinksPage.jsx';
 import CreatorCampaignsPage from '../components/creator/CreatorCampaignsPage.jsx';
@@ -39,6 +42,7 @@ import { buildActivity } from '../lib/creatorActivity.js';
 // `soon` marks the item with a badge while withdrawals are closed.
 const NAV = [
   { id: 'dashboard', label: 'Dashboard', icon: 'home' },
+  { id: 'game', label: 'Creator Game', icon: 'star' },
   { id: 'campaigns', label: 'Campaigns', icon: 'sparkle' },
   { id: 'links', label: 'Links', icon: 'externalLink' },
   { id: 'analytics', label: 'Analytics', icon: 'award' },
@@ -79,6 +83,7 @@ export default function CreatorPortal({ initial = null }) {
   const [terms, setTerms] = useState(initial?.terms || null);
   const [termsAccepted, setTermsAccepted] = useState(null);   // null = unknown
   const [acceptingTerms, setAcceptingTerms] = useState(false);
+  const [game, setGame] = useState(initial?.game || null);
   const navRef = useRef(null);
 
   // Reload just the money surfaces (earnings buckets, KYC, payout history)
@@ -150,6 +155,7 @@ export default function CreatorPortal({ initial = null }) {
     for (const r of [DEFAULT_RANGE, '90d']) loadRange(r);
     getMyRecentClicks().then((c) => setRecentClicks(Array.isArray(c) ? c : [])).catch(() => setRecentClicks([]));
     getLevelRewardsCatalog().then((c) => setCatalog(Array.isArray(c) ? c : [])).catch(() => setCatalog([]));
+    getMyCreatorGame().then((g) => setGame(g)).catch(() => setGame({ ok: false }));
     setCampaigns(cs);
     setLinks(ls);
     setAnalytics(an && an.ok ? an : null);
@@ -160,6 +166,29 @@ export default function CreatorPortal({ initial = null }) {
     setRewards(rw && rw.ok ? rw : null);
     setLeaderboard(Array.isArray(lb) ? lb : []);
     setState('ready');
+  }, []);
+
+  // Creator Game: re-check every 90 s while the portal is open and visible,
+  // so a new sale's cha-ching can arrive live. Paused in a background tab.
+  useEffect(() => {
+    if (initial || state !== 'ready') return undefined;
+    const tick = () => {
+      if (document.visibilityState !== 'visible') return;
+      getMyCreatorGame().then((g) => { if (g && g.ok) setGame(g); }).catch(() => {});
+    };
+    const id = setInterval(tick, 90000);
+    document.addEventListener('visibilitychange', tick);
+    return () => { clearInterval(id); document.removeEventListener('visibilitychange', tick); };
+  }, [initial, state]);
+
+  const onVanity = useCallback(async (code) => {
+    const res = await claimVanityCode(code);
+    if (res?.ok) {
+      const [me, g] = await Promise.all([getMyCreator(), getMyCreatorGame()]);
+      if (me) setCreator(me);
+      if (g && g.ok) setGame(g);
+    }
+    return res;
   }, []);
 
   useEffect(() => {
@@ -295,6 +324,10 @@ export default function CreatorPortal({ initial = null }) {
             />
           )}
 
+          {tab === 'game' && (
+            <CreatorGamePage game={game} creator={creator} standing={standing} catalog={catalog} onVanity={onVanity} nowMs={initial?.now ? new Date(initial.now).getTime() : undefined} />
+          )}
+
           {tab === 'campaigns' && (
             <CreatorCampaignsPage creator={creator} campaigns={campaigns} links={links} buildUrl={buildTrackingUrl} />
           )}
@@ -373,6 +406,7 @@ export default function CreatorPortal({ initial = null }) {
           )}
         </main>
       </div>
+      {game?.ok && <ChaChing creatorId={creator.id} recent={game.recent} holdDays={Number(earnings?.settlement_hold_days ?? 7)} />}
     </div>
   );
 }

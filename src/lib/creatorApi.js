@@ -379,6 +379,18 @@ export async function claimLevelReward(level, rewardId) {
   if (error) return { ok: false, reason: error.message };
   return data || { ok: false };
 }
+// Creator Game v1 (0050): badges, map, season, Wrapped, recent sales — own data only.
+export async function getMyCreatorGame() {
+  const { data, error } = await supabase.rpc('my_creator_game');
+  if (error) return { ok: false, reason: error.message };
+  return data || { ok: false };
+}
+// Elite (level 5) and up choose their public code; the old one keeps working.
+export async function claimVanityCode(code) {
+  const { data, error } = await supabase.rpc('claim_vanity_code', { p_code: String(code || '') });
+  if (error) return { ok: false, reason: 'error' };
+  return data || { ok: false };
+}
 // PUBLIC: name, rank, level, position — the function returns nothing else,
 // and the client re-projects to those four fields regardless.
 export async function getCreatorLeaderboard(limit = LEADERBOARD_LIMIT) {

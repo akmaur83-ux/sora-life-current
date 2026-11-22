@@ -1,0 +1,1162 @@
+diff --git a/src/components/Discoverer.jsx b/src/components/Discoverer.jsx
+new file mode 100644
+index 0000000..d3d154c
+--- /dev/null
++++ b/src/components/Discoverer.jsx
+@@ -0,0 +1,57 @@
++import { useEffect, useState } from 'react';
++import { supabase, isSupabaseConfigured } from '../lib/supabase.js';
++import Icon from './Icon.jsx';
++
++// ============================================================
++// "First sold by …" (Creator Game v1, owner 2026-11-22): the creator who
++// made the first sale of this product gets the credit on its page for good.
++// product_discoverer() (0050) returns the creator's public display name
++// only — the same field the public creator leaderboard already shows.
++//
++// Speed: the call waits until the browser is idle after the page has drawn,
++// is made once per product per visit, and renders nothing while it waits or
++// when nobody has sold the product yet. No layout is reserved for it.
++// ============================================================
++
++const cache = new Map();
++
++/** "vikas shamra" → "Vikas Shamra". Pure. */
++export const displayName = (name) => String(name || '').trim().replace(/\s+/g, ' ')
++  .split(' ').map((w) => (w ? w[0].toUpperCase() + w.slice(1) : w)).join(' ');
++
++const idle = (fn) => {
++  if (typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
++    const id = window.requestIdleCallback(fn, { timeout: 4000 });
++    return () => window.cancelIdleCallback?.(id);
++  }
++  const t = setTimeout(fn, 1200);
++  return () => clearTimeout(t);
++};
++
++export default function Discoverer({ productId }) {
++  const key = productId == null ? '' : String(productId);
++  const [name, setName] = useState(() => cache.get(key) || null);
++
++  useEffect(() => {
++    if (!key || !isSupabaseConfigured) return undefined;
++    if (cache.has(key)) { setName(cache.get(key)); return undefined; }
++    let live = true;
++    const cancel = idle(() => {
++      supabase.rpc('product_discoverer', { p_product_id: key })
++        .then(({ data, error }) => {
++          const n = !error && data && data.name ? displayName(data.name) : null;
++          cache.set(key, n);
++          if (live) setName(n);
++        }, () => {});
++    });
++    return () => { live = false; cancel(); };
++  }, [key]);
++
++  if (!name) return null;
++  return (
++    <p className="sora-discoverer">
++      <Icon name="sparkle" size={13} />
++      <span>First sold by <b>{name}</b> · SORA Creator</span>
++    </p>
++  );
++}
+diff --git a/src/components/creator/ChaChing.jsx b/src/components/creator/ChaChing.jsx
+new file mode 100644
+index 0000000..56822c2
+--- /dev/null
++++ b/src/components/creator/ChaChing.jsx
+@@ -0,0 +1,81 @@
++import { useEffect, useMemo, useState } from 'react';
++import Icon from '../Icon.jsx';
++import { money2 } from '../../lib/format.js';
++import { unseenSales, markSeen, playChaChing, buzz } from '../../lib/creatorGame.js';
++import { reducedMotion } from '../../lib/motion.js';
++
++// ============================================================
++// Cha-ching (Creator Game v1, owner 2026-11-22). New paid sales since the
++// creator last looked arrive as a gold pill; tapping it plays a coin sound,
++// a small burst and a buzz (browsers allow sound and vibration only after a
++// tap, so the tap IS the reveal). Shows the state an order came from — never
++// a customer's name or city. The portal re-checks every 90 s while it is
++// open and visible, so a sale can land live.
++// ============================================================
++
++const BITS = 18;
++
++export default function ChaChing({ creatorId, recent, holdDays = 7 }) {
++  const { fresh, newest, first } = useMemo(() => unseenSales(recent, creatorId), [recent, creatorId]);
++  const [open, setOpen] = useState(false);
++  const [gone, setGone] = useState(false);
++
++  // A first visit: remember where history ends, no party.
++  useEffect(() => { if (first && newest) markSeen(creatorId, newest); }, [first, newest, creatorId]);
++  // New sales arriving later bring the pill back.
++  useEffect(() => { if (fresh.length) setGone(false); }, [fresh.length, newest]);
++  useEffect(() => {
++    if (!open) return undefined;
++    const onKey = (e) => { if (e.key === 'Escape') { markSeen(creatorId, newest); setOpen(false); setGone(true); } };
++    window.addEventListener('keydown', onKey);
++    return () => window.removeEventListener('keydown', onKey);
++  }, [open, creatorId, newest]);
++
++  if (!fresh.length || gone) return null;
++  const total = fresh.reduce((s, r) => s + (Number(r.commission) || 0), 0);
++  const calm = reducedMotion();
++
++  const reveal = () => { setOpen(true); playChaChing(); buzz(); };
++  const close = () => { markSeen(creatorId, newest); setOpen(false); setGone(true); };
++
++  if (!open) {
++    return (
++      <button type="button" className="cc-pill" onClick={reveal} aria-live="polite">
++        <span className="cc-pill__coin" aria-hidden="true">₹</span>
++        <span><b>Cha-ching!</b> {fresh.length} new {fresh.length === 1 ? 'sale' : 'sales'}{total > 0 ? ` · ${money2(total)}` : ''}</span>
++        <span className="cc-pill__go">Tap to see <Icon name="arrowRight" size={14} /></span>
++      </button>
++    );
++  }
++
++  return (
++    <div className="cc-layer" role="dialog" aria-modal="true" aria-labelledby="cc-h" onClick={(e) => { if (e.target === e.currentTarget) close(); }}>
++      <div className="cc-card">
++        {!calm && (
++          <div className="cc-burst" aria-hidden="true">
++            {Array.from({ length: BITS }, (_, i) => <i key={i} style={{ '--a': `${(360 / BITS) * i}deg`, '--d': `${70 + (i % 3) * 26}px`, '--t': `${(i % 4) * 40}ms` }} />)}
++          </div>
++        )}
++        <span className="cc-card__coin" aria-hidden="true">₹</span>
++        <p className="cc-card__kicker">Cha-ching!</p>
++        <h2 className="cc-card__h serif" id="cc-h">
++          {total > 0 ? `You earned ${money2(total)}` : `${fresh.length} new ${fresh.length === 1 ? 'sale' : 'sales'}`}
++        </h2>
++        <ul className="cc-list">
++          {fresh.slice(0, 5).map((r) => (
++            <li key={r.id}>
++              <span className="cc-list__amt">{Number(r.commission) > 0 ? money2(r.commission) : '—'}</span>
++              <span className="cc-list__what">
++                {r.product || 'An order'}{Number(r.items) > 1 ? ` +${Number(r.items) - 1} more` : ''}
++                {r.state ? <em> · from {r.state}</em> : null}
++              </span>
++            </li>
++          ))}
++        </ul>
++        {fresh.length > 5 && <p className="cc-more">and {fresh.length - 5} more</p>}
++        <p className="cc-note">Held until {holdDays} days after delivery, then it’s yours to withdraw.</p>
++        <button type="button" className="cg-btn" onClick={close} autoFocus>Keep going</button>
++      </div>
++    </div>
++  );
++}
+diff --git a/src/components/creator/CreatorGamePage.jsx b/src/components/creator/CreatorGamePage.jsx
+new file mode 100644
+index 0000000..8863257
+--- /dev/null
++++ b/src/components/creator/CreatorGamePage.jsx
+@@ -0,0 +1,308 @@
++import { useMemo, useState } from 'react';
++import Icon from '../Icon.jsx';
++import { money } from '../../lib/format.js';
++import {
++  badgeList, leagueOf, daysLeft, yatraTiles, vanityProblem, VANITY_REASON,
++  wrappedLines, drawWrapped, monthName,
++} from '../../lib/creatorGame.js';
++
++// ============================================================
++// Creator Game v1 (owner, 2026-11-22: "Creator Game v1 bana do"):
++// badges · Bharat Yatra · season & league · Wrapped card · custom code ·
++// Discoverer. Every number is my_creator_game() (0050); this page only
++// arranges it. Sales mean paid, non-self-referred orders — never clicks.
++// ============================================================
++
++const TILE = 44; const GAP = 6;
++
++export default function CreatorGamePage({ game, creator, standing, catalog = [], onVanity, nowMs }) {
++  const now = nowMs ? new Date(nowMs) : new Date();
++  if (!game || game.ok === false) {
++    return (
++      <section className="cg">
++        <div className="cd-panel"><p className="muted">The game board couldn’t load just now. Refresh to try again.</p></div>
++      </section>
++    );
++  }
++  const badges = badgeList(game);
++  const earned = badges.filter((b) => b.earned).length;
++  const yatra = yatraTiles(game.map);
++  const season = game.season || {};
++  const league = leagueOf(season.league);
++  const me = (season.members || []).find((m) => m.me);
++  const left = daysLeft(season.ends_at, now);
++  const nextHamper = (catalog || []).find((o) => o.reward_type === 'mystery' && Number(o.level) > Number(game.level || 1));
++
++  return (
++    <section className="cg" aria-labelledby="cg-h">
++      <header className="cg-head">
++        <div>
++          <p className="cg-eyebrow">Creator Game · Season {monthName(season.month)}</p>
++          <h1 className="cg-h serif" id="cg-h">Play to grow</h1>
++          <p className="cg-sub">Every badge, tile and point here comes from real, paid orders. Shares and clicks never count, so neither can tricks.</p>
++        </div>
++      </header>
++
++      <div className="cg-stats" role="list">
++        <Stat icon="award" label="Badges" value={`${earned}/${badges.length}`} />
++        <Stat icon="mapPin" label="States visited" value={`${yatra.visited}/${yatra.total}`} />
++        <Stat icon="leaf" label="Week streak" value={String(game.streak?.current || 0)} note={game.streak?.best ? `Best ${game.streak.best}` : null} />
++        <Stat icon="crown" label={league.name} value={me ? `#${me.pos}` : '—'} note={me ? `${me.points.toLocaleString('en-IN')} pts` : null} />
++      </div>
++
++      <div className="cg-row">
++        <Badges badges={badges} />
++        <League season={season} league={league} left={left} />
++      </div>
++
++      <Yatra yatra={yatra} />
++
++      <div className="cg-row">
++        <Wrapped game={game} creator={creator} standing={standing} />
++        <div className="cg-col">
++          <Vanity game={game} standing={standing} onVanity={onVanity} />
++          <Discovered list={game.discovered} />
++          {nextHamper && (
++            <div className="cd-panel cg-hamper">
++              <span className="cg-hamper__box" aria-hidden="true"><Icon name="gift" size={26} /></span>
++              <div>
++                <p className="cg-eyebrow">Level {nextHamper.level} unlock</p>
++                <h3 className="cg-panel-h serif">Mystery hamper</h3>
++                <p className="cg-note">What’s inside is a surprise. {nextHamper.value ? `Worth ${nextHamper.value}.` : ''}</p>
++              </div>
++            </div>
++          )}
++        </div>
++      </div>
++    </section>
++  );
++}
++
++function Stat({ icon, label, value, note }) {
++  return (
++    <div className="cg-stat" role="listitem">
++      <span className="cg-stat__ic" aria-hidden="true"><Icon name={icon} size={17} /></span>
++      <span className="cg-stat__v">{value}</span>
++      <span className="cg-stat__l">{label}{note ? <em> · {note}</em> : null}</span>
++    </div>
++  );
++}
++
++function Badges({ badges }) {
++  return (
++    <div className="cd-panel cg-badges" aria-labelledby="cg-badges-h">
++      <header className="cd-panel__head">
++        <div>
++          <h2 className="cd-panel__h serif" id="cg-badges-h">Badges</h2>
++          <p className="cd-panel__sub">Earned ones show on your card. The rest show how close you are.</p>
++        </div>
++      </header>
++      <ul className="cg-badges__grid">
++        {badges.map((b) => (
++          <li key={b.id} className={`cg-badge${b.earned ? ' is-earned' : ''}`}>
++            <span className="cg-badge__medal" aria-hidden="true"><Icon name={b.icon} size={20} /></span>
++            <span className="cg-badge__name">{b.name}</span>
++            <span className="cg-badge__hint">{b.hint}</span>
++            {!b.earned && (
++              <span className="cg-badge__bar" role="progressbar" aria-label={`${b.name} progress`} aria-valuemin={0} aria-valuemax={b.target} aria-valuenow={b.progress}>
++                <i style={{ transform: `scaleX(${b.fraction})` }} />
++              </span>
++            )}
++            {!b.earned && <span className="cg-badge__left">{b.money ? `${money(b.target - b.progress)} to go` : `${b.target - b.progress} to go`}</span>}
++          </li>
++        ))}
++      </ul>
++    </div>
++  );
++}
++
++function League({ season, league, left }) {
++  const members = Array.isArray(season.members) ? season.members : [];
++  return (
++    <div className="cd-panel cg-league" style={{ '--league': league.tone }} aria-labelledby="cg-league-h">
++      <header className="cd-panel__head">
++        <div>
++          <p className="cg-eyebrow">{league.en} · {league.levels}</p>
++          <h2 className="cd-panel__h serif" id="cg-league-h">{league.name}</h2>
++          <p className="cd-panel__sub">
++            {left == null ? 'This month’s season.' : left === 0 ? 'Last day of this season.' : `${left} ${left === 1 ? 'day' : 'days'} left in this season.`}
++            {' '}1 point for every ₹10 of sales. Points reset on the 1st; your rank never does.
++          </p>
++        </div>
++      </header>
++      <ol className="cg-table">
++        {members.map((m) => (
++          <li key={`${m.pos}-${m.name}`} className={`cg-table__row${m.me ? ' is-me' : ''}${m.pos <= 3 ? ` is-top is-top${m.pos}` : ''}`}>
++            <span className="cg-table__pos">{m.pos}</span>
++            <span className="cg-table__name">{m.name}{m.me ? <em> (you)</em> : null}</span>
++            <span className="cg-table__pts">{Number(m.points || 0).toLocaleString('en-IN')}<small> pts</small></span>
++          </li>
++        ))}
++      </ol>
++      {members.length <= 1 && <p className="cg-note">You’re the first in this league. As more creators join, this table fills up.</p>}
++    </div>
++  );
++}
++
++function Yatra({ yatra }) {
++  const cols = 9; const rows = 7;
++  const w = cols * TILE + (cols - 1) * GAP; const h = rows * TILE + (rows - 1) * GAP;
++  const lit = yatra.tiles.filter((t) => t.lit).sort((a, b) => b.orders - a.orders);
++  return (
++    <div className="cd-panel cg-yatra" aria-labelledby="cg-yatra-h">
++      <header className="cd-panel__head">
++        <div>
++          <h2 className="cd-panel__h serif" id="cg-yatra-h">Bharat Yatra</h2>
++          <p className="cd-panel__sub">Every state an order of yours reaches lights up. {yatra.visited} of {yatra.total} so far.</p>
++        </div>
++        <span className="cg-yatra__count"><b>{yatra.visited}</b>/{yatra.total}</span>
++      </header>
++      <div className="cg-yatra__wrap">
++        <svg className="cg-yatra__map" viewBox={`0 0 ${w} ${h}`} role="img" aria-label={`${yatra.visited} of ${yatra.total} states and union territories reached`}>
++          {yatra.tiles.map((t) => (
++            <g key={t.code} transform={`translate(${t.c * (TILE + GAP)} ${t.r * (TILE + GAP)})`} className={`cg-tile${t.lit ? ' is-lit' : ''}`} style={t.lit ? { '--heat': t.heat } : undefined}>
++              <title>{t.name}{t.lit ? ` · ${t.orders} ${t.orders === 1 ? 'order' : 'orders'}` : ''}</title>
++              <rect width={TILE} height={TILE} rx="9" />
++              <text x={TILE / 2} y={TILE / 2 + 4.5} textAnchor="middle">{t.code}</text>
++            </g>
++          ))}
++        </svg>
++        <div className="cg-yatra__side">
++          <p className="cg-yatra__goal"><Icon name="mapPin" size={15} /> Next: <b>{yatra.visited < 5 ? 'Paanch Pradesh' : yatra.visited < 10 ? 'Bharat Darshan' : 'all 36'}</b> at {yatra.visited < 5 ? 5 : yatra.visited < 10 ? 10 : 36} states</p>
++          {lit.length ? (
++            <ul className="cg-yatra__list">
++              {lit.slice(0, 8).map((t) => <li key={t.code}><span>{t.name}</span><b>{t.orders}</b></li>)}
++            </ul>
++          ) : <p className="cg-note">No state yet — your first order lights the first tile.</p>}
++        </div>
++      </div>
++    </div>
++  );
++}
++
++function Wrapped({ game, creator, standing }) {
++  const [which, setWhich] = useState('this');
++  const [busy, setBusy] = useState(false);
++  const [msg, setMsg] = useState('');
++  const stats = game.wrapped?.[which] || {};
++  const lines = useMemo(() => wrappedLines(stats, {
++    name: creator?.display_name, rank: standing?.rank || game.rank, league: game.season?.league, code: game.vanity?.code || creator?.creator_code,
++  }), [stats, creator, standing, game]);
++
++  const share = async () => {
++    setBusy(true); setMsg('');
++    try {
++      const blob = await drawWrapped(lines);
++      if (!blob) throw new Error('no image');
++      const file = new File([blob], `sora-${stats.month || 'wrapped'}.png`, { type: 'image/png' });
++      if (navigator.canShare?.({ files: [file] })) {
++        await navigator.share({ files: [file], title: lines.title });
++      } else {
++        const url = URL.createObjectURL(blob);
++        const a = document.createElement('a'); a.href = url; a.download = file.name; a.click();
++        setTimeout(() => URL.revokeObjectURL(url), 4000);
++        setMsg('Saved — post it to your story.');
++      }
++    } catch (e) {
++      if (e?.name !== 'AbortError') setMsg('Couldn’t make the image. Try again.');
++    }
++    setBusy(false);
++  };
++
++  return (
++    <div className="cd-panel cg-wrapped" aria-labelledby="cg-wrapped-h">
++      <header className="cd-panel__head">
++        <div>
++          <h2 className="cd-panel__h serif" id="cg-wrapped-h">Your Wrapped</h2>
++          <p className="cd-panel__sub">A card of your month, ready for your story.</p>
++        </div>
++        <div className="cg-seg" role="group" aria-label="Month">
++          <button type="button" aria-pressed={which === 'this'} onClick={() => setWhich('this')}>This month</button>
++          <button type="button" aria-pressed={which === 'last'} onClick={() => setWhich('last')}>Last month</button>
++        </div>
++      </header>
++      <figure className="cg-card" aria-label={`${lines.title}: ${lines.big} ${lines.bigLabel}`}>
++        <p className="cg-card__kicker">SORA LIFESTYLE · CREATOR PROGRAM</p>
++        <p className="cg-card__title serif">{lines.title}</p>
++        {lines.name && <p className="cg-card__name">{lines.name}</p>}
++        <p className="cg-card__big serif">{lines.big}<small>{lines.bigLabel}</small></p>
++        <dl className="cg-card__rows">
++          {lines.rows.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}
++        </dl>
++        {lines.top && <p className="cg-card__top"><span>Most loved</span>{lines.top}</p>}
++        {lines.code && <p className="cg-card__code">Shop with my code {lines.code}</p>}
++      </figure>
++      <button type="button" className="cg-btn" onClick={share} disabled={busy}>
++        <Icon name="download" size={16} /> {busy ? 'Making your card…' : 'Share my Wrapped'}
++      </button>
++      {msg && <p className="cg-note" role="status">{msg}</p>}
++    </div>
++  );
++}
++
++function Vanity({ game, standing, onVanity }) {
++  const v = game.vanity || {};
++  const [code, setCode] = useState('');
++  const [busy, setBusy] = useState(false);
++  const [msg, setMsg] = useState(null);
++  const ladder = Array.isArray(standing?.ladder) ? standing.ladder : [];
++  const eliteAt = Number(ladder.find((l) => Number(l.level) === Number(v.min_level || 5))?.threshold);
++  const toGo = Number.isFinite(eliteAt) ? Math.max(0, eliteAt - Number(standing?.lifetime_confirmed_sales || game.confirmed_sales || 0)) : null;
++  const cooling = v.next_change_at && new Date(v.next_change_at) > new Date();
++
++  const submit = async (e) => {
++    e.preventDefault();
++    const problem = vanityProblem(code);
++    if (problem) { setMsg({ tone: 'err', text: problem }); return; }
++    setBusy(true); setMsg(null);
++    const res = await onVanity(code.trim().toUpperCase());
++    if (res?.ok) { setMsg({ tone: 'ok', text: `Done — your code is now ${res.code}. Links with ${res.old_code || 'your old code'} still work.` }); setCode(''); }
++    else setMsg({ tone: 'err', text: VANITY_REASON[res?.reason] || 'Couldn’t change it just now. Try again.' });
++    setBusy(false);
++  };
++
++  return (
++    <div className={`cd-panel cg-vanity${v.eligible ? '' : ' is-locked'}`} aria-labelledby="cg-vanity-h">
++      <p className="cg-eyebrow">{v.eligible ? 'Unlocked' : `Unlocks at Elite · Level ${v.min_level || 5}`}</p>
++      <h2 className="cg-panel-h serif" id="cg-vanity-h">Your own code</h2>
++      <p className="cg-vanity__now">Now: <b>{v.code}</b></p>
++      {v.eligible ? (
++        cooling ? (
++          <p className="cg-note">You can change it again on {new Date(v.next_change_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'long' })}.</p>
++        ) : (
++          <form className="cg-vanity__form" onSubmit={submit}>
++            <label className="sr-only" htmlFor="cg-vanity-in">New code</label>
++            <input id="cg-vanity-in" className="cg-input" value={code} maxLength={16} autoComplete="off" spellCheck="false"
++              onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, ''))} placeholder="e.g. GHEEQUEEN" />
++            <button type="submit" className="cg-btn" disabled={busy || !code}>{busy ? 'Saving…' : 'Claim'}</button>
++          </form>
++        )
++      ) : (
++        <p className="cg-note">
++          Pick a code like <b>GHEEQUEEN</b> instead of {v.code}.
++          {toGo != null && toGo > 0 ? ` ${money(toGo)} more in confirmed sales to get there.` : ''}
++        </p>
++      )}
++      {msg && <p className={`cg-msg is-${msg.tone}`} role="status">{msg.text}</p>}
++    </div>
++  );
++}
++
++function Discovered({ list }) {
++  const items = Array.isArray(list) ? list : [];
++  return (
++    <div className="cd-panel cg-disc" aria-labelledby="cg-disc-h">
++      <p className="cg-eyebrow">Discoverer</p>
++      <h2 className="cg-panel-h serif" id="cg-disc-h">First sold by you</h2>
++      {items.length ? (
++        <>
++          <p className="cg-note">Your name shows on these product pages for good.</p>
++          <ul className="cg-disc__list">{items.slice(0, 6).map((n) => <li key={n}><Icon name="sparkle" size={13} />{n}</li>)}</ul>
++          {items.length > 6 && <p className="cg-note">+{items.length - 6} more</p>}
++        </>
++      ) : (
++        <p className="cg-note">Be the first creator to sell a product and your name goes on its page for good. New launches are the easiest race to win.</p>
++      )}
++    </div>
++  );
++}
+diff --git a/src/components/creator/CreatorTier.jsx b/src/components/creator/CreatorTier.jsx
+index 989d5e9..ac7553c 100644
+--- a/src/components/creator/CreatorTier.jsx
++++ b/src/components/creator/CreatorTier.jsx
+@@ -177,7 +177,7 @@ export function RewardChooser({ rewards, onClaim, onChanged }) {
+               const pending = confirm && confirm.level === lv.level && confirm.option.id === o.id;
+               const key = `${lv.level}:${o.id}`;
+               return (
+-                <div key={o.id} className={`ctier-option${pending ? ' is-pending' : ''}`} role="listitem">
++                <div key={o.id} className={`ctier-option${o.reward_type === 'mystery' ? ' is-mystery' : ''}${pending ? ' is-pending' : ''}`} role="listitem">
+                   <span className="ctier-option__type">{REWARD_TYPE_LABEL[o.reward_type] || 'Reward'}</span>
+                   <h4 className="ctier-option__label">{o.label}</h4>
+                   {o.value && <p className="ctier-option__value">{o.value}</p>}
+diff --git a/src/fashion/FashionProductPage.jsx b/src/fashion/FashionProductPage.jsx
+index cfb1ed1..14831da 100644
+--- a/src/fashion/FashionProductPage.jsx
++++ b/src/fashion/FashionProductPage.jsx
+@@ -1,4 +1,5 @@
+ import { useEffect, useRef, useState } from 'react';
++import Discoverer from '../components/Discoverer.jsx';
+ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+ import Icon from '../components/Icon.jsx';
+ import { money } from '../lib/format.js';
+@@ -219,6 +220,7 @@ export default function FashionProductPage() {
+           <h1 className="fs-pdp__h serif">{view.name}</h1>
+           {/* Made in India / leather care (round 11, 2026-11-20): from the product's own record (ProductOrigin.jsx). */}
+           <ProductOrigin origin={facts?.country_of_origin} material={facts?.material} name={view.name} />
++          <Discoverer productId={view.id} />
+           {/* No reviews yet: no rating row, rather than "0.0 ☆☆☆☆☆ (0 reviews)" (as on the card). */}
+           {view.reviewCount > 0 && <p className="fs-rating"><b>{view.rating.toFixed(1)}</b><Stars value={view.rating} size={15} /><span className="fs-rating__count">({view.reviewCount.toLocaleString('en-IN')} {view.reviewCount === 1 ? 'review' : 'reviews'})</span></p>}
+           {facts?.net_content && <p className="fs-pdp__net">{facts.net_content}</p>}
+diff --git a/src/homeliving/HomeLivingProductPage.jsx b/src/homeliving/HomeLivingProductPage.jsx
+index 9db2d06..3050966 100644
+--- a/src/homeliving/HomeLivingProductPage.jsx
++++ b/src/homeliving/HomeLivingProductPage.jsx
+@@ -1,4 +1,5 @@
+ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
++import Discoverer from '../components/Discoverer.jsx';
+ import { createPortal } from 'react-dom';
+ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+ import Icon from '../components/Icon.jsx';
+@@ -645,6 +646,7 @@ export default function HomeLivingProductPage() {
+           <h1 className="hl-pdp__h serif">{head}{hl && <> <span className="hl-pdp__hl">{hl}</span></>}{tail && <> {tail}</>}</h1>
+           {/* Made in India / leather care (round 11, 2026-11-20): from the product's own record (ProductOrigin.jsx). */}
+           <ProductOrigin origin={view.country_of_origin} material={view.material} name={view.name} />
++          <Discoverer productId={view.id} />
+           {lede && <p className="hl-pdp__lede">{lede}</p>}
+           {view.review_count > 0 && view.rating > 0 && (
+             <p className="hl-pdp__rating"><Stars rating={view.rating} /><b>{view.rating.toFixed(1)}</b> <span>({view.review_count.toLocaleString('en-IN')} Reviews)</span></p>
+diff --git a/src/lib/creatorApi.js b/src/lib/creatorApi.js
+index 21185ce..32dd61b 100644
+--- a/src/lib/creatorApi.js
++++ b/src/lib/creatorApi.js
+@@ -379,6 +379,18 @@ export async function claimLevelReward(level, rewardId) {
+   if (error) return { ok: false, reason: error.message };
+   return data || { ok: false };
+ }
++// Creator Game v1 (0050): badges, map, season, Wrapped, recent sales — own data only.
++export async function getMyCreatorGame() {
++  const { data, error } = await supabase.rpc('my_creator_game');
++  if (error) return { ok: false, reason: error.message };
++  return data || { ok: false };
++}
++// Elite (level 5) and up choose their public code; the old one keeps working.
++export async function claimVanityCode(code) {
++  const { data, error } = await supabase.rpc('claim_vanity_code', { p_code: String(code || '') });
++  if (error) return { ok: false, reason: 'error' };
++  return data || { ok: false };
++}
+ // PUBLIC: name, rank, level, position — the function returns nothing else,
+ // and the client re-projects to those four fields regardless.
+ export async function getCreatorLeaderboard(limit = LEADERBOARD_LIMIT) {
+diff --git a/src/lib/creatorGame.js b/src/lib/creatorGame.js
+new file mode 100644
+index 0000000..5adb981
+--- /dev/null
++++ b/src/lib/creatorGame.js
+@@ -0,0 +1,256 @@
++// ============================================================
++// Creator Game v1 (owner, 2026-11-22) — pure helpers.
++//
++// The numbers come from my_creator_game() (0050), computed server-side from
++// paid, non-self-referred sales, so nothing here can award itself a badge.
++// This file only names things, lays out the map and draws the share card.
++// Lives in the creator portal's own chunk: a shopper never downloads it.
++// ============================================================
++
++export const BADGES = Object.freeze([
++  { id: 'first_sale', name: 'Pehli Sale', hint: 'Your first sale', icon: 'sparkle' },
++  { id: 'ten_sales', name: 'Das Ka Dum', hint: '10 sales', icon: 'star' },
++  { id: 'fifty_sales', name: 'Half Century', hint: '50 sales', icon: 'award' },
++  { id: 'club_10k', name: '₹10k Club', hint: '₹10,000 in confirmed sales', icon: 'card', money: true },
++  { id: 'lakhpati', name: 'Lakhpati', hint: '₹1,00,000 in confirmed sales', icon: 'crown', money: true },
++  { id: 'states_5', name: 'Paanch Pradesh', hint: 'Orders from 5 states', icon: 'mapPin' },
++  { id: 'states_10', name: 'Bharat Darshan', hint: 'Orders from 10 states', icon: 'mapPin' },
++  { id: 'weekend', name: 'Weekend Warrior', hint: '5 sales on a Saturday or Sunday', icon: 'clock' },
++  { id: 'streak_4', name: 'Chaar Hafte', hint: 'A sale 4 weeks in a row', icon: 'leaf' },
++  { id: 'repeat', name: 'Bharosa', hint: 'A customer came back to you', icon: 'heartHand' },
++  { id: 'discoverer', name: 'Discoverer', hint: 'First creator to sell a product', icon: 'flask' },
++]);
++
++/** Server badges joined to their names, earned first. Unknown ids are dropped. */
++export function badgeList(game) {
++  const byId = new Map((Array.isArray(game?.badges) ? game.badges : []).map((b) => [b?.id, b]));
++  return BADGES.map((meta, i) => {
++    const b = byId.get(meta.id) || {};
++    const target = Math.max(1, Number(b.target) || 1);
++    const progress = Math.max(0, Math.min(target, Number(b.progress) || 0));
++    return { ...meta, order: i, target, progress, earned: progress >= target, fraction: progress / target };
++  }).sort((a, b) => (Number(b.earned) - Number(a.earned)) || (b.fraction - a.fraction) || (a.order - b.order));
++}
++
++export const LEAGUES = Object.freeze({
++  kaansa: { name: 'Kaansa League', en: 'Bronze', levels: 'Levels 1–3', tone: '#9A6A3A' },
++  chandi: { name: 'Chandi League', en: 'Silver', levels: 'Levels 4–6', tone: '#7C8A93' },
++  sona: { name: 'Sona League', en: 'Gold', levels: 'Levels 7–10', tone: '#B58A2E' },
++  heera: { name: 'Heera League', en: 'Diamond', levels: 'Levels 11+', tone: '#3C7FA0' },
++});
++export const leagueOf = (id) => LEAGUES[id] || LEAGUES.kaansa;
++
++/** Whole days left in a season (0 on its last day). */
++export function daysLeft(endsAt, now = new Date()) {
++  const end = new Date(endsAt).getTime();
++  if (!Number.isFinite(end)) return null;
++  return Math.max(0, Math.ceil((end - now.getTime()) / 86400000) - 1);
++}
++
++// ---- Bharat Yatra: a tile map (one equal tile per state / UT) ----------
++// A tile grid, not a drawn border map: every state gets a same-size tile in
++// roughly its place, so small states are as visible as big ones and no
++// boundary is drawn at all.
++export const STATE_TILES = Object.freeze([
++  { code: 'JK', name: 'Jammu and Kashmir', c: 2, r: 0, alt: ['jammu & kashmir', 'j&k'] },
++  { code: 'LA', name: 'Ladakh', c: 3, r: 0 },
++  { code: 'PB', name: 'Punjab', c: 2, r: 1 },
++  { code: 'HP', name: 'Himachal Pradesh', c: 3, r: 1 },
++  { code: 'UK', name: 'Uttarakhand', c: 4, r: 1, alt: ['uttaranchal'] },
++  { code: 'CH', name: 'Chandigarh', c: 1, r: 1 },
++  { code: 'AR', name: 'Arunachal Pradesh', c: 8, r: 1 },
++  { code: 'RJ', name: 'Rajasthan', c: 1, r: 2 },
++  { code: 'HR', name: 'Haryana', c: 2, r: 2 },
++  { code: 'DL', name: 'Delhi', c: 3, r: 2, alt: ['nct of delhi', 'new delhi', 'national capital territory of delhi'] },
++  { code: 'UP', name: 'Uttar Pradesh', c: 4, r: 2 },
++  { code: 'BR', name: 'Bihar', c: 5, r: 2 },
++  { code: 'SK', name: 'Sikkim', c: 6, r: 2 },
++  { code: 'AS', name: 'Assam', c: 7, r: 2 },
++  { code: 'NL', name: 'Nagaland', c: 8, r: 2 },
++  { code: 'GJ', name: 'Gujarat', c: 0, r: 3 },
++  { code: 'MP', name: 'Madhya Pradesh', c: 2, r: 3 },
++  { code: 'CG', name: 'Chhattisgarh', c: 3, r: 3, alt: ['chattisgarh'] },
++  { code: 'JH', name: 'Jharkhand', c: 4, r: 3 },
++  { code: 'WB', name: 'West Bengal', c: 5, r: 3 },
++  { code: 'ML', name: 'Meghalaya', c: 6, r: 3 },
++  { code: 'TR', name: 'Tripura', c: 7, r: 3 },
++  { code: 'MN', name: 'Manipur', c: 8, r: 3 },
++  { code: 'DH', name: 'Dadra and Nagar Haveli and Daman and Diu', c: 0, r: 4, alt: ['daman and diu', 'dadra and nagar haveli', 'dnh and dd'] },
++  { code: 'MH', name: 'Maharashtra', c: 1, r: 4 },
++  { code: 'TS', name: 'Telangana', c: 2, r: 4 },
++  { code: 'OD', name: 'Odisha', c: 3, r: 4, alt: ['orissa'] },
++  { code: 'MZ', name: 'Mizoram', c: 7, r: 4 },
++  { code: 'GA', name: 'Goa', c: 1, r: 5 },
++  { code: 'KA', name: 'Karnataka', c: 2, r: 5 },
++  { code: 'AP', name: 'Andhra Pradesh', c: 3, r: 5 },
++  { code: 'LD', name: 'Lakshadweep', c: 0, r: 6 },
++  { code: 'KL', name: 'Kerala', c: 1, r: 6 },
++  { code: 'TN', name: 'Tamil Nadu', c: 2, r: 6 },
++  { code: 'PY', name: 'Puducherry', c: 3, r: 6, alt: ['pondicherry'] },
++  { code: 'AN', name: 'Andaman and Nicobar Islands', c: 6, r: 6, alt: ['andaman & nicobar islands', 'andaman and nicobar'] },
++]);
++
++const norm = (s) => String(s || '').toLowerCase().replace(/&/g, 'and').replace(/[^a-z]+/g, ' ').trim();
++const LOOKUP = new Map();
++for (const t of STATE_TILES) {
++  LOOKUP.set(norm(t.name), t.code);
++  LOOKUP.set(norm(t.code), t.code);
++  for (const a of t.alt || []) LOOKUP.set(norm(a), t.code);
++}
++/** A free-text state from an order address → its tile code, or null. */
++export const stateCode = (name) => LOOKUP.get(norm(name)) || null;
++
++/** Tiles with order counts and a 0–1 heat. */
++export function yatraTiles(map) {
++  const counts = new Map();
++  for (const row of Array.isArray(map) ? map : []) {
++    const code = stateCode(row?.state);
++    if (code) counts.set(code, (counts.get(code) || 0) + (Number(row?.orders) || 0));
++  }
++  const max = Math.max(1, ...counts.values());
++  const tiles = STATE_TILES.map((t) => {
++    const orders = counts.get(t.code) || 0;
++    return { ...t, orders, lit: orders > 0, heat: orders ? 0.35 + 0.65 * (orders / max) : 0 };
++  });
++  return { tiles, visited: tiles.filter((t) => t.lit).length, total: tiles.length };
++}
++
++// ---- Cha-ching ----------------------------------------------------------
++const seenKey = (creatorId) => `sora.creator.chaching.${creatorId}`;
++const safeGet = (k) => { try { return window.localStorage.getItem(k); } catch { return null; } };
++const safeSet = (k, v) => { try { window.localStorage.setItem(k, v); } catch { /* private mode */ } };
++
++/**
++ * Sales the creator has not celebrated yet. The very first visit marks
++ * everything as seen without a party, so old history never pops up at once.
++ */
++export function unseenSales(recent, creatorId, read = safeGet) {
++  const list = (Array.isArray(recent) ? recent : []).filter((r) => r && r.id && r.at);
++  if (!creatorId || list.length === 0) return { fresh: [], newest: null, first: read(seenKey(creatorId)) == null };
++  const newest = list.reduce((m, r) => (r.at > m ? r.at : m), list[0].at);
++  const seen = read(seenKey(creatorId));
++  if (seen == null) return { fresh: [], newest, first: true };
++  return { fresh: list.filter((r) => r.at > seen).sort((a, b) => (a.at < b.at ? 1 : -1)), newest, first: false };
++}
++export const markSeen = (creatorId, at, write = safeSet) => { if (creatorId && at) write(seenKey(creatorId), at); };
++
++/** A short coin "cha-ching", synthesised: no audio file is downloaded. */
++export function playChaChing() {
++  try {
++    const AC = window.AudioContext || window.webkitAudioContext;
++    if (!AC) return;
++    const ctx = new AC();
++    const tone = (freq, start, dur, vol) => {
++      const o = ctx.createOscillator(); const g = ctx.createGain();
++      o.type = 'triangle'; o.frequency.value = freq;
++      g.gain.setValueAtTime(0, ctx.currentTime + start);
++      g.gain.linearRampToValueAtTime(vol, ctx.currentTime + start + 0.01);
++      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + start + dur);
++      o.connect(g).connect(ctx.destination);
++      o.start(ctx.currentTime + start); o.stop(ctx.currentTime + start + dur + 0.02);
++    };
++    tone(988, 0, 0.12, 0.22);
++    tone(1319, 0.09, 0.45, 0.22);
++    tone(2637, 0.09, 0.3, 0.05);
++    setTimeout(() => ctx.close?.(), 900);
++  } catch { /* sound is a bonus */ }
++}
++export const buzz = () => { try { navigator.vibrate?.([25, 40, 70]); } catch { /* not on desktop */ } };
++
++// ---- Vanity code ----------------------------------------------------------
++export const VANITY_RE = /^[A-Z0-9]+(-[A-Z0-9]+)*$/;
++/** Client-side first check (the server checks again, and more). */
++export function vanityProblem(code) {
++  const c = String(code || '').trim().toUpperCase();
++  if (c.length < 4) return 'At least 4 characters.';
++  if (c.length > 16) return 'At most 16 characters.';
++  if (!VANITY_RE.test(c)) return 'Letters, numbers and single hyphens only.';
++  if (!/[A-Z]/.test(c)) return 'Needs at least one letter.';
++  return null;
++}
++export const VANITY_REASON = Object.freeze({
++  level_locked: 'Custom codes unlock at Elite rank (level 5).',
++  bad_format: 'Use 4–16 letters or numbers, with single hyphens.',
++  not_allowed: 'That code isn’t allowed.',
++  reserved: 'That code is reserved.',
++  taken: 'That code is already taken. Try another.',
++  cooldown: 'You can change your code once every 30 days.',
++  not_active: 'Your creator account needs to be active first.',
++});
++
++// ---- Wrapped card -----------------------------------------------------------
++const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
++export const monthName = (ym) => {
++  const m = /^(\d{4})-(\d{2})$/.exec(String(ym || ''));
++  return m ? MONTHS[Number(m[2]) - 1] : '';
++};
++
++/** The lines a Wrapped card shows — shared by the on-page preview and the PNG. */
++export function wrappedLines(stats, { name, rank, league, code } = {}) {
++  const s = stats || {};
++  return {
++    title: `Mera SORA ${monthName(s.month)}`,
++    name: String(name || '').trim(),
++    big: Number(s.sales) || 0,
++    bigLabel: (Number(s.sales) || 0) === 1 ? 'sale' : 'sales',
++    rows: [
++      ['States reached', String(Number(s.states) || 0)],
++      ['Cities reached', String(Number(s.cities) || 0)],
++      ['Season points', (Number(s.points) || 0).toLocaleString('en-IN')],
++      ['Rank', rank || 'Rise'],
++      ['League', leagueOf(league).name],
++    ],
++    top: s.top_product ? String(s.top_product) : null,
++    code: code ? String(code) : null,
++  };
++}
++
++/** Draws the 1080×1350 share card on a canvas and resolves a PNG Blob. */
++export async function drawWrapped(lines) {
++  const W = 1080; const H = 1350;
++  const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
++  const g = cv.getContext('2d');
++  try { await document.fonts?.ready; } catch { /* system fonts then */ }
++  const serif = getComputedStyle(document.documentElement).getPropertyValue('--font-serif').trim() || 'Georgia, serif';
++  const sans = getComputedStyle(document.body).fontFamily || 'system-ui, sans-serif';
++
++  const bg = g.createLinearGradient(0, 0, W, H);
++  bg.addColorStop(0, '#1E3A2F'); bg.addColorStop(1, '#0F2018');
++  g.fillStyle = bg; g.fillRect(0, 0, W, H);
++  g.strokeStyle = 'rgba(228,196,130,.55)'; g.lineWidth = 3; g.strokeRect(48, 48, W - 96, H - 96);
++
++  g.fillStyle = '#E4C482'; g.font = `600 30px ${sans}`; g.textAlign = 'left';
++  g.fillText('SORA LIFESTYLE · CREATOR PROGRAM', 100, 150);
++  g.fillStyle = '#F6F3EB'; g.font = `500 84px ${serif}`;
++  g.fillText(lines.title, 100, 260);
++  if (lines.name) { g.fillStyle = 'rgba(246,243,235,.75)'; g.font = `400 38px ${sans}`; g.fillText(lines.name, 100, 320); }
++
++  g.fillStyle = '#E4C482'; g.font = `600 260px ${serif}`;
++  g.fillText(String(lines.big), 92, 600);
++  g.fillStyle = '#F6F3EB'; g.font = `500 46px ${sans}`;
++  g.fillText(lines.bigLabel, 100, 670);
++
++  let y = 790;
++  for (const [k, v] of lines.rows) {
++    g.fillStyle = 'rgba(246,243,235,.65)'; g.font = `400 36px ${sans}`; g.textAlign = 'left'; g.fillText(k, 100, y);
++    g.fillStyle = '#F6F3EB'; g.font = `600 40px ${sans}`; g.textAlign = 'right'; g.fillText(v, W - 100, y);
++    g.strokeStyle = 'rgba(246,243,235,.12)'; g.lineWidth = 2; g.beginPath(); g.moveTo(100, y + 26); g.lineTo(W - 100, y + 26); g.stroke();
++    y += 78;
++  }
++  g.textAlign = 'left';
++  if (lines.top) {
++    g.fillStyle = 'rgba(246,243,235,.65)'; g.font = `400 32px ${sans}`; g.fillText('Most loved', 100, y + 40);
++    g.fillStyle = '#E4C482'; g.font = `600 40px ${sans}`;
++    let t = lines.top;
++    if (g.measureText(t).width > W - 200) {
++      while (g.measureText(`${t}…`).width > W - 200 && t.length > 4) t = t.slice(0, -1);
++      t = `${t.trimEnd()}…`;
++    }
++    g.fillText(t, 100, y + 92);
++  }
++  g.fillStyle = 'rgba(246,243,235,.8)'; g.font = `500 32px ${sans}`;
++  g.fillText(lines.code ? `Shop with my code ${lines.code}` : 'soralifestyle.in', 100, H - 110);
++  g.textAlign = 'right'; g.fillStyle = 'rgba(246,243,235,.55)'; g.fillText('soralifestyle.in', W - 100, H - 110);
++
++  return new Promise((resolve) => cv.toBlob((b) => resolve(b), 'image/png'));
++}
+diff --git a/src/lib/creatorRewards.js b/src/lib/creatorRewards.js
+index 01ece2d..cf5c11e 100644
+--- a/src/lib/creatorRewards.js
++++ b/src/lib/creatorRewards.js
+@@ -4,8 +4,9 @@
+ // nothing here writes.
+ // ============================================================
+ 
+-export const REWARD_TYPES = Object.freeze(['product', 'cash', 'other']);
+-export const REWARD_TYPE_LABEL = Object.freeze({ product: 'Product', cash: 'Cash', other: 'Other' });
++// 'mystery' (0050, Creator Game): a hamper whose contents are a surprise; `value` states its minimum worth.
++export const REWARD_TYPES = Object.freeze(['product', 'cash', 'other', 'mystery']);
++export const REWARD_TYPE_LABEL = Object.freeze({ product: 'Product', cash: 'Cash', other: 'Other', mystery: 'Mystery hamper' });
+ export const REWARD_OPTION_SLOTS = Object.freeze([1, 2, 3]);
+ export const CLAIM_STATUSES = Object.freeze(['pending', 'fulfilled', 'cancelled']);
+ export const CLAIM_STATUS_LABEL = Object.freeze({ pending: 'Pending', fulfilled: 'Fulfilled', cancelled: 'Cancelled' });
+diff --git a/src/pages/CreatorPortal.jsx b/src/pages/CreatorPortal.jsx
+index be90acd..f76840e 100644
+--- a/src/pages/CreatorPortal.jsx
++++ b/src/pages/CreatorPortal.jsx
+@@ -9,7 +9,10 @@ import {
+   getMyCreatorEarnings, getMyKyc, submitKyc, uploadKycDocument, requestPayout, getMyPayouts,
+   getMyCreatorStanding, getMyCreatorRewards, claimLevelReward, getCreatorLeaderboard, getMyActivitySeries, getMyRecentClicks, getLevelRewardsCatalog,
+   getCreatorTerms, termsArePublished, getMyTermsAcceptance, acceptCreatorTerms,
++  getMyCreatorGame, claimVanityCode,
+ } from '../lib/creatorApi.js';
++import CreatorGamePage from '../components/creator/CreatorGamePage.jsx';
++import ChaChing from '../components/creator/ChaChing.jsx';
+ import CreatorEarningsPage from '../components/creator/CreatorEarningsPage.jsx';
+ import CreatorLinksPage from '../components/creator/CreatorLinksPage.jsx';
+ import CreatorCampaignsPage from '../components/creator/CreatorCampaignsPage.jsx';
+@@ -39,6 +42,7 @@ import { buildActivity } from '../lib/creatorActivity.js';
+ // `soon` marks the item with a badge while withdrawals are closed.
+ const NAV = [
+   { id: 'dashboard', label: 'Dashboard', icon: 'home' },
++  { id: 'game', label: 'Creator Game', icon: 'star' },
+   { id: 'campaigns', label: 'Campaigns', icon: 'sparkle' },
+   { id: 'links', label: 'Links', icon: 'externalLink' },
+   { id: 'analytics', label: 'Analytics', icon: 'award' },
+@@ -79,6 +83,7 @@ export default function CreatorPortal({ initial = null }) {
+   const [terms, setTerms] = useState(initial?.terms || null);
+   const [termsAccepted, setTermsAccepted] = useState(null);   // null = unknown
+   const [acceptingTerms, setAcceptingTerms] = useState(false);
++  const [game, setGame] = useState(initial?.game || null);
+   const navRef = useRef(null);
+ 
+   // Reload just the money surfaces (earnings buckets, KYC, payout history)
+@@ -150,6 +155,7 @@ export default function CreatorPortal({ initial = null }) {
+     for (const r of [DEFAULT_RANGE, '90d']) loadRange(r);
+     getMyRecentClicks().then((c) => setRecentClicks(Array.isArray(c) ? c : [])).catch(() => setRecentClicks([]));
+     getLevelRewardsCatalog().then((c) => setCatalog(Array.isArray(c) ? c : [])).catch(() => setCatalog([]));
++    getMyCreatorGame().then((g) => setGame(g)).catch(() => setGame({ ok: false }));
+     setCampaigns(cs);
+     setLinks(ls);
+     setAnalytics(an && an.ok ? an : null);
+@@ -162,6 +168,29 @@ export default function CreatorPortal({ initial = null }) {
+     setState('ready');
+   }, []);
+ 
++  // Creator Game: re-check every 90 s while the portal is open and visible,
++  // so a new sale's cha-ching can arrive live. Paused in a background tab.
++  useEffect(() => {
++    if (initial || state !== 'ready') return undefined;
++    const tick = () => {
++      if (document.visibilityState !== 'visible') return;
++      getMyCreatorGame().then((g) => { if (g && g.ok) setGame(g); }).catch(() => {});
++    };
++    const id = setInterval(tick, 90000);
++    document.addEventListener('visibilitychange', tick);
++    return () => { clearInterval(id); document.removeEventListener('visibilitychange', tick); };
++  }, [initial, state]);
++
++  const onVanity = useCallback(async (code) => {
++    const res = await claimVanityCode(code);
++    if (res?.ok) {
++      const [me, g] = await Promise.all([getMyCreator(), getMyCreatorGame()]);
++      if (me) setCreator(me);
++      if (g && g.ok) setGame(g);
++    }
++    return res;
++  }, []);
++
+   useEffect(() => {
+     if (initial) return;
+     if (authLoading) return;
+@@ -295,6 +324,10 @@ export default function CreatorPortal({ initial = null }) {
+             />
+           )}
+ 
++          {tab === 'game' && (
++            <CreatorGamePage game={game} creator={creator} standing={standing} catalog={catalog} onVanity={onVanity} nowMs={initial?.now ? new Date(initial.now).getTime() : undefined} />
++          )}
++
+           {tab === 'campaigns' && (
+             <CreatorCampaignsPage creator={creator} campaigns={campaigns} links={links} buildUrl={buildTrackingUrl} />
+           )}
+@@ -373,6 +406,7 @@ export default function CreatorPortal({ initial = null }) {
+           )}
+         </main>
+       </div>
++      {game?.ok && <ChaChing creatorId={creator.id} recent={game.recent} holdDays={Number(earnings?.settlement_hold_days ?? 7)} />}
+     </div>
+   );
+ }
+diff --git a/src/pages/Product.jsx b/src/pages/Product.jsx
+index e0e7c37..fcbc629 100644
+--- a/src/pages/Product.jsx
++++ b/src/pages/Product.jsx
+@@ -1,4 +1,5 @@
+ import { useState, useEffect, Fragment } from 'react';
++import Discoverer from '../components/Discoverer.jsx';
+ import { useParams, Link, useNavigate, useLocation, Navigate } from 'react-router-dom';
+ import Icon from '../components/Icon.jsx';
+ import ProductImage from '../components/ProductImage.jsx';
+@@ -292,6 +293,8 @@ useEffect(() => {
+           </h1>
+ 
+           <ProductRatingTeaser product={product} />
++          {/* Creator Game (2026-11-22): the creator who first sold it, once known. */}
++          <Discoverer productId={product.id} />
+ 
+           {/* ONE price line: struck MRP, the price the customer pays, the
+               saving, and the tax note. PriceTag already emits them as a row;
+diff --git a/src/styles/creator-game.css b/src/styles/creator-game.css
+new file mode 100644
+index 0000000..faaae8a
+--- /dev/null
++++ b/src/styles/creator-game.css
+@@ -0,0 +1,218 @@
++/* ============================================================
++   Creator Game v1 (owner, 2026-11-22) — badges, Bharat Yatra, league,
++   Wrapped, custom code, Discoverer, cha-ching. Deferred bundle only
++   (never on a shop page). Studio tokens from creator-dashboard.css.
++   Only transform and opacity animate; reduced motion stills them.
++   ============================================================ */
++
++.crp.crp--studio .cg { display: grid; gap: 20px; }
++.crp.crp--studio .cg-eyebrow { margin: 0 0 4px; font-size: 11.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--s-gold-ink); }
++.crp.crp--studio .cg-h { margin: 0; font-size: clamp(28px, 4vw, 38px); line-height: 1.08; color: var(--s-ink); }
++.crp.crp--studio .cg-sub { margin: 8px 0 0; max-width: 62ch; font-size: 14px; line-height: 1.55; color: var(--s-ink-3); }
++.crp.crp--studio .cg-panel-h { margin: 0 0 6px; font-size: 20px; line-height: 1.2; color: var(--s-ink); }
++.crp.crp--studio .cg-note { margin: 8px 0 0; font-size: 13px; line-height: 1.55; color: var(--s-ink-3); }
++.crp.crp--studio .cg-row { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 20px; align-items: start; }
++.crp.crp--studio .cg-row > .cd-panel, .crp.crp--studio .cg-col { min-width: 0; }
++.crp.crp--studio .cg-col { display: grid; gap: 20px; }
++
++/* Buttons and inputs */
++.crp.crp--studio .cg-btn {
++  display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 20px;
++  border: 0; border-radius: 999px; background: var(--s-forest); color: #F6F3EB; font: inherit; font-size: 14px; font-weight: 700;
++  cursor: pointer; transition: transform .16s ease, opacity .16s ease;
++}
++.crp.crp--studio .cg-btn:hover { transform: translateY(-1px); }
++.crp.crp--studio .cg-btn:active { transform: scale(.98); }
++.crp.crp--studio .cg-btn:disabled { opacity: .55; cursor: default; transform: none; }
++.crp.crp--studio .cg-btn:focus-visible, .crp.crp--studio .cg-seg button:focus-visible { outline: 2px solid var(--s-gold); outline-offset: 2px; }
++.crp.crp--studio .cg-input {
++  flex: 1; min-width: 0; min-height: 44px; padding: 0 14px; border: 1px solid var(--s-line-2); border-radius: var(--s-r-sm);
++  background: var(--s-paper); font: inherit; font-size: 15px; font-weight: 700; letter-spacing: .06em; color: var(--s-ink);
++}
++.crp.crp--studio .cg-input:focus { outline: 2px solid var(--s-gold); outline-offset: 1px; border-color: transparent; }
++.crp.crp--studio .cg-seg { display: inline-flex; padding: 3px; border-radius: 999px; background: var(--s-bg); }
++.crp.crp--studio .cg-seg button { min-height: 34px; padding: 0 14px; border: 0; border-radius: 999px; background: transparent; font: inherit; font-size: 12.5px; font-weight: 700; color: var(--s-ink-3); cursor: pointer; }
++.crp.crp--studio .cg-seg button[aria-pressed="true"] { background: var(--s-paper); color: var(--s-ink); box-shadow: 0 1px 3px rgba(22, 33, 27, .12); }
++.crp.crp--studio .cg-msg { margin: 10px 0 0; font-size: 13px; font-weight: 600; }
++.crp.crp--studio .cg-msg.is-ok { color: var(--s-green); }
++.crp.crp--studio .cg-msg.is-err { color: var(--s-red); }
++
++/* Stat strip */
++.crp.crp--studio .cg-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
++.crp.crp--studio .cg-stat {
++  display: grid; grid-template-columns: 36px minmax(0, 1fr); grid-template-rows: auto auto; column-gap: 12px; align-items: center;
++  padding: 16px 18px; border-radius: var(--s-r); background: var(--s-paper); border: 1px solid var(--s-line); box-shadow: var(--s-shadow);
++}
++.crp.crp--studio .cg-stat__ic { grid-row: 1 / 3; width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: var(--s-gold-soft); color: var(--s-gold-ink); }
++.crp.crp--studio .cg-stat__v { font-size: 22px; font-weight: 800; line-height: 1.1; color: var(--s-ink); font-variant-numeric: tabular-nums; }
++.crp.crp--studio .cg-stat__l { font-size: 12.5px; color: var(--s-ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
++.crp.crp--studio .cg-stat__l em { font-style: normal; color: var(--s-ink-4); }
++
++/* Badges */
++.crp.crp--studio .cg-badges__grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 10px; }
++.crp.crp--studio .cg-badge {
++  position: relative; display: grid; justify-items: center; gap: 3px; padding: 14px 10px 12px; text-align: center;
++  border-radius: var(--s-r-sm); background: var(--s-bg); border: 1px solid transparent;
++}
++.crp.crp--studio .cg-badge__medal {
++  width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; margin-bottom: 4px;
++  background: var(--s-bg-2); color: var(--s-ink-4); border: 2px dashed var(--s-line-2);
++}
++.crp.crp--studio .cg-badge.is-earned { background: var(--s-gold-50); border-color: var(--s-gold-soft); }
++.crp.crp--studio .cg-badge.is-earned .cg-badge__medal {
++  border: 0; color: #FFF8E8;
++  background: radial-gradient(circle at 32% 28%, var(--s-gold-2), var(--s-gold) 55%, var(--s-gold-ink));
++  box-shadow: 0 6px 14px -6px rgba(134, 100, 25, .6), inset 0 0 0 3px rgba(255, 248, 232, .35);
++}
++.crp.crp--studio .cg-badge__name { font-size: 13.5px; font-weight: 800; color: var(--s-ink); }
++.crp.crp--studio .cg-badge:not(.is-earned) .cg-badge__name { color: var(--s-ink-2); }
++.crp.crp--studio .cg-badge__hint { font-size: 11.5px; line-height: 1.35; color: var(--s-ink-3); }
++.crp.crp--studio .cg-badge__bar { width: 100%; height: 5px; margin-top: 6px; border-radius: 999px; background: var(--s-line); overflow: hidden; }
++.crp.crp--studio .cg-badge__bar i { display: block; height: 100%; background: var(--s-gold); transform-origin: left; }
++.crp.crp--studio .cg-badge__left { font-size: 11px; font-weight: 700; color: var(--s-gold-ink); font-variant-numeric: tabular-nums; }
++
++/* League table */
++.crp.crp--studio .cg-league { --league: #9A6A3A; border-top: 4px solid var(--league); }
++.crp.crp--studio .cg-league .cg-eyebrow { color: var(--league); }
++.crp.crp--studio .cg-table { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
++.crp.crp--studio .cg-table__row {
++  display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; align-items: center; gap: 10px;
++  min-height: 46px; padding: 0 14px; border-radius: var(--s-r-sm); background: var(--s-bg); font-size: 14px;
++}
++.crp.crp--studio .cg-table__pos { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: 12.5px; font-weight: 800; color: var(--s-ink-2); background: var(--s-paper); }
++.crp.crp--studio .cg-table__row.is-top1 .cg-table__pos { background: var(--s-gold); color: #fff; }
++.crp.crp--studio .cg-table__row.is-top2 .cg-table__pos { background: #A9B3B9; color: #fff; }
++.crp.crp--studio .cg-table__row.is-top3 .cg-table__pos { background: #B0764A; color: #fff; }
++.crp.crp--studio .cg-table__name { font-weight: 600; color: var(--s-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-transform: capitalize; }
++.crp.crp--studio .cg-table__name em { font-style: normal; font-weight: 700; color: var(--s-gold-ink); text-transform: none; }
++.crp.crp--studio .cg-table__pts { font-weight: 800; color: var(--s-ink); font-variant-numeric: tabular-nums; }
++.crp.crp--studio .cg-table__pts small { font-size: 11px; font-weight: 600; color: var(--s-ink-3); }
++.crp.crp--studio .cg-table__row.is-me { background: var(--s-gold-50); box-shadow: inset 0 0 0 1.5px var(--s-gold-soft); }
++
++/* Bharat Yatra */
++.crp.crp--studio .cg-yatra__count { font-size: 14px; color: var(--s-ink-3); font-variant-numeric: tabular-nums; }
++.crp.crp--studio .cg-yatra__count b { font-size: 28px; color: var(--s-gold-ink); }
++.crp.crp--studio .cg-yatra__wrap { display: grid; grid-template-columns: minmax(0, 520px) minmax(0, 1fr); gap: 24px; align-items: start; }
++.crp.crp--studio .cg-yatra__map { display: block; width: 100%; height: auto; }
++.crp.crp--studio .cg-tile rect { fill: var(--s-bg-2); stroke: var(--s-line-2); stroke-width: 1; }
++.crp.crp--studio .cg-tile text { font-size: 12px; font-weight: 700; fill: var(--s-ink-4); letter-spacing: .02em; }
++.crp.crp--studio .cg-tile.is-lit rect { fill: var(--s-gold); fill-opacity: var(--heat, .6); stroke: var(--s-gold-ink); }
++.crp.crp--studio .cg-tile.is-lit text { fill: #3B2F14; }
++.crp.crp--studio .cg-tile.is-lit { animation: cg-glow 2.6s ease-in-out infinite; transform-box: fill-box; }
++@keyframes cg-glow { 0%, 100% { opacity: 1; } 50% { opacity: .78; } }
++.crp.crp--studio .cg-yatra__goal { display: flex; align-items: center; gap: 6px; margin: 0 0 12px; font-size: 13.5px; color: var(--s-ink-2); }
++.crp.crp--studio .cg-yatra__goal svg { color: var(--s-gold); }
++.crp.crp--studio .cg-yatra__list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
++.crp.crp--studio .cg-yatra__list li { display: flex; justify-content: space-between; gap: 10px; padding: 9px 12px; border-radius: var(--s-r-sm); background: var(--s-bg); font-size: 13.5px; color: var(--s-ink); }
++.crp.crp--studio .cg-yatra__list b { font-variant-numeric: tabular-nums; color: var(--s-gold-ink); }
++
++/* Wrapped preview — the same lines the PNG draws */
++.crp.crp--studio .cg-card {
++  margin: 0 0 16px; aspect-ratio: 4 / 5; max-width: 380px; padding: 26px 26px 22px; border-radius: 18px; display: flex; flex-direction: column;
++  color: #F6F3EB; background: linear-gradient(155deg, #1E3A2F, #0F2018); box-shadow: inset 0 0 0 1.5px rgba(228, 196, 130, .45), 0 18px 40px -24px rgba(15, 32, 24, .8);
++}
++.crp.crp--studio .cg-card__kicker { margin: 0; font-size: 10px; font-weight: 700; letter-spacing: .1em; color: #E4C482; }
++.crp.crp--studio .cg-card__title { margin: 10px 0 0; font-size: 28px; line-height: 1.05; color: #F6F3EB; }
++.crp.crp--studio .cg-card__name { margin: 4px 0 0; font-size: 13px; color: rgba(246, 243, 235, .72); text-transform: capitalize; }
++.crp.crp--studio .cg-card__big { margin: 14px 0 6px; font-size: 76px; line-height: .9; color: #E4C482; }
++.crp.crp--studio .cg-card__big small { display: block; margin-top: 6px; font-size: 15px; color: #F6F3EB; font-family: inherit; }
++.crp.crp--studio .cg-card__rows { margin: 4px 0 0; display: grid; }
++.crp.crp--studio .cg-card__rows div { display: flex; justify-content: space-between; gap: 10px; padding: 6px 0; border-bottom: 1px solid rgba(246, 243, 235, .12); font-size: 12.5px; }
++.crp.crp--studio .cg-card__rows dt { color: rgba(246, 243, 235, .65); }
++.crp.crp--studio .cg-card__rows dd { margin: 0; font-weight: 700; }
++.crp.crp--studio .cg-card__top { margin: 10px 0 0; font-size: 13px; font-weight: 700; color: #E4C482; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
++.crp.crp--studio .cg-card__top span { display: block; font-size: 11px; font-weight: 400; color: rgba(246, 243, 235, .65); }
++.crp.crp--studio .cg-card__code { margin: auto 0 0; padding-top: 10px; font-size: 12px; color: rgba(246, 243, 235, .8); }
++
++/* Custom code */
++.crp.crp--studio .cg-vanity__now { margin: 0 0 12px; font-size: 14px; color: var(--s-ink-2); }
++.crp.crp--studio .cg-vanity__now b { font-size: 16px; letter-spacing: .05em; color: var(--s-ink); }
++.crp.crp--studio .cg-vanity__form { display: flex; gap: 10px; }
++.crp.crp--studio .cg-vanity.is-locked { background: linear-gradient(180deg, var(--s-paper), var(--s-bg)); }
++.crp.crp--studio .cg-vanity.is-locked .cg-eyebrow::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 2px; background: var(--s-ink-4); vertical-align: 1px; }
++
++/* Discoverer + hamper */
++.crp.crp--studio .cg-disc__list { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 6px; }
++.crp.crp--studio .cg-disc__list li { display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--s-ink); }
++.crp.crp--studio .cg-disc__list svg { flex: none; color: var(--s-gold); }
++.crp.crp--studio .cg-hamper { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 14px; align-items: center; }
++.crp.crp--studio .cg-hamper__box { width: 56px; height: 56px; border-radius: 14px; display: grid; place-items: center; background: var(--s-forest); color: #E4C482; animation: cg-shake 3.6s ease-in-out infinite; }
++@keyframes cg-shake { 0%, 84%, 100% { transform: rotate(0); } 87% { transform: rotate(-7deg); } 90% { transform: rotate(6deg); } 93% { transform: rotate(-4deg); } 96% { transform: rotate(2deg); } }
++
++/* Tier page: a mystery hamper option */
++.ctier-option.is-mystery { position: relative; background: linear-gradient(160deg, rgba(228, 196, 130, .18), transparent 70%); }
++.ctier-option.is-mystery .ctier-option__type { color: #E4C482; }
++
++/* ---- Cha-ching ---- */
++.crp .cc-pill {
++  position: fixed; z-index: 60; left: 50%; bottom: max(18px, env(safe-area-inset-bottom)); transform: translateX(-50%);
++  display: flex; align-items: center; gap: 10px; max-width: calc(100vw - 32px); min-height: 52px; padding: 8px 18px 8px 8px;
++  border: 0; border-radius: 999px; font: inherit; font-size: 14px; text-align: left; color: #F6F3EB; cursor: pointer;
++  background: linear-gradient(135deg, #1E3A2F, #14261C); box-shadow: 0 14px 34px -12px rgba(15, 32, 24, .7), inset 0 0 0 1.5px rgba(228, 196, 130, .5);
++  animation: cc-in .5s cubic-bezier(.2, .9, .3, 1.25) backwards;
++}
++.crp .cc-pill b { color: #E4C482; }
++.crp .cc-pill__coin, .crp .cc-card__coin {
++  flex: none; display: grid; place-items: center; border-radius: 50%; font-weight: 800; color: #5A4210;
++  background: radial-gradient(circle at 32% 28%, #F7E2A8, #E4C482 45%, #C79A45 75%, #866419);
++  box-shadow: inset 0 0 0 3px rgba(255, 248, 232, .4);
++}
++.crp .cc-pill__coin { width: 36px; height: 36px; font-size: 17px; animation: cc-spin 1.6s ease-in-out infinite; }
++.crp .cc-pill__go { display: inline-flex; align-items: center; gap: 4px; margin-left: 4px; font-size: 12.5px; font-weight: 700; color: rgba(246, 243, 235, .75); white-space: nowrap; }
++@keyframes cc-in { from { opacity: 0; transform: translate(-50%, 24px) scale(.9); } }
++@keyframes cc-spin { 0%, 60%, 100% { transform: scaleX(1); } 75% { transform: scaleX(.15); } }
++
++.crp .cc-layer { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 16px; background: rgba(15, 32, 24, .55); animation: cc-fade .25s ease backwards; }
++@keyframes cc-fade { from { opacity: 0; } }
++.crp .cc-card {
++  position: relative; width: min(420px, 100%); max-height: calc(100vh - 32px); overflow: auto; padding: 34px 26px 24px; border-radius: 22px; text-align: center;
++  background: var(--s-paper, #fff); box-shadow: 0 30px 70px -30px rgba(15, 32, 24, .8); animation: cc-pop .45s cubic-bezier(.2, .9, .3, 1.3) backwards;
++}
++@keyframes cc-pop { from { opacity: 0; transform: scale(.85) translateY(10px); } }
++.crp .cc-card__coin { width: 72px; height: 72px; margin: 0 auto 12px; font-size: 34px; animation: cc-flip 1s ease .1s backwards; }
++@keyframes cc-flip { from { transform: translateY(-40px) rotateY(540deg); opacity: 0; } }
++.crp .cc-card__kicker { margin: 0; font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--s-gold-ink, #866419); }
++.crp .cc-card__h { margin: 6px 0 16px; font-size: 28px; line-height: 1.15; color: var(--s-ink, #16211B); }
++.crp .cc-list { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 8px; text-align: left; }
++.crp .cc-list li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: baseline; padding: 10px 12px; border-radius: 10px; background: var(--s-bg, #F6F3EB); font-size: 13.5px; }
++.crp .cc-list__amt { font-weight: 800; color: var(--s-green, #2F855A); font-variant-numeric: tabular-nums; }
++.crp .cc-list__what { color: var(--s-ink, #16211B); }
++.crp .cc-list__what em { font-style: normal; color: var(--s-ink-3, #6B776F); }
++.crp .cc-more, .crp .cc-note { margin: 6px 0 0; font-size: 12.5px; color: var(--s-ink-3, #6B776F); }
++.crp .cc-card .cg-btn { margin-top: 18px; width: 100%; }
++.crp .cc-burst { position: absolute; left: 50%; top: 70px; width: 0; height: 0; pointer-events: none; }
++.crp .cc-burst i {
++  position: absolute; left: -4px; top: -4px; width: 8px; height: 8px; border-radius: 2px; background: #E4C482; opacity: 0;
++  animation: cc-bit .9s cubic-bezier(.15, .7, .3, 1) var(--t) forwards;
++}
++.crp .cc-burst i:nth-child(3n) { background: #2F855A; border-radius: 50%; }
++.crp .cc-burst i:nth-child(3n+1) { background: #C79A45; }
++@keyframes cc-bit {
++  0% { opacity: 1; transform: rotate(var(--a)) translateY(0) scale(1); }
++  100% { opacity: 0; transform: rotate(var(--a)) translateY(calc(-1 * var(--d))) scale(.4); }
++}
++
++/* ---- Small screens ---- */
++@media (max-width: 1019px) {
++  .crp.crp--studio .cg-row, .crp.crp--studio .cg-yatra__wrap { grid-template-columns: minmax(0, 1fr); }
++}
++@media (max-width: 640px) {
++  .crp.crp--studio .cg-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
++  .crp.crp--studio .cg-stat { padding: 12px; grid-template-columns: 30px minmax(0, 1fr); column-gap: 10px; }
++  .crp.crp--studio .cg-stat__ic { width: 30px; height: 30px; }
++  .crp.crp--studio .cg-stat__v { font-size: 19px; }
++  .crp.crp--studio .cg-badges__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
++  .crp.crp--studio .cg-card { max-width: none; }
++  .crp.crp--studio .cg-card__big { font-size: 64px; }
++  .crp .cc-pill__go { display: none; }
++}
++
++@media (prefers-reduced-motion: reduce) {
++  .crp.crp--studio .cg-tile.is-lit, .crp.crp--studio .cg-hamper__box, .crp .cc-pill, .crp .cc-pill__coin,
++  .crp .cc-layer, .crp .cc-card, .crp .cc-card__coin { animation: none; }
++  .crp.crp--studio .cg-btn { transition: none; }
++}
++@media (max-width: 640px) {
++  .crp.crp--studio .cg-stat__l em { display: none; }
++  .crp .cc-pill > span:nth-child(2) { white-space: nowrap; }
++}
+diff --git a/src/styles/sora-ds.css b/src/styles/sora-ds.css
+index 9864aff..3b15a16 100644
+--- a/src/styles/sora-ds.css
++++ b/src/styles/sora-ds.css
+@@ -390,6 +390,12 @@ body .fs .hx-ans .hx-ans__cta { background: #D9B26A; color: #121A16; }
+ .sora-origin__in { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; font-weight: 600; color: #1E3A2F; background: #EEF5EF; border: 1px solid rgba(30, 58, 47, .15); }
+ .sora-origin__care { display: inline-flex; align-items: center; gap: 4px; font-weight: 600; color: #8A5A12; text-decoration: none; }
+ .sora-origin__care:hover { text-decoration: underline; }
++/* Creator Game (2026-11-22): "First sold by …" under a product's name. */
++.sora-discoverer { display: flex; align-items: center; gap: 6px; margin: 4px 0 10px; font-size: 12.5px; color: #6B5A2E; animation: sora-disc-in .35s ease backwards; }
++@keyframes sora-disc-in { from { opacity: 0; } }
++@media (prefers-reduced-motion: reduce) { .sora-discoverer { animation: none; } }
++.sora-discoverer svg { color: #C79A45; flex: none; }
++.sora-discoverer b { font-weight: 700; color: #3B2F14; }
+ .sora-guide { padding: 18px 0 56px; background: #fff; }
+ .sora-guide .container { max-width: 760px; }
+ .sora-guide__head { padding: 18px 0 6px; }

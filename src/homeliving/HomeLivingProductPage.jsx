@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import Discoverer from '../components/Discoverer.jsx';
 import { createPortal } from 'react-dom';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import Icon from '../components/Icon.jsx';
@@ -645,6 +646,7 @@ export default function HomeLivingProductPage() {
           <h1 className="hl-pdp__h serif">{head}{hl && <> <span className="hl-pdp__hl">{hl}</span></>}{tail && <> {tail}</>}</h1>
           {/* Made in India / leather care (round 11, 2026-11-20): from the product's own record (ProductOrigin.jsx). */}
           <ProductOrigin origin={view.country_of_origin} material={view.material} name={view.name} />
+          <Discoverer productId={view.id} />
           {lede && <p className="hl-pdp__lede">{lede}</p>}
           {view.review_count > 0 && view.rating > 0 && (
             <p className="hl-pdp__rating"><Stars rating={view.rating} /><b>{view.rating.toFixed(1)}</b> <span>({view.review_count.toLocaleString('en-IN')} Reviews)</span></p>

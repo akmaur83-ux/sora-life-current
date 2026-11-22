@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import Discoverer from '../components/Discoverer.jsx';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import Icon from '../components/Icon.jsx';
 import { money } from '../lib/format.js';
@@ -219,6 +220,7 @@ export default function FashionProductPage() {
           <h1 className="fs-pdp__h serif">{view.name}</h1>
           {/* Made in India / leather care (round 11, 2026-11-20): from the product's own record (ProductOrigin.jsx). */}
           <ProductOrigin origin={facts?.country_of_origin} material={facts?.material} name={view.name} />
+          <Discoverer productId={view.id} />
           {/* No reviews yet: no rating row, rather than "0.0 ☆☆☆☆☆ (0 reviews)" (as on the card). */}
           {view.reviewCount > 0 && <p className="fs-rating"><b>{view.rating.toFixed(1)}</b><Stars value={view.rating} size={15} /><span className="fs-rating__count">({view.reviewCount.toLocaleString('en-IN')} {view.reviewCount === 1 ? 'review' : 'reviews'})</span></p>}
           {facts?.net_content && <p className="fs-pdp__net">{facts.net_content}</p>}

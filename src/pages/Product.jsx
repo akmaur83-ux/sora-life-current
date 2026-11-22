@@ -1,4 +1,5 @@
 import { useState, useEffect, Fragment } from 'react';
+import Discoverer from '../components/Discoverer.jsx';
 import { useParams, Link, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import Icon from '../components/Icon.jsx';
 import ProductImage from '../components/ProductImage.jsx';
@@ -292,6 +293,8 @@ useEffect(() => {
           </h1>
 
           <ProductRatingTeaser product={product} />
+          {/* Creator Game (2026-11-22): the creator who first sold it, once known. */}
+          <Discoverer productId={product.id} />
 
           {/* ONE price line: struck MRP, the price the customer pays, the
               saving, and the tax note. PriceTag already emits them as a row;

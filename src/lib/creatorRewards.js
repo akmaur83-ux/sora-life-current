@@ -4,8 +4,9 @@
 // nothing here writes.
 // ============================================================
 
-export const REWARD_TYPES = Object.freeze(['product', 'cash', 'other']);
-export const REWARD_TYPE_LABEL = Object.freeze({ product: 'Product', cash: 'Cash', other: 'Other' });
+// 'mystery' (0050, Creator Game): a hamper whose contents are a surprise; `value` states its minimum worth.
+export const REWARD_TYPES = Object.freeze(['product', 'cash', 'other', 'mystery']);
+export const REWARD_TYPE_LABEL = Object.freeze({ product: 'Product', cash: 'Cash', other: 'Other', mystery: 'Mystery hamper' });
 export const REWARD_OPTION_SLOTS = Object.freeze([1, 2, 3]);
 export const CLAIM_STATUSES = Object.freeze(['pending', 'fulfilled', 'cancelled']);
 export const CLAIM_STATUS_LABEL = Object.freeze({ pending: 'Pending', fulfilled: 'Fulfilled', cancelled: 'Cancelled' });

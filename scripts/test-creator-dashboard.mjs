@@ -280,7 +280,8 @@ await test('shell: forest sidebar with the hummingbird, icon+label nav with a So
   assert.match(html, /<div class="crp crp--studio" data-rank="rise"><aside class="cs-side">/);
   assert.match(html, /class="cs-brand__mark"><picture><source media="\(max-width: 1019px\)" srcSet="\/assets\/sora-lifestyle-bird-header\.webp"\/><img src="\/assets\/sora-lifestyle-bird-light\.webp"[^>]*class="sora-mark"/, 'the mark: the sparrow lockup, cream on forest, green on cream (2026-11-16)');
   assert.match(html, /<em>Creator Program<\/em>/);
-  assert.equal((html.match(/class="cs-nav__item/g) || []).length, 9);
+  // 10 since the Creator Game tab (2026-11-22, owner: "Creator Game v1 bana do").
+  assert.equal((html.match(/class="cs-nav__item/g) || []).length, 10);
   assert.match(html, /class="cs-nav__item is-on" aria-current="page"[^>]*><svg[^>]*>[\s\S]*?<span>Dashboard<\/span>/);
   assert.match(html, /<span>Payouts<\/span><em class="cs-nav__soon">Soon<\/em>/);
   assert.match(html, /class="cs-user__avatar" aria-hidden="true">VS</); assert.match(html, /<strong>Vikas Shamra<\/strong><em>Rise · Level 1<\/em>/);

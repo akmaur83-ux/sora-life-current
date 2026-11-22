@@ -93,6 +93,8 @@ const DEFERRED = [
   'src/styles/creator-tier.css',
   // The studio shell + dashboard: re-points the tokens above to the light palette. Last on purpose.
   'src/styles/creator-dashboard.css',
+  // Creator Game v1 (2026-11-22): badges, Bharat Yatra, league, Wrapped, cha-ching.
+  'src/styles/creator-game.css',
   // The fashion store (/fashion): its own shell and pages, namespaced .fs-*.
   'src/styles/fashion.css',
   'src/styles/fashion-departments.css',

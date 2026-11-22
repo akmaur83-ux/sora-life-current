@@ -177,7 +177,7 @@ export function RewardChooser({ rewards, onClaim, onChanged }) {
               const pending = confirm && confirm.level === lv.level && confirm.option.id === o.id;
               const key = `${lv.level}:${o.id}`;
               return (
-                <div key={o.id} className={`ctier-option${pending ? ' is-pending' : ''}`} role="listitem">
+                <div key={o.id} className={`ctier-option${o.reward_type === 'mystery' ? ' is-mystery' : ''}${pending ? ' is-pending' : ''}`} role="listitem">
                   <span className="ctier-option__type">{REWARD_TYPE_LABEL[o.reward_type] || 'Reward'}</span>
                   <h4 className="ctier-option__label">{o.label}</h4>
                   {o.value && <p className="ctier-option__value">{o.value}</p>}
