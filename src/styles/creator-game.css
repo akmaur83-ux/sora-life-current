@@ -544,7 +544,7 @@
 /* ---------- Level up! (round 3) ---------- */
 .crp .lu-layer {
   position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: 16px; overflow: hidden;
-  background: radial-gradient(circle at 50% 42%, rgba(36, 69, 58, .9), rgba(9, 19, 14, .95));
+  background: radial-gradient(circle at 50% 42%, rgba(36, 69, 58, .985), rgba(9, 19, 14, .99));
 }
 .crp .lu-card { position: relative; isolation: isolate; display: grid; justify-items: center; width: min(420px, 100%); text-align: center; color: #F6F3EB; }
 .crp .lu-rays {
