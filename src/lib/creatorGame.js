@@ -254,3 +254,24 @@ export async function drawWrapped(lines) {
 
   return new Promise((resolve) => cv.toBlob((b) => resolve(b), 'image/png'));
 }
+
+/** Days, hours and minutes until a season ends (null when unknown or over). */
+export function countdownParts(endsAt, nowMs = Date.now()) {
+  const end = new Date(endsAt).getTime();
+  if (!Number.isFinite(end)) return null;
+  const left = Math.floor((end - nowMs) / 60000);
+  if (left <= 0) return null;
+  return { d: Math.floor(left / 1440), h: Math.floor((left % 1440) / 60), m: left % 60 };
+}
+
+/** What it takes to pass the creator just above you (₹10 of sales = 1 point). */
+export function overtake(members) {
+  const list = Array.isArray(members) ? members : [];
+  const me = list.find((m) => m && m.me);
+  if (!me) return null;
+  if (Number(me.pos) === 1) return { leading: true };
+  const above = list.find((m) => Number(m.pos) === Number(me.pos) - 1);
+  if (!above) return null;
+  const gap = Math.max(0, Number(above.points || 0) - Number(me.points || 0)) + 1;
+  return { leading: false, name: above.name, pos: above.pos, rupees: gap * 10 };
+}

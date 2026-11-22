@@ -50,6 +50,7 @@ export default function ChaChing({ creatorId, recent, holdDays = 7 }) {
 
   return (
     <div className="cc-layer" role="dialog" aria-modal="true" aria-labelledby="cc-h" onClick={(e) => { if (e.target === e.currentTarget) close(); }}>
+      {!calm && <div className="lu-rain cc-rain" aria-hidden="true">{Array.from({ length: 16 }, (_, i) => <i key={i} style={{ '--x': `${(i * 41 + 7) % 100}%`, '--d': `${(i % 6) * 0.18}s`, '--s': `${2.2 + (i % 4) * 0.45}s`, '--r': `${(i % 2 ? 1 : -1) * (240 + i * 17)}deg` }} />)}</div>}
       <div className="cc-card">
         {!calm && (
           <div className="cc-burst" aria-hidden="true">

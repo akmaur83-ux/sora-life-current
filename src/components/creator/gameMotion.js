@@ -67,3 +67,14 @@ export function newBadgeIds(creatorId, earnedIds) {
 export function rememberBadges(creatorId, earnedIds) {
   try { window.localStorage.setItem(badgeKey(creatorId), JSON.stringify(earnedIds)); } catch { /* private mode */ }
 }
+
+/** The time now, refreshed every `ms` (the season countdown). */
+export function useNow(ms = 30000, fixed = null) {
+  const [n, setN] = useState(() => fixed ?? Date.now());
+  useEffect(() => {
+    if (fixed != null) return undefined;
+    const id = setInterval(() => setN(Date.now()), ms);
+    return () => clearInterval(id);
+  }, [ms, fixed]);
+  return n;
+}

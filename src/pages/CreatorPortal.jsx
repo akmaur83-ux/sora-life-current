@@ -11,7 +11,8 @@ import {
   getCreatorTerms, termsArePublished, getMyTermsAcceptance, acceptCreatorTerms,
   getMyCreatorGame, claimVanityCode,
 } from '../lib/creatorApi.js';
-import CreatorGamePage from '../components/creator/CreatorGamePage.jsx';
+import CreatorGamePage, { GameTeaser } from '../components/creator/CreatorGamePage.jsx';
+import LevelUp from '../components/creator/LevelUp.jsx';
 import ChaChing from '../components/creator/ChaChing.jsx';
 import CreatorEarningsPage from '../components/creator/CreatorEarningsPage.jsx';
 import CreatorLinksPage from '../components/creator/CreatorLinksPage.jsx';
@@ -309,6 +310,7 @@ export default function CreatorPortal({ initial = null }) {
             </div>
           )}
 
+          {tab === 'dashboard' && game?.ok && <GameTeaser game={game} standing={standing} Link={Link} />}
           {tab === 'dashboard' && (
             <CreatorDashboard
               creator={creator}
@@ -406,6 +408,7 @@ export default function CreatorPortal({ initial = null }) {
           )}
         </main>
       </div>
+      {game?.ok && <LevelUp creatorId={creator.id} level={Number(game.level) || 1} rank={standing?.rank || game.rank} rate={standing?.rate} />}
       {game?.ok && <ChaChing creatorId={creator.id} recent={game.recent} holdDays={Number(earnings?.settlement_hold_days ?? 7)} />}
     </div>
   );

@@ -4,9 +4,9 @@ import { money } from '../../lib/format.js';
 import { tierProgress } from '../../lib/creatorTiers.js';
 import {
   badgeList, leagueOf, daysLeft, yatraTiles, vanityProblem, VANITY_REASON,
-  wrappedLines, drawWrapped, monthName,
+  wrappedLines, drawWrapped, monthName, countdownParts, overtake, STATE_TILES,
 } from '../../lib/creatorGame.js';
-import { useInView, inViewClass, useCountUp, motionOk, newBadgeIds, rememberBadges } from './gameMotion.js';
+import { useInView, inViewClass, useCountUp, motionOk, newBadgeIds, rememberBadges, useNow } from './gameMotion.js';
 
 // ============================================================
 // Creator Game v1 (owner, 2026-11-22: "Creator Game v1 bana do"; then
@@ -44,12 +44,12 @@ export default function CreatorGamePage({ game, creator, standing, catalog = [],
 
   return (
     <section className={`cg${motion ? ' cg--motion' : ''}`} aria-labelledby="cg-h">
-      <Hero game={game} standing={standing} season={season} league={league} left={left} />
+      <Hero game={game} standing={standing} season={season} league={league} nowMs={nowMs} />
 
       <Stats items={[
         { icon: 'award', label: 'Badges', value: earned, of: badges.length },
         { icon: 'mapPin', label: 'States visited', value: yatra.visited, of: yatra.total },
-        { icon: 'leaf', label: 'Week streak', value: Number(game.streak?.current || 0), note: game.streak?.best ? `Best ${game.streak.best}` : null },
+        { icon: 'flame', label: 'Week streak', value: Number(game.streak?.current || 0), note: game.streak?.best ? `Best ${game.streak.best}` : null },
         { icon: 'crown', label: league.name, value: me ? me.pos : null, prefix: '#', note: me ? `${Number(me.points || 0).toLocaleString('en-IN')} pts` : null },
       ]} />
 
@@ -73,8 +73,11 @@ export default function CreatorGamePage({ game, creator, standing, catalog = [],
 }
 
 // ---- Hero: the rank medallion ----------------------------------------
-function Hero({ game, standing, season, league, left }) {
+function Hero({ game, standing, season, league, nowMs }) {
   const [ref, seen, live] = useInView();
+  const now = useNow(30000, nowMs ?? null);
+  const cd = countdownParts(season.ends_at, now);
+  const [flip, setFlip] = useState(0);
   const prog = tierProgress(standing || { lifetime_confirmed_sales: game.confirmed_sales, threshold: 0, next_threshold: null });
   const R = 54; const C = 2 * Math.PI * R;
   const offset = C * (1 - (seen ? prog.fraction : 0));
@@ -90,11 +93,21 @@ function Hero({ game, standing, season, league, left }) {
         <p className="cg-hero__sub">Every badge, tile and point here comes from real, paid orders. Shares and clicks never count — so neither can tricks.</p>
         <div className="cg-hero__chips">
           <span className="cg-chip" style={{ '--league': league.tone }}><i aria-hidden="true" />{league.name}</span>
-          {left != null && <span className="cg-chip"><Icon name="clock" size={13} />{left === 0 ? 'Last day of the season' : `${left} ${left === 1 ? 'day' : 'days'} left`}</span>}
+          {cd && (
+            <span className="cg-chip cg-chip--clock" aria-label={`${cd.d} days ${cd.h} hours ${cd.m} minutes left in the season`}>
+              <Icon name="clock" size={13} />
+              <span className="cg-cd" aria-hidden="true">
+                {[[cd.d, 'd'], [cd.h, 'h'], [cd.m, 'm']].map(([v, u]) => <span key={u} className="cg-cd__u"><b key={v}>{String(v).padStart(2, '0')}</b>{u}</span>)}
+              </span>
+              <span className="cg-cd__l">left</span>
+            </span>
+          )}
           {Number(game.streak?.current) > 0 && <span className="cg-chip"><Icon name="leaf" size={13} />{game.streak.current}-week streak</span>}
         </div>
       </div>
-      <div className="cg-medal" role="img" aria-label={`${rank}, level ${level}${prog.atTop ? '' : `, ${Math.round(prog.fraction * 100)}% of the way to level ${standing?.next_level ?? level + 1}`}`}>
+      <div className="cg-medal" role="img" onClick={() => setFlip((f) => f + 1)} aria-label={`${rank}, level ${level}${prog.atTop ? '' : `, ${Math.round(prog.fraction * 100)}% of the way to level ${standing?.next_level ?? level + 1}`}`}>
+        <span className="cg-medal__rays" aria-hidden="true" />
+        <span className="cg-medal__orbit" aria-hidden="true"><i /></span>
         <svg viewBox="0 0 132 132" className="cg-medal__ring" aria-hidden="true">
           <defs>
             <linearGradient id="cg-ring-g" x1="0" y1="0" x2="1" y2="1">
@@ -104,7 +117,7 @@ function Hero({ game, standing, season, league, left }) {
           <circle cx="66" cy="66" r={R} className="cg-medal__track" />
           <circle cx="66" cy="66" r={R} className="cg-medal__fill" stroke="url(#cg-ring-g)" strokeDasharray={C} strokeDashoffset={offset} transform="rotate(-90 66 66)" />
         </svg>
-        <span className="cg-medal__core">
+        <span className="cg-medal__core" key={flip} data-flip={flip > 0 ? '1' : undefined}>
           <span className="cg-medal__shine" aria-hidden="true" />
           <Icon name="crown" size={22} />
           <b className="serif">{rank}</b>
@@ -129,7 +142,7 @@ function Stat({ icon, label, value, of, prefix = '', note, run, i }) {
   const n = useCountUp(value ?? 0, run);
   return (
     <div className="cg-stat" role="listitem" style={{ '--i': i }}>
-      <span className="cg-stat__ic" aria-hidden="true"><Icon name={icon} size={18} /></span>
+      <span className={`cg-stat__ic${icon === 'flame' ? ' is-flame' : ''}`} aria-hidden="true">{icon === 'flame' ? <Flame /> : <Icon name={icon} size={18} />}</span>
       <span className="cg-stat__v">{value == null ? '—' : <>{prefix}{n}{of != null && <small>/{of}</small>}</>}</span>
       <span className="cg-stat__l">{label}{note ? <em> · {note}</em> : null}</span>
     </div>
@@ -142,6 +155,9 @@ function Badges({ badges, creatorId }) {
   const earnedIds = badges.filter((b) => b.earned).map((b) => b.id);
   const key = earnedIds.join(',');
   const [fresh, setFresh] = useState([]);
+  const [tap, setTap] = useState(null); // { id, n }
+  const tapped = tap ? badges.find((b) => b.id === tap.id) : null;
+  const onTap = (b) => setTap((t) => ({ id: b.id, n: (t?.n || 0) + 1 }));
   useEffect(() => { setFresh(newBadgeIds(creatorId, earnedIds)); }, [creatorId, key]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!seen || !fresh.length) return undefined;
@@ -162,12 +178,14 @@ function Badges({ badges, creatorId }) {
         {badges.map((b, i) => {
           const isNew = fresh.includes(b.id);
           return (
-            <li key={b.id} className={`cg-badge${b.earned ? ' is-earned' : ''}${isNew ? ' is-new' : ''}`} style={{ '--i': i }}>
+            <li key={b.id} className={`cg-badge${b.earned ? ' is-earned' : ''}${isNew ? ' is-new' : ''}${tap?.id === b.id ? ' is-tapped' : ''}`} style={{ '--i': i }}
+              role="button" tabIndex={0} aria-label={`${b.name}: ${b.hint}${b.earned ? ', earned' : `, ${b.target - b.progress} to go`}`}
+              onClick={() => onTap(b)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTap(b); } }}>
               {isNew && <span className="cg-badge__ribbon">New</span>}
-              <span className="cg-badge__medal" aria-hidden="true">
+              <span className="cg-badge__medal" aria-hidden="true" key={tap?.id === b.id ? `t${tap.n}` : 'm'}>
                 <Icon name={b.icon} size={20} />
                 {b.earned && <span className="cg-badge__shine" />}
-                {isNew && <span className="cg-badge__burst">{Array.from({ length: 10 }, (_, k) => <i key={k} style={{ '--a': `${k * 36}deg` }} />)}</span>}
+                {(isNew || (tap?.id === b.id && b.earned)) && <span className="cg-badge__burst">{Array.from({ length: 10 }, (_, k) => <i key={k} style={{ '--a': `${k * 36}deg` }} />)}</span>}
               </span>
               <span className="cg-badge__name">{b.name}</span>
               <span className="cg-badge__hint">{b.hint}</span>
@@ -181,6 +199,11 @@ function Badges({ badges, creatorId }) {
           );
         })}
       </ul>
+      <p className={`cg-toast${tapped ? ' is-on' : ''}`} role="status" key={tap ? tap.n : 0}>
+        {tapped ? (tapped.earned
+          ? <><Icon name="checkCircle" size={15} /><b>{tapped.name}</b> · {tapped.hint} — earned</>
+          : <><Icon name="clock" size={15} /><b>{tapped.name}</b> · {tapped.money ? money(tapped.target - tapped.progress) : tapped.target - tapped.progress} to go</>) : null}
+      </p>
     </div>
   );
 }
@@ -192,6 +215,7 @@ function League({ season, league, left }) {
   const top = members.filter((m) => m.pos <= 3);
   const podium = [top.find((m) => m.pos === 2), top.find((m) => m.pos === 1), top.find((m) => m.pos === 3)].filter(Boolean);
   const rest = members.filter((m) => m.pos > 3);
+  const chase = overtake(members);
   return (
     <div ref={ref} className={`cd-panel cg-league cg-reveal${inViewClass(seen, live)}`} style={{ '--league': league.tone }} aria-labelledby="cg-league-h">
       <header className="cd-panel__head">
@@ -227,6 +251,14 @@ function League({ season, league, left }) {
           ))}
         </ol>
       )}
+      {chase && members.length > 1 && (
+        <p className={`cg-chase${chase.leading ? ' is-lead' : ''}`}>
+          <span className="cg-chase__ic" aria-hidden="true"><Icon name={chase.leading ? 'crown' : 'arrowRight'} size={15} /></span>
+          {chase.leading
+            ? <span>You’re leading <b>{league.name}</b>. Hold the crown till the 1st.</span>
+            : <span><b>{money(chase.rupees)}</b> more in sales to pass <b className="cg-cap">{chase.name}</b> for #{chase.pos}.</span>}
+        </p>
+      )}
       {members.length <= 1 && <p className="cg-note">You’re the first in this league. As more creators join, the podium fills up.</p>}
     </div>
   );
@@ -241,6 +273,27 @@ function Yatra({ yatra }) {
   const lit = yatra.tiles.filter((t) => t.lit).sort((a, b) => b.orders - a.orders);
   const star = lit[0]?.code;
   const shown = hover ? yatra.tiles.find((t) => t.code === hover) : null;
+  const travel = useRef(null);
+  const route = lit.slice(0, 8);
+  const routeKey = route.map((t) => t.code).join(',');
+  useEffect(() => {
+    const el = travel.current;
+    if (!el || !seen || route.length < 2 || !motionOk() || typeof el.animate !== 'function') return undefined;
+    const pt = (t) => `translate(${t.c * (TILE + GAP) + TILE / 2}px, ${t.r * (TILE + GAP) + TILE / 2}px)`;
+    const stops = [...route, route[0]];
+    const frames = [];
+    stops.forEach((t, i) => {
+      const at = i / (stops.length - 1);
+      frames.push({ transform: `${pt(t)} scale(1)`, offset: at });
+      if (i < stops.length - 1) frames.push({ transform: `${pt(t)} scale(1)`, offset: at + 0.35 / (stops.length - 1) });
+    });
+    const anim = el.animate(frames, { duration: 1600 * (stops.length - 1), iterations: Infinity, easing: 'ease-in-out', delay: 1400 });
+    return () => anim.cancel();
+  }, [seen, routeKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    const anims = travel.current?.getAnimations?.() || [];
+    anims.forEach((a) => (live ? a.play() : a.pause()));
+  }, [live]);
   const goal = yatra.visited < 5 ? ['Paanch Pradesh', 5] : yatra.visited < 10 ? ['Bharat Darshan', 10] : ['all of India', 36];
   return (
     <div ref={ref} className={`cd-panel cg-yatra cg-reveal${inViewClass(seen, live)}`} aria-labelledby="cg-yatra-h">
@@ -270,6 +323,12 @@ function Yatra({ yatra }) {
                 </g>
               </g>
             ))}
+            {route.length >= 2 && (
+              <g className="cg-traveller" ref={travel} style={{ transform: `translate(${route[0].c * (TILE + GAP) + TILE / 2}px, ${route[0].r * (TILE + GAP) + TILE / 2}px)` }}>
+                <circle r="11" className="cg-traveller__halo" />
+                <circle r="5" className="cg-traveller__dot" />
+              </g>
+            )}
           </svg>
           <p className="cg-yatra__cap" aria-live="polite">
             {shown ? <><b>{shown.name}</b>{shown.lit ? ` · ${shown.orders} ${shown.orders === 1 ? 'order' : 'orders'}` : ' · not yet'}</> : 'Tap or hover a tile to see its state'}
@@ -350,7 +409,8 @@ function Wrapped({ game, creator, standing }) {
         </div>
       </header>
       <div className="cg-card-stage" onPointerMove={tilt} onPointerLeave={untilt}>
-        <figure ref={cardRef} key={which} className="cg-card" aria-label={`${lines.title}: ${lines.big} ${lines.bigLabel}`}>
+        <div ref={cardRef} key={which} className="cg-holo">
+        <figure className="cg-card" aria-label={`${lines.title}: ${lines.big} ${lines.bigLabel}`}>
           <span className="cg-card__sheen" aria-hidden="true" />
           <span className="cg-card__orb" aria-hidden="true" />
           <p className="cg-card__kicker">SORA LIFESTYLE · CREATOR PROGRAM</p>
@@ -363,6 +423,7 @@ function Wrapped({ game, creator, standing }) {
           {lines.top && <p className="cg-card__top"><span>Most loved</span>{lines.top}</p>}
           {lines.code && <p className="cg-card__code">Shop with my code <b>{lines.code}</b></p>}
         </figure>
+        </div>
       </div>
       <button type="button" className="cg-btn cg-btn--gold" onClick={share} disabled={busy}>
         <Icon name="download" size={16} /> {busy ? 'Making your card…' : 'Share my Wrapped'}
@@ -474,5 +535,49 @@ function Hamper({ reward }) {
         <p className="cg-note">What’s inside is a surprise. {reward.value ? `Worth ${reward.value}.` : ''}</p>
       </div>
     </div>
+  );
+}
+
+// ---- Small pieces ----------------------------------------------------------
+function Flame() {
+  return (
+    <svg className="cg-flame" viewBox="0 0 24 24" width="20" height="20">
+      <path className="cg-flame__out" d="M12 2c1 3.5 5 6 5 11a5 5 0 0 1-10 0c0-2.2 1-3.6 2.2-4.8.2 1.6 1 2.6 2 3C10.6 8.6 11 5 12 2Z" />
+      <path className="cg-flame__in" d="M12 11c.6 1.8 2.6 2.8 2.6 5a2.6 2.6 0 0 1-5.2 0c0-1.3.7-2.2 1.4-2.8.2.8.6 1.3 1.1 1.5-.3-1.5 0-2.7.1-3.7Z" />
+    </svg>
+  );
+}
+
+/**
+ * The game on the dashboard: a small dark card with the medal and three
+ * numbers, linking to the full game. Shown only when the game has loaded.
+ */
+export function GameTeaser({ game, standing, Link }) {
+  const [ref, seen, live] = useInView();
+  if (!game || game.ok === false) return null;
+  const badges = badgeList(game);
+  const earned = badges.filter((b) => b.earned).length;
+  const visited = yatraTiles(game.map).visited;
+  const me = (game.season?.members || []).find((m) => m.me);
+  const league = leagueOf(game.season?.league);
+  return (
+    <section ref={ref} className={`cg-teaser${inViewClass(seen, live)}`} aria-label="Creator Game">
+      <span className="cg-hero__sparks" aria-hidden="true">{Array.from({ length: 6 }, (_, i) => <i key={i} />)}</span>
+      <span className="cg-teaser__medal" aria-hidden="true">
+        <span className="cg-medal__shine" />
+        <Icon name="crown" size={16} />
+        <b className="serif">{standing?.rank || game.rank || 'Rise'}</b>
+      </span>
+      <div className="cg-teaser__body">
+        <p className="cg-hero__eyebrow">Creator Game</p>
+        <p className="cg-teaser__h serif">Play to <em>grow</em></p>
+        <ul className="cg-teaser__stats">
+          <li><b>{earned}</b>/{badges.length} badges</li>
+          <li><b>{visited}</b>/{STATE_TILES.length} states</li>
+          <li>{me ? <><b>#{me.pos}</b> in {league.name}</> : league.name}</li>
+        </ul>
+      </div>
+      <Link to="/creator/game" className="cg-btn cg-btn--gold cg-teaser__go">Play <Icon name="arrowRight" size={15} /></Link>
+    </section>
   );
 }

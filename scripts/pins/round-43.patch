@@ -1,0 +1,612 @@
+diff --git a/src/components/creator/ChaChing.jsx b/src/components/creator/ChaChing.jsx
+index 56822c2..c7e46dd 100644
+--- a/src/components/creator/ChaChing.jsx
++++ b/src/components/creator/ChaChing.jsx
+@@ -50,6 +50,7 @@ export default function ChaChing({ creatorId, recent, holdDays = 7 }) {
+ 
+   return (
+     <div className="cc-layer" role="dialog" aria-modal="true" aria-labelledby="cc-h" onClick={(e) => { if (e.target === e.currentTarget) close(); }}>
++      {!calm && <div className="lu-rain cc-rain" aria-hidden="true">{Array.from({ length: 16 }, (_, i) => <i key={i} style={{ '--x': `${(i * 41 + 7) % 100}%`, '--d': `${(i % 6) * 0.18}s`, '--s': `${2.2 + (i % 4) * 0.45}s`, '--r': `${(i % 2 ? 1 : -1) * (240 + i * 17)}deg` }} />)}</div>}
+       <div className="cc-card">
+         {!calm && (
+           <div className="cc-burst" aria-hidden="true">
+diff --git a/src/components/creator/CreatorGamePage.jsx b/src/components/creator/CreatorGamePage.jsx
+index 5857ac6..4e95849 100644
+--- a/src/components/creator/CreatorGamePage.jsx
++++ b/src/components/creator/CreatorGamePage.jsx
+@@ -4,9 +4,9 @@ import { money } from '../../lib/format.js';
+ import { tierProgress } from '../../lib/creatorTiers.js';
+ import {
+   badgeList, leagueOf, daysLeft, yatraTiles, vanityProblem, VANITY_REASON,
+-  wrappedLines, drawWrapped, monthName,
++  wrappedLines, drawWrapped, monthName, countdownParts, overtake, STATE_TILES,
+ } from '../../lib/creatorGame.js';
+-import { useInView, inViewClass, useCountUp, motionOk, newBadgeIds, rememberBadges } from './gameMotion.js';
++import { useInView, inViewClass, useCountUp, motionOk, newBadgeIds, rememberBadges, useNow } from './gameMotion.js';
+ 
+ // ============================================================
+ // Creator Game v1 (owner, 2026-11-22: "Creator Game v1 bana do"; then
+@@ -44,12 +44,12 @@ export default function CreatorGamePage({ game, creator, standing, catalog = [],
+ 
+   return (
+     <section className={`cg${motion ? ' cg--motion' : ''}`} aria-labelledby="cg-h">
+-      <Hero game={game} standing={standing} season={season} league={league} left={left} />
++      <Hero game={game} standing={standing} season={season} league={league} nowMs={nowMs} />
+ 
+       <Stats items={[
+         { icon: 'award', label: 'Badges', value: earned, of: badges.length },
+         { icon: 'mapPin', label: 'States visited', value: yatra.visited, of: yatra.total },
+-        { icon: 'leaf', label: 'Week streak', value: Number(game.streak?.current || 0), note: game.streak?.best ? `Best ${game.streak.best}` : null },
++        { icon: 'flame', label: 'Week streak', value: Number(game.streak?.current || 0), note: game.streak?.best ? `Best ${game.streak.best}` : null },
+         { icon: 'crown', label: league.name, value: me ? me.pos : null, prefix: '#', note: me ? `${Number(me.points || 0).toLocaleString('en-IN')} pts` : null },
+       ]} />
+ 
+@@ -73,8 +73,11 @@ export default function CreatorGamePage({ game, creator, standing, catalog = [],
+ }
+ 
+ // ---- Hero: the rank medallion ----------------------------------------
+-function Hero({ game, standing, season, league, left }) {
++function Hero({ game, standing, season, league, nowMs }) {
+   const [ref, seen, live] = useInView();
++  const now = useNow(30000, nowMs ?? null);
++  const cd = countdownParts(season.ends_at, now);
++  const [flip, setFlip] = useState(0);
+   const prog = tierProgress(standing || { lifetime_confirmed_sales: game.confirmed_sales, threshold: 0, next_threshold: null });
+   const R = 54; const C = 2 * Math.PI * R;
+   const offset = C * (1 - (seen ? prog.fraction : 0));
+@@ -90,11 +93,21 @@ function Hero({ game, standing, season, league, left }) {
+         <p className="cg-hero__sub">Every badge, tile and point here comes from real, paid orders. Shares and clicks never count — so neither can tricks.</p>
+         <div className="cg-hero__chips">
+           <span className="cg-chip" style={{ '--league': league.tone }}><i aria-hidden="true" />{league.name}</span>
+-          {left != null && <span className="cg-chip"><Icon name="clock" size={13} />{left === 0 ? 'Last day of the season' : `${left} ${left === 1 ? 'day' : 'days'} left`}</span>}
++          {cd && (
++            <span className="cg-chip cg-chip--clock" aria-label={`${cd.d} days ${cd.h} hours ${cd.m} minutes left in the season`}>
++              <Icon name="clock" size={13} />
++              <span className="cg-cd" aria-hidden="true">
++                {[[cd.d, 'd'], [cd.h, 'h'], [cd.m, 'm']].map(([v, u]) => <span key={u} className="cg-cd__u"><b key={v}>{String(v).padStart(2, '0')}</b>{u}</span>)}
++              </span>
++              <span className="cg-cd__l">left</span>
++            </span>
++          )}
+           {Number(game.streak?.current) > 0 && <span className="cg-chip"><Icon name="leaf" size={13} />{game.streak.current}-week streak</span>}
+         </div>
+       </div>
+-      <div className="cg-medal" role="img" aria-label={`${rank}, level ${level}${prog.atTop ? '' : `, ${Math.round(prog.fraction * 100)}% of the way to level ${standing?.next_level ?? level + 1}`}`}>
++      <div className="cg-medal" role="img" onClick={() => setFlip((f) => f + 1)} aria-label={`${rank}, level ${level}${prog.atTop ? '' : `, ${Math.round(prog.fraction * 100)}% of the way to level ${standing?.next_level ?? level + 1}`}`}>
++        <span className="cg-medal__rays" aria-hidden="true" />
++        <span className="cg-medal__orbit" aria-hidden="true"><i /></span>
+         <svg viewBox="0 0 132 132" className="cg-medal__ring" aria-hidden="true">
+           <defs>
+             <linearGradient id="cg-ring-g" x1="0" y1="0" x2="1" y2="1">
+@@ -104,7 +117,7 @@ function Hero({ game, standing, season, league, left }) {
+           <circle cx="66" cy="66" r={R} className="cg-medal__track" />
+           <circle cx="66" cy="66" r={R} className="cg-medal__fill" stroke="url(#cg-ring-g)" strokeDasharray={C} strokeDashoffset={offset} transform="rotate(-90 66 66)" />
+         </svg>
+-        <span className="cg-medal__core">
++        <span className="cg-medal__core" key={flip} data-flip={flip > 0 ? '1' : undefined}>
+           <span className="cg-medal__shine" aria-hidden="true" />
+           <Icon name="crown" size={22} />
+           <b className="serif">{rank}</b>
+@@ -129,7 +142,7 @@ function Stat({ icon, label, value, of, prefix = '', note, run, i }) {
+   const n = useCountUp(value ?? 0, run);
+   return (
+     <div className="cg-stat" role="listitem" style={{ '--i': i }}>
+-      <span className="cg-stat__ic" aria-hidden="true"><Icon name={icon} size={18} /></span>
++      <span className={`cg-stat__ic${icon === 'flame' ? ' is-flame' : ''}`} aria-hidden="true">{icon === 'flame' ? <Flame /> : <Icon name={icon} size={18} />}</span>
+       <span className="cg-stat__v">{value == null ? '—' : <>{prefix}{n}{of != null && <small>/{of}</small>}</>}</span>
+       <span className="cg-stat__l">{label}{note ? <em> · {note}</em> : null}</span>
+     </div>
+@@ -142,6 +155,9 @@ function Badges({ badges, creatorId }) {
+   const earnedIds = badges.filter((b) => b.earned).map((b) => b.id);
+   const key = earnedIds.join(',');
+   const [fresh, setFresh] = useState([]);
++  const [tap, setTap] = useState(null); // { id, n }
++  const tapped = tap ? badges.find((b) => b.id === tap.id) : null;
++  const onTap = (b) => setTap((t) => ({ id: b.id, n: (t?.n || 0) + 1 }));
+   useEffect(() => { setFresh(newBadgeIds(creatorId, earnedIds)); }, [creatorId, key]); // eslint-disable-line react-hooks/exhaustive-deps
+   useEffect(() => {
+     if (!seen || !fresh.length) return undefined;
+@@ -162,12 +178,14 @@ function Badges({ badges, creatorId }) {
+         {badges.map((b, i) => {
+           const isNew = fresh.includes(b.id);
+           return (
+-            <li key={b.id} className={`cg-badge${b.earned ? ' is-earned' : ''}${isNew ? ' is-new' : ''}`} style={{ '--i': i }}>
++            <li key={b.id} className={`cg-badge${b.earned ? ' is-earned' : ''}${isNew ? ' is-new' : ''}${tap?.id === b.id ? ' is-tapped' : ''}`} style={{ '--i': i }}
++              role="button" tabIndex={0} aria-label={`${b.name}: ${b.hint}${b.earned ? ', earned' : `, ${b.target - b.progress} to go`}`}
++              onClick={() => onTap(b)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTap(b); } }}>
+               {isNew && <span className="cg-badge__ribbon">New</span>}
+-              <span className="cg-badge__medal" aria-hidden="true">
++              <span className="cg-badge__medal" aria-hidden="true" key={tap?.id === b.id ? `t${tap.n}` : 'm'}>
+                 <Icon name={b.icon} size={20} />
+                 {b.earned && <span className="cg-badge__shine" />}
+-                {isNew && <span className="cg-badge__burst">{Array.from({ length: 10 }, (_, k) => <i key={k} style={{ '--a': `${k * 36}deg` }} />)}</span>}
++                {(isNew || (tap?.id === b.id && b.earned)) && <span className="cg-badge__burst">{Array.from({ length: 10 }, (_, k) => <i key={k} style={{ '--a': `${k * 36}deg` }} />)}</span>}
+               </span>
+               <span className="cg-badge__name">{b.name}</span>
+               <span className="cg-badge__hint">{b.hint}</span>
+@@ -181,6 +199,11 @@ function Badges({ badges, creatorId }) {
+           );
+         })}
+       </ul>
++      <p className={`cg-toast${tapped ? ' is-on' : ''}`} role="status" key={tap ? tap.n : 0}>
++        {tapped ? (tapped.earned
++          ? <><Icon name="checkCircle" size={15} /><b>{tapped.name}</b> · {tapped.hint} — earned</>
++          : <><Icon name="clock" size={15} /><b>{tapped.name}</b> · {tapped.money ? money(tapped.target - tapped.progress) : tapped.target - tapped.progress} to go</>) : null}
++      </p>
+     </div>
+   );
+ }
+@@ -192,6 +215,7 @@ function League({ season, league, left }) {
+   const top = members.filter((m) => m.pos <= 3);
+   const podium = [top.find((m) => m.pos === 2), top.find((m) => m.pos === 1), top.find((m) => m.pos === 3)].filter(Boolean);
+   const rest = members.filter((m) => m.pos > 3);
++  const chase = overtake(members);
+   return (
+     <div ref={ref} className={`cd-panel cg-league cg-reveal${inViewClass(seen, live)}`} style={{ '--league': league.tone }} aria-labelledby="cg-league-h">
+       <header className="cd-panel__head">
+@@ -227,6 +251,14 @@ function League({ season, league, left }) {
+           ))}
+         </ol>
+       )}
++      {chase && members.length > 1 && (
++        <p className={`cg-chase${chase.leading ? ' is-lead' : ''}`}>
++          <span className="cg-chase__ic" aria-hidden="true"><Icon name={chase.leading ? 'crown' : 'arrowRight'} size={15} /></span>
++          {chase.leading
++            ? <span>You’re leading <b>{league.name}</b>. Hold the crown till the 1st.</span>
++            : <span><b>{money(chase.rupees)}</b> more in sales to pass <b className="cg-cap">{chase.name}</b> for #{chase.pos}.</span>}
++        </p>
++      )}
+       {members.length <= 1 && <p className="cg-note">You’re the first in this league. As more creators join, the podium fills up.</p>}
+     </div>
+   );
+@@ -241,6 +273,27 @@ function Yatra({ yatra }) {
+   const lit = yatra.tiles.filter((t) => t.lit).sort((a, b) => b.orders - a.orders);
+   const star = lit[0]?.code;
+   const shown = hover ? yatra.tiles.find((t) => t.code === hover) : null;
++  const travel = useRef(null);
++  const route = lit.slice(0, 8);
++  const routeKey = route.map((t) => t.code).join(',');
++  useEffect(() => {
++    const el = travel.current;
++    if (!el || !seen || route.length < 2 || !motionOk() || typeof el.animate !== 'function') return undefined;
++    const pt = (t) => `translate(${t.c * (TILE + GAP) + TILE / 2}px, ${t.r * (TILE + GAP) + TILE / 2}px)`;
++    const stops = [...route, route[0]];
++    const frames = [];
++    stops.forEach((t, i) => {
++      const at = i / (stops.length - 1);
++      frames.push({ transform: `${pt(t)} scale(1)`, offset: at });
++      if (i < stops.length - 1) frames.push({ transform: `${pt(t)} scale(1)`, offset: at + 0.35 / (stops.length - 1) });
++    });
++    const anim = el.animate(frames, { duration: 1600 * (stops.length - 1), iterations: Infinity, easing: 'ease-in-out', delay: 1400 });
++    return () => anim.cancel();
++  }, [seen, routeKey]); // eslint-disable-line react-hooks/exhaustive-deps
++  useEffect(() => {
++    const anims = travel.current?.getAnimations?.() || [];
++    anims.forEach((a) => (live ? a.play() : a.pause()));
++  }, [live]);
+   const goal = yatra.visited < 5 ? ['Paanch Pradesh', 5] : yatra.visited < 10 ? ['Bharat Darshan', 10] : ['all of India', 36];
+   return (
+     <div ref={ref} className={`cd-panel cg-yatra cg-reveal${inViewClass(seen, live)}`} aria-labelledby="cg-yatra-h">
+@@ -270,6 +323,12 @@ function Yatra({ yatra }) {
+                 </g>
+               </g>
+             ))}
++            {route.length >= 2 && (
++              <g className="cg-traveller" ref={travel} style={{ transform: `translate(${route[0].c * (TILE + GAP) + TILE / 2}px, ${route[0].r * (TILE + GAP) + TILE / 2}px)` }}>
++                <circle r="11" className="cg-traveller__halo" />
++                <circle r="5" className="cg-traveller__dot" />
++              </g>
++            )}
+           </svg>
+           <p className="cg-yatra__cap" aria-live="polite">
+             {shown ? <><b>{shown.name}</b>{shown.lit ? ` · ${shown.orders} ${shown.orders === 1 ? 'order' : 'orders'}` : ' · not yet'}</> : 'Tap or hover a tile to see its state'}
+@@ -350,7 +409,8 @@ function Wrapped({ game, creator, standing }) {
+         </div>
+       </header>
+       <div className="cg-card-stage" onPointerMove={tilt} onPointerLeave={untilt}>
+-        <figure ref={cardRef} key={which} className="cg-card" aria-label={`${lines.title}: ${lines.big} ${lines.bigLabel}`}>
++        <div ref={cardRef} key={which} className="cg-holo">
++        <figure className="cg-card" aria-label={`${lines.title}: ${lines.big} ${lines.bigLabel}`}>
+           <span className="cg-card__sheen" aria-hidden="true" />
+           <span className="cg-card__orb" aria-hidden="true" />
+           <p className="cg-card__kicker">SORA LIFESTYLE · CREATOR PROGRAM</p>
+@@ -363,6 +423,7 @@ function Wrapped({ game, creator, standing }) {
+           {lines.top && <p className="cg-card__top"><span>Most loved</span>{lines.top}</p>}
+           {lines.code && <p className="cg-card__code">Shop with my code <b>{lines.code}</b></p>}
+         </figure>
++        </div>
+       </div>
+       <button type="button" className="cg-btn cg-btn--gold" onClick={share} disabled={busy}>
+         <Icon name="download" size={16} /> {busy ? 'Making your card…' : 'Share my Wrapped'}
+@@ -476,3 +537,47 @@ function Hamper({ reward }) {
+     </div>
+   );
+ }
++
++// ---- Small pieces ----------------------------------------------------------
++function Flame() {
++  return (
++    <svg className="cg-flame" viewBox="0 0 24 24" width="20" height="20">
++      <path className="cg-flame__out" d="M12 2c1 3.5 5 6 5 11a5 5 0 0 1-10 0c0-2.2 1-3.6 2.2-4.8.2 1.6 1 2.6 2 3C10.6 8.6 11 5 12 2Z" />
++      <path className="cg-flame__in" d="M12 11c.6 1.8 2.6 2.8 2.6 5a2.6 2.6 0 0 1-5.2 0c0-1.3.7-2.2 1.4-2.8.2.8.6 1.3 1.1 1.5-.3-1.5 0-2.7.1-3.7Z" />
++    </svg>
++  );
++}
++
++/**
++ * The game on the dashboard: a small dark card with the medal and three
++ * numbers, linking to the full game. Shown only when the game has loaded.
++ */
++export function GameTeaser({ game, standing, Link }) {
++  const [ref, seen, live] = useInView();
++  if (!game || game.ok === false) return null;
++  const badges = badgeList(game);
++  const earned = badges.filter((b) => b.earned).length;
++  const visited = yatraTiles(game.map).visited;
++  const me = (game.season?.members || []).find((m) => m.me);
++  const league = leagueOf(game.season?.league);
++  return (
++    <section ref={ref} className={`cg-teaser${inViewClass(seen, live)}`} aria-label="Creator Game">
++      <span className="cg-hero__sparks" aria-hidden="true">{Array.from({ length: 6 }, (_, i) => <i key={i} />)}</span>
++      <span className="cg-teaser__medal" aria-hidden="true">
++        <span className="cg-medal__shine" />
++        <Icon name="crown" size={16} />
++        <b className="serif">{standing?.rank || game.rank || 'Rise'}</b>
++      </span>
++      <div className="cg-teaser__body">
++        <p className="cg-hero__eyebrow">Creator Game</p>
++        <p className="cg-teaser__h serif">Play to <em>grow</em></p>
++        <ul className="cg-teaser__stats">
++          <li><b>{earned}</b>/{badges.length} badges</li>
++          <li><b>{visited}</b>/{STATE_TILES.length} states</li>
++          <li>{me ? <><b>#{me.pos}</b> in {league.name}</> : league.name}</li>
++        </ul>
++      </div>
++      <Link to="/creator/game" className="cg-btn cg-btn--gold cg-teaser__go">Play <Icon name="arrowRight" size={15} /></Link>
++    </section>
++  );
++}
+diff --git a/src/components/creator/LevelUp.jsx b/src/components/creator/LevelUp.jsx
+new file mode 100644
+index 0000000..98a5d78
+--- /dev/null
++++ b/src/components/creator/LevelUp.jsx
+@@ -0,0 +1,62 @@
++import { useEffect, useState } from 'react';
++import Icon from '../Icon.jsx';
++import { motionOk } from './gameMotion.js';
++import { playChaChing, buzz } from '../../lib/creatorGame.js';
++
++// ============================================================
++// Level up! (owner, 2026-11-22: "more beautiful n animations add kro").
++// When the creator's level (from my_creator_game, confirmed sales) is higher
++// than the last level this browser saw, a full-screen moment: rays, the new
++// medal dropping in, gold rain. The first visit only remembers the level.
++// ============================================================
++
++const key = (cid) => `sora.creator.level.${cid}`;
++const read = (cid) => { try { const v = window.localStorage.getItem(key(cid)); return v == null ? null : Number(v); } catch { return null; } };
++const write = (cid, lv) => { try { window.localStorage.setItem(key(cid), String(lv)); } catch { /* private mode */ } };
++
++/** Pure: should a level-up show? First visit (null) never does. */
++export const levelUpFrom = (seen, level) => (seen != null && Number.isFinite(seen) && Number(level) > seen ? seen : null);
++
++const RAIN = 26;
++
++export default function LevelUp({ creatorId, level, rank, rate }) {
++  const [from, setFrom] = useState(null);
++  useEffect(() => {
++    if (!creatorId || !level) return;
++    const seen = read(creatorId);
++    if (seen == null) { write(creatorId, level); return; }
++    setFrom(levelUpFrom(seen, level));
++  }, [creatorId, level]);
++  const close = () => { write(creatorId, level); setFrom(null); };
++  useEffect(() => {
++    if (from == null) return undefined;
++    const onKey = (e) => { if (e.key === 'Escape') { write(creatorId, level); setFrom(null); } };
++    window.addEventListener('keydown', onKey);
++    return () => window.removeEventListener('keydown', onKey);
++  }, [from, creatorId, level]);
++
++  if (from == null) return null;
++  const go = () => { playChaChing(); buzz(); close(); };
++  const motion = motionOk();
++
++  return (
++    <div className="lu-layer" role="dialog" aria-modal="true" aria-labelledby="lu-h" onClick={(e) => { if (e.target === e.currentTarget) close(); }}>
++      {motion && <div className="lu-rain" aria-hidden="true">{Array.from({ length: RAIN }, (_, i) => <i key={i} style={{ '--x': `${(i * 37) % 100}%`, '--d': `${(i % 7) * 0.22}s`, '--s': `${2.6 + (i % 5) * 0.4}s`, '--r': `${(i % 2 ? 1 : -1) * (200 + i * 13)}deg` }} />)}</div>}
++      <div className="lu-card">
++        <span className="lu-rays" aria-hidden="true" />
++        <p className="lu-kicker">Level up!</p>
++        <span className="lu-medal" aria-hidden="true">
++          <span className="lu-medal__shine" />
++          <Icon name="crown" size={26} />
++          <b className="serif">{rank || 'Rise'}</b>
++          <small>Level {level}</small>
++        </span>
++        <h2 className="lu-h serif" id="lu-h">You’ve reached Level {level}</h2>
++        <p className="lu-sub">
++          Up from Level {from}.{Number(rate) > 0 ? <> New sales now earn <b>{rate}%</b>.</> : null}
++        </p>
++        <button type="button" className="cg-btn cg-btn--gold lu-btn" onClick={go} autoFocus>Let’s go <Icon name="arrowRight" size={16} /></button>
++      </div>
++    </div>
++  );
++}
+diff --git a/src/components/creator/gameMotion.js b/src/components/creator/gameMotion.js
+index 8e674f2..20378c9 100644
+--- a/src/components/creator/gameMotion.js
++++ b/src/components/creator/gameMotion.js
+@@ -67,3 +67,14 @@ export function newBadgeIds(creatorId, earnedIds) {
+ export function rememberBadges(creatorId, earnedIds) {
+   try { window.localStorage.setItem(badgeKey(creatorId), JSON.stringify(earnedIds)); } catch { /* private mode */ }
+ }
++
++/** The time now, refreshed every `ms` (the season countdown). */
++export function useNow(ms = 30000, fixed = null) {
++  const [n, setN] = useState(() => fixed ?? Date.now());
++  useEffect(() => {
++    if (fixed != null) return undefined;
++    const id = setInterval(() => setN(Date.now()), ms);
++    return () => clearInterval(id);
++  }, [ms, fixed]);
++  return n;
++}
+diff --git a/src/lib/creatorGame.js b/src/lib/creatorGame.js
+index 5adb981..581d303 100644
+--- a/src/lib/creatorGame.js
++++ b/src/lib/creatorGame.js
+@@ -254,3 +254,24 @@ export async function drawWrapped(lines) {
+ 
+   return new Promise((resolve) => cv.toBlob((b) => resolve(b), 'image/png'));
+ }
++
++/** Days, hours and minutes until a season ends (null when unknown or over). */
++export function countdownParts(endsAt, nowMs = Date.now()) {
++  const end = new Date(endsAt).getTime();
++  if (!Number.isFinite(end)) return null;
++  const left = Math.floor((end - nowMs) / 60000);
++  if (left <= 0) return null;
++  return { d: Math.floor(left / 1440), h: Math.floor((left % 1440) / 60), m: left % 60 };
++}
++
++/** What it takes to pass the creator just above you (₹10 of sales = 1 point). */
++export function overtake(members) {
++  const list = Array.isArray(members) ? members : [];
++  const me = list.find((m) => m && m.me);
++  if (!me) return null;
++  if (Number(me.pos) === 1) return { leading: true };
++  const above = list.find((m) => Number(m.pos) === Number(me.pos) - 1);
++  if (!above) return null;
++  const gap = Math.max(0, Number(above.points || 0) - Number(me.points || 0)) + 1;
++  return { leading: false, name: above.name, pos: above.pos, rupees: gap * 10 };
++}
+diff --git a/src/pages/CreatorPortal.jsx b/src/pages/CreatorPortal.jsx
+index f76840e..02906f3 100644
+--- a/src/pages/CreatorPortal.jsx
++++ b/src/pages/CreatorPortal.jsx
+@@ -11,7 +11,8 @@ import {
+   getCreatorTerms, termsArePublished, getMyTermsAcceptance, acceptCreatorTerms,
+   getMyCreatorGame, claimVanityCode,
+ } from '../lib/creatorApi.js';
+-import CreatorGamePage from '../components/creator/CreatorGamePage.jsx';
++import CreatorGamePage, { GameTeaser } from '../components/creator/CreatorGamePage.jsx';
++import LevelUp from '../components/creator/LevelUp.jsx';
+ import ChaChing from '../components/creator/ChaChing.jsx';
+ import CreatorEarningsPage from '../components/creator/CreatorEarningsPage.jsx';
+ import CreatorLinksPage from '../components/creator/CreatorLinksPage.jsx';
+@@ -309,6 +310,7 @@ export default function CreatorPortal({ initial = null }) {
+             </div>
+           )}
+ 
++          {tab === 'dashboard' && game?.ok && <GameTeaser game={game} standing={standing} Link={Link} />}
+           {tab === 'dashboard' && (
+             <CreatorDashboard
+               creator={creator}
+@@ -406,6 +408,7 @@ export default function CreatorPortal({ initial = null }) {
+           )}
+         </main>
+       </div>
++      {game?.ok && <LevelUp creatorId={creator.id} level={Number(game.level) || 1} rank={standing?.rank || game.rank} rate={standing?.rate} />}
+       {game?.ok && <ChaChing creatorId={creator.id} recent={game.recent} holdDays={Number(earnings?.settlement_hold_days ?? 7)} />}
+     </div>
+   );
+diff --git a/src/styles/creator-game.css b/src/styles/creator-game.css
+index ca55d59..7f086a4 100644
+--- a/src/styles/creator-game.css
++++ b/src/styles/creator-game.css
+@@ -266,9 +266,16 @@
+ .crp.crp--studio .cg-card {
+   position: relative; overflow: hidden; margin: 0; min-height: 460px; padding: 26px 26px 22px; border-radius: 20px; display: flex; flex-direction: column;
+   color: var(--cream); background: linear-gradient(155deg, #24453A, var(--forest) 40%, var(--forest-deep));
+-  box-shadow: inset 0 0 0 1.5px rgba(228, 196, 130, .5), 0 26px 50px -26px rgba(15, 32, 24, .85);
+-  transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); transition: transform .3s cubic-bezier(.2, .8, .2, 1); transform-style: preserve-3d;
++  box-shadow: inset 0 0 0 1px rgba(228, 196, 130, .25);
+ }
++/* The holographic frame: a conic foil turning behind a 2px gap, and the tilt. */
++.crp.crp--studio .cg-holo {
++  position: relative; overflow: hidden; isolation: isolate; padding: 2px; border-radius: 22px;
++  background: linear-gradient(135deg, var(--gold-2), var(--gold)); box-shadow: 0 26px 50px -26px rgba(15, 32, 24, .85);
++  transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); transition: transform .3s cubic-bezier(.2, .8, .2, 1);
++}
++.crp.crp--studio .cg-holo::before { content: ""; position: absolute; inset: -60%; z-index: -1; background: conic-gradient(from 0deg, #E4C482, #FFF3CF, #C79A45, #2C5341, #9CC2AE, #F7E2A8, #E4C482); }
++.crp.crp--studio .cg--motion .cg-wrapped.is-in .cg-holo::before { animation: cg-spin 7s linear infinite; }
+ .crp.crp--studio .cg-card > * { position: relative; }
+ .crp.crp--studio .cg-card__orb { position: absolute; width: 260px; height: 260px; right: -110px; top: -110px; border-radius: 50%; background: radial-gradient(circle, rgba(228, 196, 130, .32), transparent 65%); pointer-events: none; }
+ .crp.crp--studio .cg-card__sheen { position: absolute; inset: 0; overflow: hidden; border-radius: inherit; pointer-events: none; z-index: 2; }
+@@ -281,7 +288,7 @@
+ .crp.crp--studio .cg--motion .cg-wrapped.is-in .cg-card__sheen::after { animation: cg-card-sweep 6s ease-in-out 1.5s infinite; }
+ .crp.crp--studio .cg--motion .cg-wrapped.is-in .cg-card-stage { animation: cg-float-sm 6s ease-in-out 1s infinite; }
+ .crp.crp--studio .cg--motion .cg-wrapped.is-in .cg-card__orb { animation: cg-drift-sm 9s ease-in-out infinite alternate; }
+-.crp.crp--studio .cg--motion .cg-wrapped.is-in .cg-card { animation: cg-card-in .7s cubic-bezier(.2, .8, .2, 1) backwards; }
++.crp.crp--studio .cg--motion .cg-wrapped.is-in .cg-holo { animation: cg-card-in .7s cubic-bezier(.2, .8, .2, 1) backwards; }
+ .crp.crp--studio .cg--motion .cg-wrapped.is-in .cg-card__rows > div { animation: cg-rise .5s cubic-bezier(.2, .8, .2, 1) calc(.35s + var(--i) * 70ms) backwards; }
+ .crp.crp--studio .cg--motion .cg-wrapped.is-in .cg-card__big { animation: cg-pop .8s cubic-bezier(.2, .9, .3, 1.35) .2s backwards; }
+ .crp.crp--studio .cg-card__kicker { margin: 0; font-size: 10px; font-weight: 700; letter-spacing: .12em; color: var(--gold-2); }
+@@ -338,6 +345,61 @@
+ .ctier-option.is-mystery { position: relative; background: linear-gradient(160deg, rgba(228, 196, 130, .18), transparent 70%); }
+ .ctier-option.is-mystery .ctier-option__type { color: #E4C482; }
+ 
++
++/* ---------- Round 3 (owner: "more beautiful n animations add kro") ---------- */
++/* Medal: turning rays, an orbiting spark, a tap flips the coin */
++.crp.crp--studio .cg-medal { cursor: pointer; -webkit-tap-highlight-color: transparent; }
++.crp.crp--studio .cg-medal__rays {
++  position: absolute; z-index: -1; top: -36px; left: 50%; width: 240px; height: 240px; margin-left: -120px; border-radius: 50%; pointer-events: none;
++  background: repeating-conic-gradient(from 0deg, rgba(247, 226, 168, .18) 0 6deg, transparent 6deg 18deg);
++  -webkit-mask-image: radial-gradient(circle, #000 28%, transparent 68%); mask-image: radial-gradient(circle, #000 28%, transparent 68%);
++}
++.crp.crp--studio .cg--motion .cg-hero.is-in .cg-medal__rays { animation: cg-spin 40s linear infinite; }
++.crp.crp--studio .cg-medal__orbit { position: absolute; top: 0; left: 50%; width: 168px; height: 168px; margin-left: -84px; pointer-events: none; }
++.crp.crp--studio .cg-medal__orbit i { position: absolute; top: 4px; left: 50%; width: 8px; height: 8px; margin-left: -4px; border-radius: 50%; background: #FFF3CF; box-shadow: 0 0 10px 3px rgba(247, 226, 168, .85); }
++.crp.crp--studio .cg--motion .cg-hero.is-in .cg-medal__orbit { animation: cg-spin 6.5s linear 2s infinite; }
++.crp.crp--studio .cg--motion .cg-hero.is-in .cg-medal__core[data-flip] { animation: cg-coin 1s cubic-bezier(.2, .8, .2, 1), cg-float 5.5s ease-in-out 1s infinite; }
++/* Live season countdown */
++.crp.crp--studio .cg-chip--clock { gap: 8px; }
++.crp.crp--studio .cg-cd { display: inline-flex; gap: 6px; font-variant-numeric: tabular-nums; }
++.crp.crp--studio .cg-cd__u { display: inline-flex; align-items: baseline; gap: 1px; font-size: 11px; color: rgba(246, 243, 235, .7); }
++.crp.crp--studio .cg-cd__u b { display: inline-block; min-width: 2ch; text-align: right; font-size: 13px; font-weight: 800; color: var(--gold-3); }
++.crp.crp--studio .cg-cd__l { color: rgba(246, 243, 235, .75); font-weight: 600; }
++.crp.crp--studio .cg--motion .cg-cd__u b { animation: cg-digit .55s cubic-bezier(.2, .9, .3, 1.3) backwards; }
++/* Streak flame */
++.crp.crp--studio .cg-stat__ic.is-flame { background: linear-gradient(150deg, #F6C979, #E08A35 55%, #B4541E); box-shadow: 0 8px 16px -10px rgba(180, 84, 30, .9); }
++.crp.crp--studio .cg-flame { display: block; overflow: visible; transform-origin: 50% 92%; }
++.crp.crp--studio .cg-flame__out { fill: #FFE7B3; }
++.crp.crp--studio .cg-flame__in { fill: #FFFAEB; }
++.crp.crp--studio .cg--motion .cg-stats.is-in .cg-flame { animation: cg-flicker 1.5s ease-in-out infinite; }
++.crp.crp--studio .cg--motion .cg-stats.is-in .cg-flame__in { transform-box: fill-box; transform-origin: 50% 100%; animation: cg-flicker-in 1.1s ease-in-out infinite; }
++/* Badges you can tap */
++.crp.crp--studio .cg-badge { cursor: pointer; -webkit-tap-highlight-color: transparent; }
++.crp.crp--studio .cg-badge:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
++.crp.crp--studio .cg--motion .cg-badges.is-in .cg-badge.is-tapped.is-earned .cg-badge__medal { animation: cg-coin .9s cubic-bezier(.2, .8, .2, 1); }
++.crp.crp--studio .cg--motion .cg-badges.is-in .cg-badge.is-tapped:not(.is-earned) .cg-badge__medal { animation: cg-nope .5s ease; }
++.crp.crp--studio .cg--motion .cg-badges.is-in .cg-badge.is-tapped .cg-badge__burst i { animation-delay: .15s; }
++.crp.crp--studio .cg-toast { display: flex; align-items: center; gap: 8px; margin: 14px 0 0; min-height: 42px; padding: 8px 14px; border-radius: 12px; background: linear-gradient(135deg, var(--forest), var(--forest-deep)); color: var(--cream); font-size: 13px; }
++.crp.crp--studio .cg-toast:not(.is-on) { display: none; }
++.crp.crp--studio .cg-toast svg { flex: none; color: var(--gold-2); }
++.crp.crp--studio .cg-toast b { color: var(--gold-2); }
++.crp.crp--studio .cg--motion .cg-badges.is-in .cg-toast.is-on { animation: cg-rise .4s cubic-bezier(.2, .8, .2, 1) backwards; }
++/* League: what it takes to climb */
++.crp.crp--studio .cg-chase { display: flex; align-items: center; gap: 10px; margin: 12px 0 0; padding: 11px 14px; border-radius: 12px; font-size: 13px; line-height: 1.45; color: var(--s-ink-2); background: linear-gradient(135deg, var(--s-gold-50), var(--s-paper)); box-shadow: inset 0 0 0 1px var(--s-gold-soft); }
++.crp.crp--studio .cg-chase b { color: var(--s-ink); }
++.crp.crp--studio .cg-cap { text-transform: capitalize; }
++.crp.crp--studio .cg-chase__ic { flex: none; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; color: var(--gold-2); background: var(--forest); transform: rotate(-45deg); }
++.crp.crp--studio .cg-chase.is-lead .cg-chase__ic { transform: none; }
++.crp.crp--studio .cg--motion .cg-league.is-in .cg-chase { animation: cg-rise .6s cubic-bezier(.2, .8, .2, 1) 1.3s backwards; }
++.crp.crp--studio .cg--motion .cg-league.is-in .cg-chase:not(.is-lead) .cg-chase__ic svg { animation: cg-nudge 1.5s ease-in-out 2s infinite; }
++.crp.crp--studio .cg--motion .cg-league.is-in .cg-chase.is-lead .cg-chase__ic svg { animation: cg-bob 2.6s ease-in-out 2s infinite; }
++/* Bharat Yatra: a traveller hopping between your states */
++.crp.crp--studio .cg-traveller { pointer-events: none; }
++.crp.crp--studio .cg-traveller__dot { fill: #fff; stroke: var(--gold); stroke-width: 3; }
++.crp.crp--studio .cg-traveller__halo { fill: rgba(228, 196, 130, .45); transform-box: fill-box; transform-origin: center; }
++.crp.crp--studio .cg--motion .cg-yatra.is-in .cg-traveller__halo { animation: cg-halo 1.3s ease-in-out infinite; }
++.crp.crp--studio .cg--motion .cg-yatra:not(.is-in) .cg-traveller { opacity: 0; }
++
+ /* ---------- Keyframes (transform / opacity only) ---------- */
+ @keyframes cg-rise { from { opacity: 0; transform: translateY(16px); } }
+ @keyframes cg-pop { from { opacity: 0; transform: scale(.6); } 70% { opacity: 1; } }
+@@ -363,6 +425,14 @@
+ @keyframes cg-bob { 0%, 100% { transform: translateY(0) rotate(-6deg); } 50% { transform: translateY(-3px) rotate(6deg); } }
+ @keyframes cg-wiggle { 0%, 86%, 100% { transform: rotate(0); } 89% { transform: rotate(-14deg); } 92% { transform: rotate(12deg); } 95% { transform: rotate(-8deg); } 98% { transform: rotate(4deg); } }
+ @keyframes cg-lid { 0%, 70%, 100% { transform: translateY(0) rotate(0); } 76% { transform: translateY(-9px) rotate(-10deg); } 82% { transform: translateY(0) rotate(0); } 86% { transform: translateY(-4px) rotate(-4deg); } 90% { transform: translateY(0) rotate(0); } }
++@keyframes cg-spin { to { transform: rotate(360deg); } }
++@keyframes cg-coin { from { transform: rotateY(0); } to { transform: rotateY(720deg); } }
++@keyframes cg-digit { from { opacity: 0; transform: translateY(-60%) scale(.8); } }
++@keyframes cg-flicker { 0%, 100% { transform: scale(1, 1) skewX(0); } 30% { transform: scale(1.05, .95) skewX(2deg); } 60% { transform: scale(.96, 1.06) skewX(-2deg); } }
++@keyframes cg-flicker-in { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(.85, 1.1); opacity: .8; } }
++@keyframes cg-nope { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-6px); } 40% { transform: translateX(5px); } 60% { transform: translateX(-3px); } 80% { transform: translateX(2px); } }
++@keyframes cg-nudge { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(3px); } }
++@keyframes cg-halo { 0%, 100% { transform: scale(.8); opacity: .9; } 50% { transform: scale(1.35); opacity: .35; } }
+ @keyframes cg-bit { 0% { opacity: 1; transform: rotate(var(--a)) translateY(0) scale(1); } 100% { opacity: 0; transform: rotate(var(--a)) translateY(-46px) scale(.4); } }
+ 
+ /* ---------- Cha-ching ---------- */
+@@ -443,3 +513,88 @@
+   .crp.crp--studio .cg-btn, .crp.crp--studio .cg-stat, .crp.crp--studio .cg-badge, .crp.crp--studio .cg-badge__medal,
+   .crp.crp--studio .cg-tile, .crp.crp--studio .cg-card, .crp.crp--studio .cg-medal__fill { transition: none; }
+ }
++
++/* ---------- Dashboard teaser (round 3) ---------- */
++.crp.crp--studio .cg-teaser {
++  position: relative; overflow: hidden; isolation: isolate; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 18px; align-items: center;
++  margin: 0 0 20px; padding: 18px 22px; border-radius: 20px; color: var(--cream);
++  background: radial-gradient(120% 170% at 100% 0%, #2C5341 0%, var(--forest) 50%, var(--forest-deep) 100%);
++  box-shadow: 0 20px 44px -30px rgba(15, 32, 24, .95), inset 0 0 0 1px rgba(228, 196, 130, .22);
++}
++.crp.crp--studio .cg-teaser__medal {
++  position: relative; overflow: hidden; width: 70px; height: 70px; border-radius: 50%; display: grid; place-content: center; justify-items: center; color: #3B2F14;
++  background: radial-gradient(circle at 32% 26%, #FFF3CF, var(--gold-3) 28%, var(--gold-2) 55%, var(--gold) 82%, #8E6A22);
++  box-shadow: 0 10px 22px -10px rgba(0, 0, 0, .6), inset 0 0 0 3px rgba(255, 248, 232, .35);
++}
++.crp.crp--studio .cg-teaser__medal b { font-size: 13px; line-height: 1.1; }
++.crp.crp--studio .cg-teaser__h { margin: 2px 0 6px; font-size: 24px; line-height: 1.05; color: var(--cream); }
++.crp.crp--studio .cg-teaser__h em { font-style: italic; color: var(--gold-2); }
++.crp.crp--studio .cg-teaser__stats { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12.5px; color: rgba(246, 243, 235, .75); }
++.crp.crp--studio .cg-teaser__stats b { color: var(--gold-3); font-size: 14px; }
++.crp.crp--studio .cg-teaser__go { text-decoration: none; }
++@media (prefers-reduced-motion: no-preference) {
++  .crp.crp--studio .cg-teaser { animation: cg-rise .7s cubic-bezier(.2, .8, .2, 1) backwards; }
++  .crp.crp--studio .cg-teaser.is-live .cg-medal__shine { animation: cg-medal-shine 4.6s ease-in-out 1s infinite; }
++  .crp.crp--studio .cg-teaser.is-live .cg-hero__sparks i { animation: cg-twinkle 3.2s ease-in-out infinite; }
++  .crp.crp--studio .cg-teaser.is-live .cg-hero__sparks i:nth-child(2n) { animation-duration: 4.1s; animation-delay: -1.3s; }
++  .crp.crp--studio .cg-teaser.is-live .cg-btn--gold::after { animation: cg-sweep 3.8s ease-in-out 1.2s infinite; }
++  .crp.crp--studio .cg-teaser.is-live .cg-teaser__medal { animation: cg-float 5.5s ease-in-out infinite; }
++}
++
++/* ---------- Level up! (round 3) ---------- */
++.crp .lu-layer {
++  position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: 16px; overflow: hidden;
++  background: radial-gradient(circle at 50% 42%, rgba(36, 69, 58, .9), rgba(9, 19, 14, .95));
++}
++.crp .lu-card { position: relative; isolation: isolate; display: grid; justify-items: center; width: min(420px, 100%); text-align: center; color: #F6F3EB; }
++.crp .lu-rays {
++  position: absolute; z-index: -1; top: 120px; left: 50%; width: 860px; height: 860px; margin: -430px 0 0 -430px; border-radius: 50%; pointer-events: none;
++  background: repeating-conic-gradient(from 0deg, rgba(247, 226, 168, .16) 0 7deg, transparent 7deg 20deg);
++  -webkit-mask-image: radial-gradient(circle, #000 12%, transparent 60%); mask-image: radial-gradient(circle, #000 12%, transparent 60%);
++}
++.crp .lu-kicker { margin: 0 0 18px; font-size: 15px; font-weight: 800; letter-spacing: .32em; text-transform: uppercase; color: #F7E2A8; text-shadow: 0 0 18px rgba(247, 226, 168, .6); }
++.crp .lu-medal {
++  position: relative; overflow: hidden; width: 150px; height: 150px; border-radius: 50%; display: grid; place-content: center; justify-items: center; gap: 2px; color: #3B2F14;
++  background: radial-gradient(circle at 32% 26%, #FFF3CF, #F7E2A8 28%, #E4C482 55%, #C79A45 82%, #8E6A22);
++  box-shadow: 0 0 0 8px rgba(247, 226, 168, .14), 0 0 60px 10px rgba(228, 196, 130, .45), inset 0 0 0 5px rgba(255, 248, 232, .35), inset 0 -10px 20px rgba(134, 100, 25, .35);
++}
++.crp .lu-medal b { font-size: 26px; line-height: 1.05; }
++.crp .lu-medal small { font-size: 12px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: rgba(59, 47, 20, .75); }
++.crp .lu-medal__shine { position: absolute; top: -20%; bottom: -20%; left: -70%; width: 45%; background: linear-gradient(105deg, transparent, rgba(255, 255, 255, .85), transparent); transform: rotate(8deg); }
++.crp .lu-h { margin: 22px 0 6px; font-size: 30px; line-height: 1.15; color: #F6F3EB; }
++.crp .lu-sub { margin: 0; font-size: 14.5px; color: rgba(246, 243, 235, .8); }
++.crp .lu-sub b { color: #F7E2A8; }
++.crp .lu-btn { margin-top: 24px; min-width: 200px; }
++.crp .lu-rain { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
++.crp .lu-rain i { position: absolute; top: -30px; left: var(--x); width: 9px; height: 14px; border-radius: 2px; background: linear-gradient(#F7E2A8, #C79A45); opacity: .9; }
++.crp .lu-rain i:nth-child(3n) { width: 12px; height: 12px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #FFF3CF, #E4C482 50%, #A9802F); }
++.crp .lu-rain i:nth-child(4n) { background: #9CC2AE; }
++@media (prefers-reduced-motion: no-preference) {
++  .crp .lu-layer { animation: cc-fade .35s ease backwards; }
++  .crp .lu-rays { animation: cg-spin 34s linear infinite; }
++  .crp .lu-kicker { animation: lu-pop .7s cubic-bezier(.2, .9, .3, 1.4) .25s backwards; }
++  .crp .lu-medal { animation: lu-drop 1.1s cubic-bezier(.2, .9, .3, 1.2) .1s backwards; }
++  .crp .lu-medal__shine { animation: cg-medal-shine 3.6s ease-in-out 1.2s infinite; }
++  .crp .lu-h, .crp .lu-sub, .crp .lu-btn { animation: cg-rise .7s cubic-bezier(.2, .8, .2, 1) .7s backwards; }
++  .crp .lu-sub { animation-delay: .8s; }
++  .crp .lu-btn { animation-delay: .9s; }
++  .crp .lu-rain i { animation: lu-fall var(--s) linear var(--d) infinite; }
++}
++@keyframes lu-pop { from { opacity: 0; transform: scale(.4); } }
++@keyframes lu-drop { 0% { opacity: 0; transform: translateY(-140px) scale(.4) rotate(-30deg); } 60% { opacity: 1; transform: translateY(10px) scale(1.08) rotate(4deg); } 80% { transform: translateY(-4px) scale(.98) rotate(-1deg); } }
++@keyframes lu-fall { from { transform: translateY(-40px) rotate(0); } to { transform: translateY(110vh) rotate(var(--r)); } }
++
++/* Coins raining behind the cha-ching card (round 3) */
++.crp .cc-rain { z-index: 0; }
++.crp .cc-layer .cc-card { z-index: 1; }
++@media (prefers-reduced-motion: no-preference) {
++  .crp .cc-rain i { animation: lu-fall var(--s) linear var(--d) 2 backwards; }
++}
++
++@media (max-width: 640px) {
++  .crp.crp--studio .cg-teaser { grid-template-columns: auto minmax(0, 1fr); padding: 16px; gap: 14px; }
++  .crp.crp--studio .cg-teaser__medal { width: 60px; height: 60px; }
++  .crp.crp--studio .cg-teaser__go { grid-column: 1 / -1; width: 100%; }
++  .crp .lu-medal { width: 128px; height: 128px; }
++  .crp .lu-h { font-size: 26px; }
++}

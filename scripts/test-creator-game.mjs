@@ -154,5 +154,27 @@ test('podium and count-up: the top three stand on steps; numbers climb only when
   assert.match(m, /if \(!run \|\| !motionOk\(\) \|\| to === 0\) \{ setV\(to\); return undefined; \}/);
 });
 
+test('round 3: season countdown, the climb to the next place, and level-up only when the level really rose', () => {
+  const end = '2026-11-30T18:30:00Z';
+  assert.deepEqual(g.countdownParts(end, Date.parse('2026-11-22T03:00:00Z')), { d: 8, h: 15, m: 30 });
+  assert.equal(g.countdownParts(end, Date.parse('2026-12-01T00:00:00Z')), null);
+  const members = [{ pos: 1, name: 'a', points: 2140 }, { pos: 2, name: 'me', points: 1875, me: true }, { pos: 3, name: 'c', points: 900 }];
+  assert.deepEqual(g.overtake(members), { leading: false, name: 'a', pos: 1, rupees: 2660 });
+  assert.deepEqual(g.overtake([{ pos: 1, name: 'me', points: 5, me: true }]), { leading: true });
+  assert.equal(g.overtake([{ pos: 1, name: 'x', points: 5 }]), null);
+  const lu = loadModule('src/components/creator/LevelUp.jsx', { Icon: () => null, motionOk: () => false, playChaChing: () => {}, buzz: () => {} });
+  assert.equal(lu.levelUpFrom(null, 5), null, 'first visit: no party');
+  assert.equal(lu.levelUpFrom(3, 3), null);
+  assert.equal(lu.levelUpFrom(4, 3), null);
+  assert.equal(lu.levelUpFrom(2, 3), 2);
+  const css = read('src/styles/creator-game.css');
+  for (const sel of ['.lu-rain i', '.lu-medal', '.cg-teaser', '.cc-rain i']) {
+    const blocks = [...css.matchAll(/@media \(prefers-reduced-motion: no-preference\) \{([\s\S]*?)\n\}/g)].map((m) => m[1]).join('\n');
+    assert.ok(blocks.includes(sel), `${sel} animates only under no-preference`);
+  }
+  const portal = read('src/pages/CreatorPortal.jsx');
+  assert.match(portal, /\{tab === 'dashboard' && game\?\.ok && <GameTeaser /);
+});
+
 console.log(failed ? `\n${failed} failed` : '\nall passed');
 process.exit(failed ? 1 : 0);
