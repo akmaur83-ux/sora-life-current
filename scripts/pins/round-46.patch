@@ -1,0 +1,35 @@
+diff --git a/src/fashion/jewelleryContent.js b/src/fashion/jewelleryContent.js
+index ba07ef2..81f7903 100644
+--- a/src/fashion/jewelleryContent.js
++++ b/src/fashion/jewelleryContent.js
+@@ -31,22 +31,25 @@ export const JEWELLERY = {
+     eyebrow: 'Shop by category', title: 'Find your perfect piece', intro: 'Explore our collections for every occasion.',
+     // Each opens its sub-category listing under Jewellery (/fashion/c/<slug>).
+     items: [
++      // 2026-11-25 (owner: Kiara Jewels tie-up): Bangles, Mangalsutra and Pendants lead, with
++      // photographs of Kiara Jewels pieces (cropped and resized only); Wedding, Men's and Gifts,
++      // which have no pieces yet, step out so no circle opens an empty listing.
++      { title: 'Bangles', slug: 'bangles', image: art('jewellery-cat-bangles', 'A pair of gold bangles with fine grooves, standing on a wooden box') },
++      { title: 'Mangalsutra', slug: 'mangalsutra', image: art('jewellery-cat-mangalsutra', 'A black-bead mangalsutra with a round stone pendant, worn at the neck') },
+       { title: 'Rings', slug: 'rings', image: art('jewellery-cat-rings', 'A solitaire ring with a clear centre stone') },
+       { title: 'Necklaces', slug: 'necklaces', image: art('jewellery-cat-necklaces', 'A fine gold chain with a small pendant') },
+       { title: 'Earrings', slug: 'earrings', image: art('jewellery-cat-earrings', 'A pair of gold and clear-stone drop earrings') },
+       { title: 'Bracelets', slug: 'bracelets', image: art('jewellery-cat-bracelets', 'A slim gold bracelet with small stones') },
+-      { title: 'Wedding', slug: 'wedding-jewellery', image: art('jewellery-cat-wedding', 'Two gold wedding bands') },
+-      { title: "Men's", slug: 'mens-jewellery', image: art('jewellery-cat-mens', 'A black and gold ring') },
+-      { title: 'Gifts', slug: 'jewellery-gifts', image: art('jewellery-cat-gifts', 'An ivory gift box tied with a champagne ribbon') },
++      { title: 'Pendants', slug: 'pendants', image: art('jewellery-cat-pendants', 'A gold chain with a heart-shaped pendant on white knit') },
+     ],
+   },
+   loved: { title: 'Our most loved pieces', viewAll: 'View all' },
+   edits: [
+-    { title: ["For life's", 'special', 'moments'], cta: 'Explore wedding', slug: 'wedding-jewellery',
++    { title: ["For life's", 'special', 'moments'], cta: 'Shop mangalsutra', slug: 'mangalsutra',
+       image: art('jewellery-edit-wedding', 'A stack of gold rings on a pale stone plinth with soft white flowers', {
+         width: 1200, height: 686, srcSet: '/img/fashion-editorial/jewellery-edit-wedding-700.webp 700w, /img/fashion-editorial/jewellery-edit-wedding.webp 1200w', sizes: '(max-width: 700px) 100vw, 54vw',
+       }) },
+-    { title: ['A gift', 'to treasure'], cta: 'Shop gifts', slug: 'jewellery-gifts',
++    { title: ['A gift', 'to treasure'], cta: 'Shop pendants', slug: 'pendants',
+       image: art('jewellery-edit-gifting', 'A diamond pendant on a fine chain, worn with an ivory silk top, beside a ribboned gift box', {
+         width: 1200, height: 686, srcSet: '/img/fashion-editorial/jewellery-edit-gifting-700.webp 700w, /img/fashion-editorial/jewellery-edit-gifting.webp 1200w', sizes: '(max-width: 700px) 100vw, 46vw',
+       }) },

@@ -54,7 +54,11 @@ function contrast(a, b) {
 
 // ---- the catalogue: Jewellery and its seven sub-categories as the owner created them -------
 const jid = (n) => `00000000-0000-4000-8000-00000000a${String(n).padStart(3, '0')}`;
-const SUBS = [['Rings', 'rings'], ['Necklaces', 'necklaces'], ['Earrings', 'earrings'], ['Bracelets', 'bracelets'], ['Wedding', 'wedding-jewellery'], ["Men's", 'mens-jewellery'], ['Gifts', 'jewellery-gifts']];
+const SUBS = [['Rings', 'rings'], ['Necklaces', 'necklaces'], ['Earrings', 'earrings'], ['Bracelets', 'bracelets'], ['Wedding', 'wedding-jewellery'], ["Men's", 'mens-jewellery'], ['Gifts', 'jewellery-gifts'],
+  // 2026-11-25: added for the Kiara Jewels tie-up.
+  ['Bangles', 'bangles'], ['Mangalsutra', 'mangalsutra'], ['Pendants', 'pendants']];
+// The seven circles since the Kiara Jewels tie-up (2026-11-25): no circle opens an empty listing.
+const CIRCLES = [['Bangles', 'bangles'], ['Mangalsutra', 'mangalsutra'], ['Rings', 'rings'], ['Necklaces', 'necklaces'], ['Earrings', 'earrings'], ['Bracelets', 'bracelets'], ['Pendants', 'pendants']];
 const J_CATEGORIES = [
   { id: jid(100), parent_id: null, name: 'Jewellery', slug: 'jewellery', tagline: '', image_url: null, sort_order: 5, is_active: true },
   ...SUBS.map(([name, slug], i) => ({ id: jid(101 + i), parent_id: jid(100), name, slug, tagline: '', image_url: null, sort_order: i + 1, is_active: true })),
@@ -83,6 +87,7 @@ const IMAGES = {
   'jewellery-hero-drape': [736, 1472],
   'jewellery-cat-rings': [400, 400], 'jewellery-cat-necklaces': [400, 400], 'jewellery-cat-earrings': [400, 400], 'jewellery-cat-bracelets': [400, 400],
   'jewellery-cat-wedding': [400, 400], 'jewellery-cat-mens': [400, 400], 'jewellery-cat-gifts': [400, 400],
+  'jewellery-cat-bangles': [400, 400], 'jewellery-cat-mangalsutra': [400, 400], 'jewellery-cat-pendants': [400, 400],
   'jewellery-edit-wedding': [1200, 686], 'jewellery-edit-wedding-700': [700, 400], 'jewellery-edit-gifting': [1200, 686], 'jewellery-edit-gifting-700': [700, 400],
   'jewellery-story': [800, 960], 'jewellery-news': [1600, 625], 'jewellery-news-mobile': [800, 741],
 };
@@ -132,11 +137,11 @@ await test('the sections in the reference\'s order: hero, trust strip, shop by c
   assert.match(page, /<h2 id="jw-news-title">Be the first to know<\/h2><p>Subscribe to hear when new jewellery arrives\. You can unsubscribe whenever you like\.<\/p><form class="jw-news__form" novalidate="">/);
 });
 
-await test('shop by category: seven circles — Rings, Necklaces, Earrings, Bracelets, Wedding, Men\'s, Gifts — each opening its own sub-category listing; the two banners open Wedding and Gifts', () => {
+await test('shop by category: seven circles — Bangles, Mangalsutra, Rings, Necklaces, Earrings, Bracelets, Pendants — each opening its own sub-category listing; the two banners open Mangalsutra and Pendants', () => {
   const circles = [...page.matchAll(/<li><a class="jw-cat" href="([^"]+)"><picture class="jw-cat__art"><img src="\/img\/fashion-editorial\/jewellery-cat-[a-z]+\.webp"[^>]*alt="[^"]{8,}"[^>]*\/><\/picture><span>([^<]+)<\/span><\/a><\/li>/g)].map((m) => [m[2].replace('&#x27;', '\''), m[1]]);
-  assert.deepEqual(circles, SUBS.map(([name, slug]) => [name, `/fashion/c/${slug}`]));
-  assert.match(page, /<a class="jw-edit jw-edit--1" href="\/fashion\/c\/wedding-jewellery">[\s\S]*?<h2><span>For life&#x27;s<\/span><span>special<\/span><span>moments<\/span><\/h2><span class="jw-button">Explore wedding <svg/);
-  assert.match(page, /<a class="jw-edit jw-edit--2" href="\/fashion\/c\/jewellery-gifts">[\s\S]*?<h2><span>A gift<\/span><span>to treasure<\/span><\/h2><span class="jw-button">Shop gifts <svg/);
+  assert.deepEqual(circles, CIRCLES.map(([name, slug]) => [name, `/fashion/c/${slug}`]));
+  assert.match(page, /<a class="jw-edit jw-edit--1" href="\/fashion\/c\/mangalsutra">[\s\S]*?<h2><span>For life&#x27;s<\/span><span>special<\/span><span>moments<\/span><\/h2><span class="jw-button">Shop mangalsutra <svg/);
+  assert.match(page, /<a class="jw-edit jw-edit--2" href="\/fashion\/c\/pendants">[\s\S]*?<h2><span>A gift<\/span><span>to treasure<\/span><\/h2><span class="jw-button">Shop pendants <svg/);
   // Without the categories in the catalogue nothing breaks: every link falls back to the page's own products.
   const bare = app.render('/fashion/jewellery');
   assert.equal((bare.match(/<a class="jw-cat" href="[^"]*#jw-products">/g) || []).length, 7);
