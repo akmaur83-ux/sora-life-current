@@ -10,6 +10,7 @@ import BrandCarousel from '../components/BrandCarousel.jsx';
 import { BiosashRange } from '../components/BiosashRange.jsx';
 import { TajLeatherPosters } from '../components/TajLeather.jsx';
 import { AnsariPosters } from '../components/AnsariFashion.jsx';
+import { KiaraPosters } from '../components/KiaraJewels.jsx';
 import HomeGroup from '../components/HomeGroup.jsx';
 import { NewArrivals } from '../components/NewArrivals.jsx';
 import PopularThisWeek from '../components/PopularThisWeek.jsx';
@@ -107,6 +108,8 @@ export default function Home() {
       <BrandCarousel />
       <TajLeatherPosters />
       <AnsariPosters />
+      {/* Kiara Jewels (partner, 2026-11-25: "home page pe poster dalo"): their three posters. */}
+      <KiaraPosters />
       {/* Existing promotions runtime: nothing when no active promotion targets `home`. */}
       <HomeOffers appearance={visuals.offers} />
 

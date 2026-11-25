@@ -180,6 +180,11 @@ const WELLNESS = {
     hidden: hidden(), title: text(60, 'Heading'), more: text(30, 'View-all label'),
     link: link('View-all link (empty: all Ansari Fashion)'),
   }, 'Ansari Fashion suits and sarees (their range in Fashion; also on the Fashion home)'),
+  // Kiara Jewels (partner, 2026-11-25), under the Ansari Fashion posters.
+  kiaraPosters: group({
+    hidden: hidden(), eyebrow: text(60, 'Eyebrow'), title: text(60, 'Headline'), text: text(200, 'Subline'),
+    cta: text(40, 'Button label'), link: link('Button link (empty: all Kiara Jewels)'),
+  }, 'Kiara Jewels posters (three photographs: bangles, mangalsutra, necklaces)'),
   // Under the Biosash range (and Weavers Villa since 2026-11-08) since 2026-11-07.
   bedsheets: group({
     hidden: hidden(), title: text(60, 'Heading'), more: text(30, 'View-all label'),
