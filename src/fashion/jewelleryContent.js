@@ -46,8 +46,10 @@ export const JEWELLERY = {
   loved: { title: 'Our most loved pieces', viewAll: 'View all' },
   edits: [
     { title: ["For life's", 'special', 'moments'], cta: 'Shop mangalsutra', slug: 'mangalsutra',
-      image: art('jewellery-edit-wedding', 'A stack of gold rings on a pale stone plinth with soft white flowers', {
-        width: 1200, height: 686, srcSet: '/img/fashion-editorial/jewellery-edit-wedding-700.webp 700w, /img/fashion-editorial/jewellery-edit-wedding.webp 1200w', sizes: '(max-width: 700px) 100vw, 54vw',
+      // 2026-11-25: a Kiara Jewels mangalsutra photograph (its right edge faded into cream for the
+      // words), so the banner shows what its button opens — it showed a stack of rings before.
+      image: art('jewellery-edit-mangalsutra', 'A black-bead hand mangalsutra worn with a pink and gold silk saree, beside a lit diya', {
+        width: 1200, height: 686, srcSet: '/img/fashion-editorial/jewellery-edit-mangalsutra-700.webp 700w, /img/fashion-editorial/jewellery-edit-mangalsutra.webp 1200w', sizes: '(max-width: 700px) 100vw, 54vw',
       }) },
     { title: ['A gift', 'to treasure'], cta: 'Shop pendants', slug: 'pendants',
       image: art('jewellery-edit-gifting', 'A diamond pendant on a fine chain, worn with an ivory silk top, beside a ribboned gift box', {

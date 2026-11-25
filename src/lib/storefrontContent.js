@@ -180,16 +180,11 @@ const WELLNESS = {
     hidden: hidden(), title: text(60, 'Heading'), more: text(30, 'View-all label'),
     link: link('View-all link (empty: all Ansari Fashion)'),
   }, 'Ansari Fashion suits and sarees (their range in Fashion; also on the Fashion home)'),
-  // Kiara Jewels (partner, 2026-11-25), under the Ansari Fashion posters.
-  kiaraPosters: group({
+  // New in Jewellery (2026-11-25): Kiara Jewels and Joiya Jewellery, under the Ansari Fashion posters.
+  newJewellery: group({
     hidden: hidden(), eyebrow: text(60, 'Eyebrow'), title: text(60, 'Headline'), text: text(200, 'Subline'),
-    cta: text(40, 'Button label'), link: link('Button link (empty: all Kiara Jewels)'),
-  }, 'Kiara Jewels posters (three photographs: bangles, mangalsutra, necklaces)'),
-  // Joiya Jewellery (partner, 2026-11-25), under the Kiara Jewels posters.
-  joiyaPosters: group({
-    hidden: hidden(), eyebrow: text(60, 'Eyebrow'), title: text(60, 'Headline'), text: text(200, 'Subline'),
-    cta: text(40, 'Button label'), link: link('Button link (empty: all Joiya Jewellery)'),
-  }, 'Joiya Jewellery posters (three photographs: necklaces, mangalsutra, pendants)'),
+    cta: text(40, 'Button label'), link: link('Button link (empty: the Jewellery store)'),
+  }, 'New in Jewellery (five photographs: Kiara Jewels and Joiya Jewellery)'),
   // Under the Biosash range (and Weavers Villa since 2026-11-08) since 2026-11-07.
   bedsheets: group({
     hidden: hidden(), title: text(60, 'Heading'), more: text(30, 'View-all label'),

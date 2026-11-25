@@ -88,7 +88,7 @@ const IMAGES = {
   'jewellery-cat-rings': [400, 400], 'jewellery-cat-necklaces': [400, 400], 'jewellery-cat-earrings': [400, 400], 'jewellery-cat-bracelets': [400, 400],
   'jewellery-cat-wedding': [400, 400], 'jewellery-cat-mens': [400, 400], 'jewellery-cat-gifts': [400, 400],
   'jewellery-cat-bangles': [400, 400], 'jewellery-cat-mangalsutra': [400, 400], 'jewellery-cat-pendants': [400, 400],
-  'jewellery-edit-wedding': [1200, 686], 'jewellery-edit-wedding-700': [700, 400], 'jewellery-edit-gifting': [1200, 686], 'jewellery-edit-gifting-700': [700, 400],
+  'jewellery-edit-wedding': [1200, 686], 'jewellery-edit-wedding-700': [700, 400], 'jewellery-edit-mangalsutra': [1200, 686], 'jewellery-edit-mangalsutra-700': [700, 400], 'jewellery-edit-gifting': [1200, 686], 'jewellery-edit-gifting-700': [700, 400],
   'jewellery-story': [800, 960], 'jewellery-news': [1600, 625], 'jewellery-news-mobile': [800, 741],
 };
 await test('the photographs: fifteen WebP files under new names, each under 150 KB, at the sizes the content declares; every image the page names exists; the replaced hero photographs are deleted (no cached copy can resurface)', () => {
