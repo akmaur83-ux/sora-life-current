@@ -1,0 +1,132 @@
+diff --git a/src/components/JoiyaJewellery.jsx b/src/components/JoiyaJewellery.jsx
+new file mode 100644
+index 0000000..c28e09c
+--- /dev/null
++++ b/src/components/JoiyaJewellery.jsx
+@@ -0,0 +1,39 @@
++import { Link } from 'react-router-dom';
++import Icon from './Icon.jsx';
++import { useStorefrontSection } from '../lib/storefrontSections.js';
++import { JOIYA_POSTERS_SECTION, JOIYA_POSTERS, JOIYA_LISTING } from '../lib/joiyaJewellery.js';
++
++// ============================================================
++// Joiya Jewellery posters (partner, 2026-11-25) — joiyaJewellery.js has what is shown and why.
++// The Ansari / Kiara poster layout (.hx-ans), in Joiya's wine (.hx-jy).
++// ============================================================
++export { JOIYA_POSTERS_SECTION };
++
++export function JoiyaPosters({ posters = JOIYA_POSTERS } = {}) {
++  const s = useStorefrontSection('wellness', 'joiyaPosters', JOIYA_POSTERS_SECTION);
++  if (s.hidden || !posters.length) return null;
++  return (
++    <section className="hx hx-ans hx-jy" aria-labelledby="hx-jy-h">
++      <div className="hx-wrap">
++        <div className="hx-taj__head">
++          <div>
++            {s.eyebrow && <p className="hx-taj__eyebrow">{s.eyebrow}</p>}
++            <h2 className="hx-taj__h" id="hx-jy-h">{s.title}</h2>
++            {s.text && <p className="hx-taj__text">{s.text}</p>}
++          </div>
++          {s.cta && <Link to={s.link || JOIYA_LISTING} className="hx-ans__cta">{s.cta} <Icon name="arrowRight" size={16} /></Link>}
++        </div>
++        <ul className="hx-ans__posters">
++          {posters.map((p) => (
++            <li key={p.id}>
++              <Link to={p.href} className="hx-ans__poster">
++                <img src={p.image} alt={p.alt} width="900" height="1200" loading="lazy" decoding="async" />
++                <span className="hx-ans__label">{p.label} <Icon name="arrowRight" size={15} /></span>
++              </Link>
++            </li>
++          ))}
++        </ul>
++      </div>
++    </section>
++  );
++}
+diff --git a/src/lib/joiyaJewellery.js b/src/lib/joiyaJewellery.js
+new file mode 100644
+index 0000000..866af00
+--- /dev/null
++++ b/src/lib/joiyaJewellery.js
+@@ -0,0 +1,28 @@
++// ============================================================
++// Joiya Jewellery (partner, 2026-11-25: "https://joiya.in/ yeh bhi kro" — the same as Kiara Jewels).
++// Sixteen of their nineteen listings live in Fashion › Jewellery at Joiya's own selling prices;
++// Joiya ship the orders. Left out: a combo whose only photographs are price banners, and two
++// listings that carry another product's name with different prices. Their struck-through MRPs
++// (₹549 against ₹1,999 and the like) are not shown: SORA cannot vouch for them.
++//
++//   * the posters — three of their photographs (copies served from this site,
++//     /img/partners/joiya-jewellery, cropped and resized only), each with our own label.
++//
++// On the wellness homepage, under the Kiara Jewels posters; editable in Storefronts → Wellness.
++// ============================================================
++export const JOIYA_BRAND = 'Joiya Jewellery';
++export const JOIYA_LISTING = '/fashion/search?q=joiya';
++export const JOIYA_POSTERS_SECTION = Object.freeze({
++  hidden: false,
++  eyebrow: 'New on SORA Lifestyle',
++  title: 'Joiya Jewellery',
++  text: 'Gold-tone chains, mangalsutras and pendants for every day, at Joiya Jewellery’s own prices.',
++  cta: 'Shop Joiya Jewellery',
++  link: JOIYA_LISTING,
++});
++const P = '/img/partners/joiya-jewellery';
++export const JOIYA_POSTERS = Object.freeze([
++  Object.freeze({ id: 'necklaces', label: 'Necklaces', href: '/fashion/c/necklaces', image: `${P}/necklaces.webp`, alt: 'A long gold-tone necklace with small coloured stones, worn with an ivory saree' }),
++  Object.freeze({ id: 'mangalsutra', label: 'Mangalsutra', href: '/fashion/c/mangalsutra', image: `${P}/mangalsutra.webp`, alt: 'A black-bead mangalsutra with an antique gold-tone pendant, worn with a black saree' }),
++  Object.freeze({ id: 'pendants', label: 'Pendants', href: '/fashion/c/pendants', image: `${P}/pendants.webp`, alt: 'A fine gold-tone chain with an open-heart pendant, worn' }),
++]);
+diff --git a/src/lib/storefrontContent.js b/src/lib/storefrontContent.js
+index 72319e1..b61652c 100644
+--- a/src/lib/storefrontContent.js
++++ b/src/lib/storefrontContent.js
+@@ -185,6 +185,11 @@ const WELLNESS = {
+     hidden: hidden(), eyebrow: text(60, 'Eyebrow'), title: text(60, 'Headline'), text: text(200, 'Subline'),
+     cta: text(40, 'Button label'), link: link('Button link (empty: all Kiara Jewels)'),
+   }, 'Kiara Jewels posters (three photographs: bangles, mangalsutra, necklaces)'),
++  // Joiya Jewellery (partner, 2026-11-25), under the Kiara Jewels posters.
++  joiyaPosters: group({
++    hidden: hidden(), eyebrow: text(60, 'Eyebrow'), title: text(60, 'Headline'), text: text(200, 'Subline'),
++    cta: text(40, 'Button label'), link: link('Button link (empty: all Joiya Jewellery)'),
++  }, 'Joiya Jewellery posters (three photographs: necklaces, mangalsutra, pendants)'),
+   // Under the Biosash range (and Weavers Villa since 2026-11-08) since 2026-11-07.
+   bedsheets: group({
+     hidden: hidden(), title: text(60, 'Heading'), more: text(30, 'View-all label'),
+diff --git a/src/pages/Home.jsx b/src/pages/Home.jsx
+index 5223d6a..ac64bfe 100644
+--- a/src/pages/Home.jsx
++++ b/src/pages/Home.jsx
+@@ -11,6 +11,7 @@ import { BiosashRange } from '../components/BiosashRange.jsx';
+ import { TajLeatherPosters } from '../components/TajLeather.jsx';
+ import { AnsariPosters } from '../components/AnsariFashion.jsx';
+ import { KiaraPosters } from '../components/KiaraJewels.jsx';
++import { JoiyaPosters } from '../components/JoiyaJewellery.jsx';
+ import HomeGroup from '../components/HomeGroup.jsx';
+ import { NewArrivals } from '../components/NewArrivals.jsx';
+ import PopularThisWeek from '../components/PopularThisWeek.jsx';
+@@ -110,6 +111,8 @@ export default function Home() {
+       <AnsariPosters />
+       {/* Kiara Jewels (partner, 2026-11-25: "home page pe poster dalo"): their three posters. */}
+       <KiaraPosters />
++      {/* Joiya Jewellery (partner, 2026-11-25): their three posters. */}
++      <JoiyaPosters />
+       {/* Existing promotions runtime: nothing when no active promotion targets `home`. */}
+       <HomeOffers appearance={visuals.offers} />
+ 
+diff --git a/src/styles/v2-home.css b/src/styles/v2-home.css
+index 8c6bcc4..5c4b36d 100644
+--- a/src/styles/v2-home.css
++++ b/src/styles/v2-home.css
+@@ -673,6 +673,11 @@
+ .hx-kj .hx-ans__poster { background: #F4ECE0; }
+ .hx-kj .hx-ans__label { background: linear-gradient(transparent, rgba(24, 16, 6, .8)); }
+ .hx-kj .hx-ans__poster:focus-visible { outline-color: #8B6A3E; }
++/* Joiya Jewellery posters (2026-11-25): the same layout in Joiya's wine. */
++.hx.hx-jy .hx-ans__cta { background: #6B2D3E; }
++.hx.hx-jy .hx-ans__cta:hover { background: #52202F; }
++.hx-jy .hx-ans__poster { background: #F3E6E3; }
++.hx-jy .hx-ans__poster:focus-visible { outline-color: #6B2D3E; }
+ .hx-ans__posters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin: 0; padding: 0; list-style: none; }
+ .hx-ans__poster { position: relative; display: block; overflow: hidden; background: #F3ECE4; color: #fff; text-decoration: none; }
+ .hx-ans__poster img { display: block; width: 100%; height: auto; aspect-ratio: 3 / 4; object-fit: cover; object-position: center top; transition: transform .5s ease; }

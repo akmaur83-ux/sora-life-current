@@ -673,6 +673,11 @@
 .hx-kj .hx-ans__poster { background: #F4ECE0; }
 .hx-kj .hx-ans__label { background: linear-gradient(transparent, rgba(24, 16, 6, .8)); }
 .hx-kj .hx-ans__poster:focus-visible { outline-color: #8B6A3E; }
+/* Joiya Jewellery posters (2026-11-25): the same layout in Joiya's wine. */
+.hx.hx-jy .hx-ans__cta { background: #6B2D3E; }
+.hx.hx-jy .hx-ans__cta:hover { background: #52202F; }
+.hx-jy .hx-ans__poster { background: #F3E6E3; }
+.hx-jy .hx-ans__poster:focus-visible { outline-color: #6B2D3E; }
 .hx-ans__posters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin: 0; padding: 0; list-style: none; }
 .hx-ans__poster { position: relative; display: block; overflow: hidden; background: #F3ECE4; color: #fff; text-decoration: none; }
 .hx-ans__poster img { display: block; width: 100%; height: auto; aspect-ratio: 3 / 4; object-fit: cover; object-position: center top; transition: transform .5s ease; }
