@@ -98,7 +98,7 @@ await test('the hero: three slides of three photographs; the first slide\'s head
   assert.match(hero, /<h2 class="hx-hero__title"><span>Layer up\.<\/span> <span class="hx-hl">Settle in\.<\/span><\/h2>/);
   assert.equal((hero.match(/<h1/g) || []).length, 1, 'one h1');
   const panels = [...hero.matchAll(/<a class="hx-hero__card"(?: tabindex="-1")? href="([^"]+)"><span class="hx-hero__ph"><picture><source media="\(max-width: 700px\)"(?: srcSet="[^"]+")?\/><img alt="([^"]{30,})" width="900" height="1200" class="hx-hero__img"(?: src="[^"]+")? loading="(eager|lazy)" decoding="async"(?: fetchPriority="high")?\/><\/picture><\/span><span class="hx-hero__glare" aria-hidden="true"><\/span><span class="hx-hero__txt"><em>[^<]+<\/em><b>([^<]+)<\/b><span class="hx-hero__shop">Shop now <svg/g)];
-  const names = mod.HERO_SLIDES.flatMap((sl) => sl.panels.map((pn) => pn.picture.desktop.match(/home-hero\/u-([a-z-]+)\.webp$/)[1]));
+  const names = mod.HERO_SLIDES.flatMap((sl) => sl.panels.map((pn) => pn.picture.desktop.match(/home-hero\/(?:u2?|o)-([a-z-]+)\.webp$/)[1]));
   assert.deepEqual(panels.map((m, i) => [m[4].replace('&amp;', '&'), m[1], names[i]]), [
     ['Leather', '/fashion/leather', 'leather'], ['Jewellery', '/fashion/jewellery', 'jewellery'], ['Wellness', '/category/wellness', 'wellness'],
     ['Sarees', '/fashion/women/sarees', 'sarees'], ['Suits', '/fashion/c/suits-dress-materials', 'suits'], ['Bangles', '/fashion/c/bangles', 'bangles'],
@@ -115,8 +115,10 @@ await test('the hero: three slides of three photographs; the first slide\'s head
 
 await test('the hero\'s photographs: real photographs from Unsplash (owner, 2026-11-27: "aise images fake lagti hain"), each under the Unsplash License with its id recorded; portrait 3:4, 900×1200 and 600×800, each under 150 KB', () => {
   for (const sl of mod.HERO_SLIDES) for (const pn of sl.panels) {
-    assert.match(pn.photo, /^\d{10,13}-[0-9a-f]{12}$/, `${pn.title}: its Unsplash photo id`);
-    const name = pn.picture.desktop.match(/home-hero\/(u-[a-z-]+)\.webp$/)[1];
+    // An Unsplash photograph (u-, u2-) carries its id; our own (o-, the Biosash range) is marked own.
+    assert.match(pn.photo, /^(\d{10,13}-[0-9a-f]{12}|own)$/, `${pn.title}: its Unsplash photo id, or own`);
+    const name = pn.picture.desktop.match(/home-hero\/((?:u2?|o)-[a-z-]+)\.webp$/)[1];
+    assert.equal(pn.photo === 'own', name.startsWith('o-'), `${pn.title}: own photographs are o- files`);
     for (const [rel, size] of [[`img/home-hero/${name}.webp`, [900, 1200]], [`img/home-hero/${name}-600.webp`, [600, 800]]]) {
       assert.ok(has(rel), `${rel} is missing`);
       assert.ok(statSync(resolve(ROOT, rel)).size <= 150 * 1024, `${rel} under 150 KB`);

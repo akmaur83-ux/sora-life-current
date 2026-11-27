@@ -41,8 +41,10 @@ const PHONE = '(max-width: 700px)';
 // centres (left, center, right).
 // The photographs (owner, 2026-11-27: real photographs, not generated ones) are from Unsplash, under
 // the Unsplash License (free for commercial use; no Unsplash+ image): each panel's `photo` is its id.
-const heroPic = (name) => ({ phone: `/img/home-hero/u-${name}-600.webp`, desktop: `/img/home-hero/u-${name}.webp` });
-const panel = (title, note, link, name, alt, photo, focus = 'center') => ({ title, note, cta: 'Shop now', link, picture: heroPic(name), alt, focus, photo });
+// The Wellness photograph is our own (Biosash's range), marked OWN.
+const OWN = 'own';
+const heroPic = (name, set = 'u-') => ({ phone: `/img/home-hero/${set}${name}-600.webp`, desktop: `/img/home-hero/${set}${name}.webp` });
+const panel = (title, note, link, name, alt, photo, focus = 'center', set = 'u-') => ({ title, note, cta: 'Shop now', link, picture: heroPic(name, set), alt, focus, photo });
 export const HERO_SLIDES = [
   {
     key: 'stores',
@@ -51,7 +53,7 @@ export const HERO_SLIDES = [
     panels: [
       panel('Leather', 'Jackets, coats & bags', '/fashion/leather', 'leather', 'A man in a brown leather jacket standing outdoors at dusk', '1700993443419-b6f067e734e4', 'left'),
       panel('Jewellery', 'Bangles, mangalsutra & more', '/fashion/jewellery', 'jewellery', 'A smiling woman wearing a kundan necklace, earrings and maang tikka', '1756483560049-e7b2208f99a0', 'right'),
-      panel('Wellness', 'Juices, care & nutrition', '/category/wellness', 'wellness', 'Fresh turmeric roots and powder beside yellow flowers on a dark stone', '1606951444141-e5533feb55be'),
+      panel('Wellness', 'Juices, care & nutrition', '/category/wellness', 'wellness', 'Biosash sea buckthorn juice in front, with Biosash Stressaid juice and more of the range behind it among sea buckthorn berries and oranges', OWN, 'left', 'o-'),
     ],
   },
   {
@@ -60,9 +62,9 @@ export const HERO_SLIDES = [
     eyebrow: 'The wedding season',
     title: ['Dressed for', 'every function.'],
     panels: [
-      panel('Sarees', 'The saree edit', '/fashion/women/sarees', 'sarees', 'A smiling woman in a green silk saree with marigold garlands at sunset', '1770838447151-05a876cdee3d'),
-      panel('Suits', 'Suits & dress materials', '/fashion/c/suits-dress-materials', 'suits', 'A woman in a yellow embroidered suit with a printed dupatta', '1599386642518-d1e8aa2875c5'),
-      panel('Bangles', 'Kiara Jewels', '/fashion/c/bangles', 'bangles', 'A hennaed hand wearing stacked gold bangles over an orange silk saree', '1762162089047-97e09435984d', 'right'),
+      panel('Sarees', 'The saree edit', '/fashion/women/sarees', 'sarees', 'A woman in a sage silk saree with a long statement necklace and jhumkas against a soft grey wall', '1679006831648-7c9ea12e5807', 'center', 'u2-'),
+      panel('Suits', 'Suits & dress materials', '/fashion/c/suits-dress-materials', 'suits', 'A woman in an ivory embroidered suit and layered pearls in a jewellery boutique', '1571908599538-7e1e6e92b064', 'center', 'u2-'),
+      panel('Bangles', 'Everyday & festive', '/fashion/c/bangles', 'bangles', 'Rows of gold-toned bangles set with small stones, glowing in warm light', '1634957975483-17a583180cbf', 'center', 'u2-'),
     ],
   },
   {
@@ -70,7 +72,7 @@ export const HERO_SLIDES = [
     eyebrow: 'Winter · Leather · Home',
     title: ['Layer up.', 'Settle in.'],
     panels: [
-      panel('Women’s jackets', 'Genuine leather', '/fashion/c/womens-leather-jackets', 'womens-jackets', 'A woman in a tan leather jacket seated in front of a brick wall', '1675621916403-31d48f4df89c'),
+      panel('Women’s jackets', 'Leather jackets & coats', '/fashion/c/womens-leather-jackets', 'womens-jackets', 'A woman in a tan leather jacket seated in front of a brick wall', '1675621916403-31d48f4df89c'),
       panel('The winter edit', 'Jackets, shawls & mufflers', '/fashion/winter', 'winter', 'A smiling woman in a black coat with a cream scarf by a white wall', '1760551936951-aa0fabc550d8'),
       panel('Home & Living', 'Bedsheets & more', '/homeliving', 'home', 'A softly lit bed with white sheets, a lamp and sheer curtains', '1616418928117-4e6d19be2df1'),
     ],
