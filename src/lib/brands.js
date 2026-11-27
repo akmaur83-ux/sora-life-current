@@ -21,6 +21,11 @@ export const BRANDS = Object.freeze([
     text: 'Genuine leather jackets for men, from Delhi.' }),
   Object.freeze({ id: 'ansari-fashion', luxe: true, page: '/brands/ansari-fashion', story: "Ansari Fashion is from Banaras: Banarasi silk and cotton suit sets, Jamdani weaves and sarees, sold here at Ansari Fashion's own prices.", catalogueBrand: 'Ansari Fashion', name: 'Ansari Fashion', store: 'Fashion', href: '/fashion/search?q=ansari%20fashion', image: '/img/partners/ansari-fashion/suit-sets.webp',
     text: 'Banarasi silk and cotton suit sets, Jamdani weaves and sarees from Banaras.' }),
+  // Jewellery partners (2026-11-25; on the brand row 2026-11-27).
+  Object.freeze({ id: 'kiara-jewels', page: '/brands/kiara-jewels', story: "Kiara Jewels makes fashion jewellery: bangles, mangalsutra, necklaces, rings, earrings, bracelets and pendants, sold here at Kiara Jewels' own prices.", catalogueBrand: 'Kiara Jewels', name: 'Kiara Jewels', store: 'Fashion', href: '/fashion/search?q=kiara%20jewels', image: '/img/partners/kiara-jewels/necklaces.webp',
+    text: 'Bangles, mangalsutra, necklaces, rings and earrings.' }),
+  Object.freeze({ id: 'joiya-jewellery', page: '/brands/joiya-jewellery', story: "Joiya Jewellery makes fashion jewellery: necklaces, pendants and chains, sold here at Joiya's own prices.", catalogueBrand: 'Joiya Jewellery', name: 'Joiya Jewellery', store: 'Fashion', href: '/fashion/search?q=joiya', image: '/img/partners/joiya-jewellery/pendants.webp',
+    text: 'Necklaces, pendants and chains.' }),
 ]);
 
 /** A brand's picture: its own, or for Biosash the first in-stock Biosash product shot. Pure. */

@@ -10,10 +10,10 @@ import { useStorefrontSection, filledLines, positionAttr, toneAttrs, phoneSource
 // palette of its own, scoped to these sections (every rule in v2-home.css
 // that styles them starts with .hx; no --slv2-* token changes).
 //
-// HomeHero      — two slides of the product lineup, the copy over the
-//                 photograph's empty white; autoplays, pauses on hover and
-//                 focus, still under prefers-reduced-motion, dots and a swipe.
-//                 Static: the admin Hero Slides page no longer drives it.
+// HomeHero      — three slides, each three portrait photographs side by side
+//                 (a collage), each with its own Shop button into a store; the
+//                 headline above them. Autoplays, pauses on hover and focus,
+//                 still under prefers-reduced-motion, dots and a swipe.
 // HomeTrustStrip — four facts: free standard delivery on every order,
 //                 genuine products, 7-day returns, support 9am–6pm IST. On a
 //                 phone, one row of four, each two short lines beside its icon.
@@ -33,26 +33,45 @@ import { useStorefrontSection, filledLines, positionAttr, toneAttrs, phoneSource
 export const HERO_AUTOPLAY_MS = 6000;
 const PHONE = '(max-width: 700px)';
 
+// The hero (owner, 2026-11-27: "hero image pe 3 shop ke button hone chahiye jiss se 3 stores
+// accessible ho … 3 collage show honge"): each slide three portrait photographs side by side, each
+// its own way in with its own Shop button; the slide's headline above them. The admin swaps the
+// photographs (Storefronts → Wellness homepage → Hero), three per slide, phone and desktop.
+// Photographs are portrait, 3:4, with no words in them; `focus` is where a phone's narrow crop
+// centres (left, center, right).
+const heroPic = (name) => ({ phone: `/img/home-hero/${name}-600.webp`, desktop: `/img/home-hero/${name}.webp` });
+const panel = (title, note, link, name, alt, focus = 'center') => ({ title, note, cta: 'Shop now', link, picture: heroPic(name), alt, focus });
 export const HERO_SLIDES = [
   {
-    key: 'everyday',
-    // Two lines on a phone, as in the mockup; one line, dot-separated, from 701px.
-    eyebrow: ['Wellness · Fashion · Home', 'Personal care · More'],
-    title: ['Everything for', 'everyday wellbeing.'],
-    cta: { label: 'Shop now', to: '/shop' },
-    // The wider lineup leads (the owner's choice): the juices, Berry Veda and its box.
-    image: '/img/home-hero-2.webp', phone: '/img/home-hero-2-800.webp', width: 1600, height: 900,
-    alt: 'Biosash sea buckthorn juices, Berry Veda and Mom’s Trust care products with berries and marigolds',
+    key: 'stores',
+    eyebrow: 'Fashion · Jewellery · Wellness',
+    title: ['Dress up. Shine.', 'Feel good.'],
+    panels: [
+      panel('Leather', 'Jackets, coats & bags', '/fashion/leather', 'leather', 'A man in a dark brown leather jacket and cream trousers beside a curved stone wall', 'right'),
+      panel('Jewellery', 'Bangles, mangalsutra & more', '/fashion/jewellery', 'jewellery', 'A woman half-veiled in a rust drape wearing a sparkling necklace, drop earrings and a ring', 'right'),
+      panel('Wellness', 'Juices, care & nutrition', '/category/wellness', 'wellness', 'Biosash sea buckthorn juice, Berry Veda and Mom’s Trust care products with marigolds and oranges'),
+    ],
   },
   {
-    // Home & Living for the festive season (owner, 2026-11-08): the Biosash lineup slide gave way.
-    // Diwali has passed (2026-11-20): the season's words, and the whole store, not one category.
-    key: 'homeliving',
-    eyebrow: ['Home & Living'],
-    title: ['Dress your home', 'for the season.'],
-    cta: { label: 'Shop Home & Living', to: '/homeliving' },
-    image: '/img/home-hero-diwali.webp', phone: '/img/home-hero-diwali-800.webp', width: 1280, height: 720,
-    alt: 'A bed in printed bedsheets with folded sheets and printed doormats, lit by diyas, a lantern and marigold garlands',
+    // The wedding season (November to February).
+    key: 'wedding',
+    eyebrow: 'The wedding season',
+    title: ['Dressed for', 'every function.'],
+    panels: [
+      panel('Sarees', 'The saree edit', '/fashion/women/sarees', 'sarees', 'A woman in a plum saree with a gold border seated on sunlit steps', 'right'),
+      panel('Suits', 'Suits & dress materials', '/fashion/c/suits-dress-materials', 'suits', 'A woman in a pink Banarasi suit and matching dupatta in a palace courtyard'),
+      panel('Mangalsutra', 'Kiara Jewels', '/fashion/c/mangalsutra', 'mangalsutra', 'A hand wearing a black-bead mangalsutra beside a pink and gold silk saree and a lit diya', 'right'),
+    ],
+  },
+  {
+    key: 'winter',
+    eyebrow: 'Winter · Leather · Home',
+    title: ['Layer up.', 'Settle in.'],
+    panels: [
+      panel('Women’s jackets', 'Taj Leather', '/fashion/c/womens-leather-jackets', 'womens-jackets', 'A woman in a dark brown leather jacket and cream trousers seated beside a leather handbag'),
+      panel('The winter edit', 'Jackets, shawls & mufflers', '/fashion/winter', 'winter', 'A woman in a camel coat and brown trousers sitting on a sunlit floor'),
+      panel('Home & Living', 'Bedsheets & more', '/homeliving', 'home', 'A bed made up in leaf-print sheets and a green quilt beside a plant on a side table', 'left'),
+    ],
   },
 ];
 
@@ -80,35 +99,52 @@ export const STORES = [
 export const HERO_SECTION = Object.freeze({
   hidden: false,
   slides: HERO_SLIDES.map((s) => ({
-    ...s, hidden: false,
-    eyebrow: [s.eyebrow[0] || '', s.eyebrow[1] || ''],
-    title: [s.title[0], s.title[1]],
-    ctaLabel: s.cta?.label || '', ctaLink: s.cta?.to || '',
-    picture: { colour: '', phone: s.phone, desktop: s.image },
-    position: 'left',
+    key: s.key, hidden: false, eyebrow: s.eyebrow, title: [s.title[0], s.title[1]],
+    panels: s.panels.map((p) => ({ hidden: false, ...p })),
   })),
 });
 
-/** The hero's slides as HomeHero renders them: the hidden ones left out, a button only with a label and a link. */
+/** The hero's slides as HomeHero renders them: the hidden slides and panels left out, a button only with a label. */
 export function heroSlidesOf(section) {
   if (section.hidden) return [];
   return section.slides.filter((s) => !s.hidden).map((s) => ({
     ...s,
-    eyebrow: filledLines(s.eyebrow),
-    cta: s.ctaLabel && s.ctaLink ? { label: s.ctaLabel, to: s.ctaLink } : null,
-    image: s.picture.desktop, phone: s.picture.phone, colour: s.picture.colour,
-  }));
+    title: filledLines(s.title),
+    panels: s.panels.filter((p) => !p.hidden && p.link && p.picture.desktop),
+  })).filter((s) => s.panels.length > 0);
 }
 
-/** A slide's page colour (only when the admin set one with its photograph) and its copy position. */
-const slideLook = (s) => ({ ...positionAttr(s.position), ...(s.colour ? { 'data-tone': '', style: { '--sf-tone': s.colour } } : {}) });
+// Where a phone's narrow crop of the photograph centres, across its width (per cent).
+const FOCUS = { left: 30, center: 50, right: 70 };
 
-/** The slides, one in view on a transform-only track; the first slide's title is the page's h1. */
+/** One panel: the photograph, its name, and its own Shop button — the whole panel one link. */
+function HeroPanel({ p, current, eager, high, i }) {
+  const Entry = entryFor(p.link);
+  return (
+    <li className="hx-hero__panel" style={{ '--i': i, '--focus': `${FOCUS[p.focus] || FOCUS.center}%` }}>
+      <Entry to={p.link} className="hx-hero__card" tabIndex={current ? undefined : -1}>
+        <span className="hx-hero__ph">
+          <DeferredImage src={p.picture.desktop} {...phoneSources(p.picture.phone, p.picture.desktop)} alt={p.alt} width={900} height={1200}
+            className="hx-hero__img" loading={eager ? 'eager' : 'lazy'} fetchPriority={high ? 'high' : undefined} />
+        </span>
+        <span className="hx-hero__txt">
+          {p.note && <em>{p.note}</em>}
+          <b>{p.title}</b>
+          {p.cta && <span className="hx-hero__shop">{p.cta} <Icon name="arrowRight" size={14} /></span>}
+        </span>
+      </Entry>
+    </li>
+  );
+}
+
+/** The slides, one in view on a transform-only track; the first slide's headline is the page's h1. */
 export function HomeHero({ slides: given, autoplayMs = HERO_AUTOPLAY_MS }) {
   const section = useStorefrontSection('wellness', 'hero', HERO_SECTION);
   const slides = given || heroSlidesOf(section);
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
+  // The later slides' photographs load once the page has (or after 2.5 s), so a slide never arrives blank.
+  const [warm, setWarm] = useState(false);
   const reduced = useRef(false);
   const swipe = useRef({ x: null, y: null, moved: false });
   const n = slides.length;
@@ -121,12 +157,18 @@ export function HomeHero({ slides: given, autoplayMs = HERO_AUTOPLAY_MS }) {
     return () => mq.removeEventListener?.('change', sync);
   }, []);
   useEffect(() => {
+    if (n < 2 || typeof window === 'undefined') return undefined;
+    const t = setTimeout(() => setWarm(true), 2500);
+    return () => clearTimeout(t);
+  }, [n]);
+  useEffect(() => {
     if (n < 2 || paused) return undefined;
     const t = setInterval(() => { if (!reduced.current) setIndex((i) => (i + 1) % n); }, autoplayMs);
     return () => clearInterval(t);
   }, [n, paused, autoplayMs]);
   if (n === 0) return null;
-  const go = (d) => setIndex((i) => (i + d + n) % n);
+  const at = index % n;
+  const go = (d) => { setWarm(true); setIndex((i) => (i + d + n) % n); };
   const onPointerDown = (e) => { swipe.current = { x: e.clientX, y: e.clientY, moved: false }; };
   const onPointerUp = (e) => {
     const s = swipe.current;
@@ -140,18 +182,20 @@ export function HomeHero({ slides: given, autoplayMs = HERO_AUTOPLAY_MS }) {
     <section className="hx hx-hero" aria-roledescription="carousel" aria-label="SORA LIFESTYLE"
       onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)} onFocus={() => setPaused(true)} onBlur={() => setPaused(false)}>
       <div className="hx-hero__viewport" onPointerDown={onPointerDown} onPointerUp={onPointerUp} onPointerCancel={() => { swipe.current = { x: null, y: null, moved: false }; }} onClickCapture={onClickCapture}>
-        <div className="hx-hero__track" style={{ transform: `translateX(-${index * 100}%)` }}>
+        <div className="hx-hero__track" style={{ transform: `translateX(-${at * 100}%)` }}>
           {slides.map((s, i) => {
             const Title = i === 0 ? 'h1' : 'h2';
-            const current = i === index;
+            const current = i === at;
             return (
-              <div key={s.key} className={`hx-hero__slide hx-hero__slide--${s.key}`} {...slideLook(s)} aria-hidden={!current} aria-roledescription="slide" aria-label={`${i + 1} of ${n}`}>
-                <DeferredImage src={s.image} sources={[{ media: PHONE, srcSet: s.phone }]} alt={s.alt} width={s.width} height={s.height}
-                  className="hx-hero__image" loading={i === 0 ? 'eager' : 'lazy'} fetchPriority={i === 0 ? 'high' : undefined} />
-                <div className="hx-wrap hx-hero__copy">
-                  <p className="hx-eyebrow">{s.eyebrow.map((line, j) => <span key={line}>{j > 0 && <span className="hx-eyebrow__dot" aria-hidden="true"> · </span>}{line}</span>)}</p>
-                  <Title className="hx-hero__title"><span>{s.title[0]}</span> <span className="hx-hl">{s.title[1]}</span></Title>
-                  {s.cta && <Link to={s.cta.to} className="hx-btn" tabIndex={current ? undefined : -1}>{s.cta.label} <Icon name="arrowRight" size={17} /></Link>}
+              <div key={s.key || i} className={`hx-hero__slide hx-hero__slide--${s.key || i}${current ? ' is-on' : ''}`} aria-hidden={!current} aria-roledescription="slide" aria-label={`${i + 1} of ${n}`}>
+                <div className="hx-wrap">
+                  <div className="hx-hero__head">
+                    {s.eyebrow && <p className="hx-eyebrow">{s.eyebrow}</p>}
+                    <Title className="hx-hero__title">{s.title.map((line, j) => <Fragment key={j}>{j > 0 && ' '}<span className={j > 0 ? 'hx-hl' : undefined}>{line}</span></Fragment>)}</Title>
+                  </div>
+                  <ul className="hx-hero__panels" style={{ '--n': s.panels.length }}>
+                    {s.panels.map((p, k) => <HeroPanel key={k} p={p} i={k} current={current} eager={i === 0 || warm} high={i === 0} />)}
+                  </ul>
                 </div>
               </div>
             );
@@ -161,7 +205,7 @@ export function HomeHero({ slides: given, autoplayMs = HERO_AUTOPLAY_MS }) {
       {n > 1 && (
         <div className="hx-hero__dots" role="group" aria-label="Choose a slide">
           {slides.map((s, i) => (
-            <button key={s.key} type="button" aria-label={`Show slide ${i + 1} of ${n}`} aria-pressed={i === index} className={`hx-hero__dot${i === index ? ' is-on' : ''}`} onClick={() => setIndex(i)} />
+            <button key={s.key || i} type="button" aria-label={`Show slide ${i + 1} of ${n}`} aria-pressed={i === at} className={`hx-hero__dot${i === at ? ' is-on' : ''}`} onClick={() => { setWarm(true); setIndex(i); }} />
           ))}
         </div>
       )}

@@ -88,17 +88,43 @@ const render = (C, props = {}) => (C ? renderToStaticMarkup(h(StaticRouter, { lo
 const hero = render(mod.HomeHero), trust = render(mod.HomeTrustStrip), tiles = render(mod.HomeTiles), stores = render(mod.ExploreStores), promo = render(mod.FestivePromo);
 const all = hero + trust + tiles + stores + promo;
 
-await test('the hero: two slides of the product lineup; the first is the page\'s only h1 — "Everything for everyday wellbeing." with "Shop now" to /shop, over the wide lineup (the juices, Berry Veda and its box) — the second (owner, 2026-11-08) Home & Living: "Dress your home for Diwali." with "Shop bedsheets" to the bedsheets listing; the first photograph loads at once, the second waits', () => {
-  const slides = [...hero.matchAll(/<div class="hx-hero__slide hx-hero__slide--([a-z]+)" aria-hidden="(true|false)" aria-roledescription="slide" aria-label="(\d) of 2">([\s\S]*?)<\/div><\/div>(?=<div class="hx-hero__slide|<\/div><\/div><div class="hx-hero__dots")/g)];
-  assert.deepEqual(slides.map((m) => [m[1], m[2], m[3]]), [['everyday', 'false', '1'], ['homeliving', 'true', '2']]);
-  const [one, two] = slides.map((m) => m[4]);
-  assert.ok(one.includes('<p class="hx-eyebrow"><span>Wellness · Fashion · Home</span><span><span class="hx-eyebrow__dot" aria-hidden="true"> · </span>Personal care · More</span></p><h1 class="hx-hero__title"><span>Everything for</span> <span class="hx-hl">everyday wellbeing.</span></h1><a class="hx-btn" href="/shop">Shop now <svg'), 'slide 1, in order');
-  assert.ok(two.includes('<p class="hx-eyebrow"><span>Home &amp; Living</span></p><h2 class="hx-hero__title"><span>Dress your home</span> <span class="hx-hl">for the season.</span></h2><a class="hx-btn" tabindex="-1" href="/homeliving">Shop Home &amp; Living <svg'), 'slide 2, in order, its button out of the tab order while hidden');
+// The collage hero (owner, 2026-11-27: "hero image pe 3 shop ke button … 3 collage show honge"): three slides,
+// three portrait photographs each, every photograph its own way into a store with its own Shop button.
+await test('the hero: three slides of three photographs; the first slide\'s headline is the page\'s only h1 — "Dress up. Shine. Feel good." over Leather, Jewellery and Wellness — then the wedding season and winter; every photograph its own link and Shop button; the first slide\'s photographs load at once, the rest wait', () => {
+  const slides = [...hero.matchAll(/<div class="hx-hero__slide hx-hero__slide--([a-z]+)( is-on)?" aria-hidden="(true|false)" aria-roledescription="slide" aria-label="(\d) of 3">/g)];
+  assert.deepEqual(slides.map((m) => [m[1], m[3], m[4]]), [['stores', 'false', '1'], ['wedding', 'true', '2'], ['winter', 'true', '3']]);
+  assert.match(hero, /<p class="hx-eyebrow">Fashion · Jewellery · Wellness<\/p><h1 class="hx-hero__title"><span>Dress up\. Shine\.<\/span> <span class="hx-hl">Feel good\.<\/span><\/h1>/);
+  assert.match(hero, /<h2 class="hx-hero__title"><span>Dressed for<\/span> <span class="hx-hl">every function\.<\/span><\/h2>/);
+  assert.match(hero, /<h2 class="hx-hero__title"><span>Layer up\.<\/span> <span class="hx-hl">Settle in\.<\/span><\/h2>/);
   assert.equal((hero.match(/<h1/g) || []).length, 1, 'one h1');
-  assert.match(one, /<picture><source media="\(max-width: 700px\)" srcSet="\/img\/home-hero-2-800\.webp"\/><img alt="Biosash sea buckthorn juices, Berry Veda[^"]+" width="1600" height="900" class="hx-hero__image" src="\/img\/home-hero-2\.webp" loading="eager" decoding="async" fetchPriority="high"\/><\/picture>/, 'slide 1 is the wide lineup, the page\'s largest paint: eager, high priority');
-  assert.match(two, /<picture><source media="\(max-width: 700px\)"\/><img alt="A bed in printed bedsheets[^"]+" width="1280" height="720" class="hx-hero__image" loading="lazy" decoding="async"\/><\/picture>/, 'slide 2 the Diwali bedroom, waiting until it is near');
+  const panels = [...hero.matchAll(/<a class="hx-hero__card"(?: tabindex="-1")? href="([^"]+)"><span class="hx-hero__ph"><picture><source media="\(max-width: 700px\)"(?: srcSet="[^"]+")?\/><img alt="([^"]{30,})" width="900" height="1200" class="hx-hero__img"(?: src="[^"]+")? loading="(eager|lazy)" decoding="async"(?: fetchPriority="high")?\/><\/picture><\/span><span class="hx-hero__txt"><em>[^<]+<\/em><b>([^<]+)<\/b><span class="hx-hero__shop">Shop now <svg/g)];
+  const names = mod.HERO_SLIDES.flatMap((sl) => sl.panels.map((pn) => pn.picture.desktop.match(/home-hero\/([a-z-]+)\.webp$/)[1]));
+  assert.deepEqual(panels.map((m, i) => [m[4].replace('&amp;', '&'), m[1], names[i]]), [
+    ['Leather', '/fashion/leather', 'leather'], ['Jewellery', '/fashion/jewellery', 'jewellery'], ['Wellness', '/category/wellness', 'wellness'],
+    ['Sarees', '/fashion/women/sarees', 'sarees'], ['Suits', '/fashion/c/suits-dress-materials', 'suits'], ['Mangalsutra', '/fashion/c/mangalsutra', 'mangalsutra'],
+    ['Women’s jackets', '/fashion/c/womens-leather-jackets', 'womens-jackets'], ['The winter edit', '/fashion/winter', 'winter'], ['Home & Living', '/homeliving', 'home'],
+  ]);
+  for (const sl of mod.HERO_SLIDES) for (const pn of sl.panels) assert.equal(pn.picture.phone, pn.picture.desktop.replace('.webp', '-600.webp'), `${pn.title}: the phone file beside it`);
+  assert.deepEqual(panels.map((m) => m[3]), ['eager', 'eager', 'eager', 'lazy', 'lazy', 'lazy', 'lazy', 'lazy', 'lazy'], 'slide 1 at once; the others wait');
+  assert.equal((hero.match(/fetchPriority="high"/g) || []).length, 3, 'slide 1 is the largest paint');
+  assert.equal((hero.match(/<a class="hx-hero__card" tabindex="-1"/g) || []).length, 6, 'the hidden slides\' links leave the tab order');
   assert.match(hero, /<div class="hx-hero__track" style="transform:translateX\(-0%\)">/, 'the track moves on transform');
-  assert.match(hero, /<div class="hx-hero__dots" role="group" aria-label="Choose a slide"><button type="button" aria-label="Show slide 1 of 2" aria-pressed="true" class="hx-hero__dot is-on"><\/button><button type="button" aria-label="Show slide 2 of 2" aria-pressed="false" class="hx-hero__dot"><\/button><\/div>/);
+  assert.match(hero, /<div class="hx-hero__dots" role="group" aria-label="Choose a slide"><button type="button" aria-label="Show slide 1 of 3" aria-pressed="true" class="hx-hero__dot is-on"><\/button>/);
+});
+
+await test('the hero\'s photographs: portrait 3:4, 900×1200 and 600×800, each under 150 KB; no words baked into the Taj Leather poster any more', async () => {
+  for (const name of ['leather', 'jewellery', 'wellness', 'sarees', 'suits', 'mangalsutra', 'womens-jackets', 'winter', 'home']) {
+    for (const [rel, size] of [[`img/home-hero/${name}.webp`, [900, 1200]], [`img/home-hero/${name}-600.webp`, [600, 800]]]) {
+      assert.ok(has(rel), `${rel} is missing`);
+      assert.ok(statSync(resolve(ROOT, rel)).size <= 150 * 1024, `${rel} under 150 KB`);
+      assert.deepEqual(webpSize(readFileSync(resolve(ROOT, rel))), size, `${rel} dimensions`);
+    }
+  }
+  // The poster's lettering sat on the dark wall at the left: that band is wall now, no near-white strokes.
+  const { data, info } = await sharp(resolve(ROOT, 'img/home-hero/leather.webp')).greyscale().raw().toBuffer({ resolveWithObject: true });
+  let bright = 0;
+  for (let y = Math.round(info.height * 0.42); y < info.height * 0.62; y++) for (let x = Math.round(info.width * 0.06); x < info.width * 0.34; x++) if (data[y * info.width + x] > 150) bright++;
+  assert.equal(bright, 0, 'no lettering left on the wall');
 });
 
 await test('the hero carousel: autoplays only with more than one slide, pauses on hover and on focus, never moves under prefers-reduced-motion; a 40px sideways swipe changes the slide and swallows the click; the hidden slide\'s button is untabbable', async () => {
@@ -118,9 +144,10 @@ await test('the hero carousel: autoplays only with more than one slide, pauses o
   const at = () => node('hx-hero__track').props.style.transform;
   assert.equal(live().length, 1); assert.equal(live()[0].ms, m.HERO_AUTOPLAY_MS); assert.equal(m.HERO_AUTOPLAY_MS, 6000);
   await tree.act(() => { for (const t of live()) t.fn(); }); assert.equal(at(), 'translateX(-100%)');
+  await tree.act(() => { for (const t of live()) t.fn(); }); assert.equal(at(), 'translateX(-200%)');
   await tree.act(() => { for (const t of live()) t.fn(); }); assert.equal(at(), 'translateX(-0%)', 'and round again');
-  const button = findAll(tree.tree, (n) => n.type === 'a' && n.props.className === 'hx-btn')[0];
-  assert.equal(button.props.tabIndex, undefined, 'the current slide\'s button is in the tab order');
+  const button = findAll(tree.tree, (n) => n.type === 'a' && n.props.className === 'hx-hero__card')[0];
+  assert.equal(button.props.tabIndex, undefined, 'the current slide\'s links are in the tab order');
   const section = node('hx hx-hero');
   await tree.act(() => section.props.onMouseEnter()); assert.equal(live().length, 0, 'hover pauses');
   await tree.act(() => section.props.onMouseLeave()); assert.equal(live().length, 1);
@@ -134,7 +161,7 @@ await test('the hero carousel: autoplays only with more than one slide, pauses o
   let swallowed = 0;
   vp.props.onClickCapture({ preventDefault() { swallowed++; }, stopPropagation() {} });
   assert.equal(swallowed, 1, 'the click a swipe ends in does not follow the link');
-  assert.equal(findAll(tree.tree, (n) => n.type === 'a' && n.props.className === 'hx-btn')[0].props.tabIndex, -1, 'slide 1 hidden: its button leaves the tab order');
+  assert.equal(findAll(tree.tree, (n) => n.type === 'a' && n.props.className === 'hx-hero__card')[0].props.tabIndex, -1, 'slide 1 hidden: its links leave the tab order');
   reduce = true;
   const still = await mount(h(m.HomeHero));
   for (let i = 0; i < 3; i++) await still.act(() => { for (const t of live()) t.fn(); });
@@ -226,7 +253,7 @@ await test('the copy is true: no free-shipping threshold, no round-the-clock sup
   for (const [name, s] of [['component', stripComments(read('src/components/HomeStorefront.jsx'))], ['render', text(all)]]) {
     for (const re of banned) assert.doesNotMatch(s, re, `${name}: ${re}`);
   }
-  for (const s of ['Free Standard Delivery', 'On every order', 'Easy Returns', '7 days', '9am–6pm IST', 'Everything for everyday wellbeing.', 'Festive gifting', 'Shop gifts']) assert.ok(text(all).includes(s), s);
+  for (const s of ['Free Standard Delivery', 'On every order', 'Easy Returns', '7 days', '9am–6pm IST', 'Dress up. Shine.', 'Feel good.', 'Festive gifting', 'Shop gifts']) assert.ok(text(all).includes(s), s);
 });
 
 // ---- the stylesheet --------------------------------------------------------
@@ -258,8 +285,11 @@ await test('contrast (WCAG 2.x), from the stylesheet itself: white on the deep-o
   const token = (name) => { const m = hx.match(new RegExp(`${name}:\\s*(#[0-9A-Fa-f]{6})`)); assert.ok(m, name); return m[1]; };
   const orange = token('--hx-orange'), deep = token('--hx-orange-deep'), ink = token('--hx-ink'), page = token('--hx-page');
   assert.equal(page.toUpperCase(), '#FFFFFF', 'the page is white (owner, 2026-11-08: the cream is gone)');
-  assert.equal(decl('.hx', 'background'), 'var(--hx-page)'); assert.match(decl('.hx-hero__slide', 'background'), /var\(--hx-page\)/);
-  assert.equal(decl('.hx-hero__image', 'mix-blend-mode'), 'multiply', 'the lineups\' white takes the tint: no white block');
+  assert.equal(decl('.hx', 'background'), 'var(--hx-page)');
+  // The collage hero (2026-11-27): its Shop buttons are near-black on cream; the names cream over the photographs' darkened foot.
+  assert.equal(decl('.hx-hero__shop', 'background'), '#FFF8EE'); assert.equal(decl('.hx-hero__shop', 'color'), 'var(--hx-ink)');
+  assert.ok(contrast(ink, '#FFF8EE') >= 7, 'the Shop buttons: near-black on cream');
+  assert.match(decl('.hx-hero__card::after', 'background'), /rgba\(20, 12, 6, \.78\) 100%/, 'the names sit on the darkened foot of each photograph');
   assert.equal(decl('.hx .hx-btn', 'background'), 'var(--hx-orange-deep)'); assert.equal(decl('.hx .hx-btn', 'color'), '#fff');
   assert.equal(decl('.hx .hx-hl', 'color'), 'var(--hx-orange-deep)'); assert.equal(decl('.hx .hx-more', 'color'), 'var(--hx-orange-deep)');
   assert.equal(decl('.hx-tile__h', 'color'), 'var(--hx-ink)');
@@ -283,15 +313,12 @@ await test('contrast (WCAG 2.x), from the stylesheet itself: white on the deep-o
 await test('the phone, as in the mockup: ONE compact hero block (copy in the left 45%, the lineup filling the right to its edge); the trust strip one row of four across the width; the tiles side by side — Fashion one tile, its portrait filling it from the right; six circles in one row, a two-word name on two lines; the festive photograph whole; no rule pairs aspect-ratio with a min/max height', async () => {
   const at = hx.indexOf('@media (max-width: 700px) {');
   const phone = hx.slice(at, hx.indexOf('\n}\n', at));
-  // The hero: one block, not text stacked above a full-width photograph.
-  assert.match(phone, /\.hx-hero__slide \{ height: clamp\(190px, 51vw, 340px\); \}/, 'a compact block, its height from the width');
-  assert.match(phone, /\.hx-hero__copy > \*, \.hx-hero__slide--biosash \.hx-hero__copy > \* \{ max-width: 46%; \}/, 'the copy in the left 45%');
-  assert.doesNotMatch(phone, /\.hx-hero__image \{[^}]*width: 1[67]0%|mask-image: linear-gradient\(180deg/, 'no photograph stacked under the copy');
+  // The hero (the collage, 2026-11-27): the same three photographs as a slim triptych, the height from the width.
+  assert.equal(decl('.hx-hero__panels', 'grid-template-columns'), 'repeat(var(--n, 3), minmax(0, 1fr))', 'three side by side, on every screen');
+  assert.match(phone, /\.hx-hero__panels \{ gap: 6px; height: clamp\(300px, 92vw, 440px\); \}/);
+  assert.match(phone, /\.hx-hero__txt em \{ display: none; \}/, 'on a phone the name and the button, no small line');
+  assert.match(hx, /\n\.hx-hero__img \{[^}]*object-position: var\(--focus, 50%\) 30%;/, 'each crop centred where its photograph asks');
   assert.match(phone, /\.hx-eyebrow > span \{ display: block; \}/, 'the eyebrow in two lines');
-  assert.match(phone, /\.hx-hero__slide--biosash \.hx-hero__image \{ top: auto; bottom: 0; height: 116%; \}/, 'the narrower lineup (slide 2) enlarged to the 45% line');
-  assert.doesNotMatch(phone, /\.hx-hero__slide--everyday \.hx-hero__image/, 'the wide lineup at the block\'s height');
-  assert.match(hx, /@media \(min-width: 701px\) and \(max-width: 1023px\) \{[^}]*\.hx-hero__slide--everyday \.hx-hero__copy > \.hx-hero__title \{ max-width: 40%; \}/, 'tablets: the headline wraps clear of the wide lineup\'s props');
-  assert.match(phone, /\.hx-hero__dots \{ left: 50%; right: auto; bottom: 0;/, 'the dots at the foot, over the photograph');
   // The trust strip: one row of four, never the sideways-scrolling two and a half.
   assert.match(phone, /\.hx-trust__list \{ display: flex; justify-content: space-between;/);
   assert.doesNotMatch(phone, /calc\(100% \/ 2\.5\)|\.hx-trust__list \{[^}]*grid-template-columns/, 'not two and a half, not 2×2');
@@ -324,7 +351,8 @@ await test('the phone, as in the mockup: ONE compact hero block (copy in the lef
 await test('Home.jsx: the five sections lead the page in the mockup\'s order, then the offers; the old hero and category strip are gone from it; from LifestyleBanner down it is exactly as it was but for the jewellery banner, directly under it', () => {
   const home = sansSiteName('src/pages/Home.jsx', read('src/pages/Home.jsx')); // the site name's heading undone (test-site-name.mjs)
   const order = [...home.matchAll(/<(HomeHero|HomeTrustStrip|HomeTiles|ExploreStores|FestivePromo|HomeOffers|LifestyleBanner|JewelleryBanner)\b/g)].map((m) => m[1]);
-  assert.deepEqual(order, ['HomeHero', 'HomeTrustStrip', 'HomeTiles', 'ExploreStores', 'FestivePromo', 'HomeOffers', 'LifestyleBanner', 'JewelleryBanner']);
+  // The three store tiles gave way to the collage hero (2026-11-27), which opens the stores.
+  assert.deepEqual(order, ['HomeHero', 'HomeTrustStrip', 'ExploreStores', 'FestivePromo', 'HomeOffers', 'LifestyleBanner', 'JewelleryBanner']);
   assert.doesNotMatch(home, /import Hero from|import HomeCategoryStrip from|<Hero \/>|<HomeCategoryStrip/);
   assert.match(home, /admin Hero Slides page no longer drives it/, 'the page says where the hero comes from now');
   // LifestyleBanner renders the banner and the fashion category strip beneath it, so the next mount is under the strip.

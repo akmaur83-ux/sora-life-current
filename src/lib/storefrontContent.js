@@ -73,17 +73,21 @@ const facts = (length, label, withLink = true) => group({
 
 // ---- The stores ---------------------------------------------------------------------------
 const WELLNESS = {
+  // The collage hero (2026-11-27): three slides, three photographs each, every photograph its own way in.
   hero: group({
     hidden: hidden(),
-    slides: list(2, {
+    slides: list(3, {
       hidden: hidden(),
-      eyebrow: lines(2, 50, 'Eyebrow (two parts)'),
-      title: lines(2, 40, 'Headline (the second line is the orange one)'),
-      ctaLabel: text(40, 'Button label (no label, no button)'), ctaLink: link('Button link'),
-      picture: tone('Photograph and the page colour it sits on'), alt: text(180, 'Photograph description'),
-      position: position(),
+      eyebrow: text(60, 'Eyebrow'),
+      title: lines(2, 30, 'Headline (the second line is the orange one)'),
+      panels: list(3, {
+        hidden: hidden(), title: text(24, 'Name (e.g. Jewellery)'), note: text(40, 'Small line above the name'),
+        cta: text(20, 'Button label (no label, no button)'), link: link('Opens'),
+        picture: pic('Photograph: portrait 3:4, no words in it (phone and desktop)'), alt: text(180, 'Photograph description'),
+        focus: { type: 'enum', options: POSITIONS, label: 'Where a phone’s narrow crop centres' },
+      }, 'Photographs', 'Photograph'),
     }, 'Slides', 'Slide'),
-  }, 'Hero'),
+  }, 'Hero (three photographs per slide, each with its own Shop button)'),
   trust: group({
     hidden: hidden(),
     items: list(4, {

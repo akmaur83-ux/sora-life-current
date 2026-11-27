@@ -115,29 +115,30 @@ body .v2-hdr__stores, body .fs-hdr__stores, body .hl .hl-hdr__stores, body .gs-h
 
 /* Our brands row on the homepage (BrandCarousel.jsx). */
 .sora-bc { padding: 36px 0 12px; }
-/* Every brand at once, no sliding (owner, 2026-11-16): one row on a wide screen, 4 + 3 tiles on a phone. */
-.sora-bc__row { list-style: none; margin: 0; padding: 0 0 8px; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; }
+/* Every brand at once, no sliding (owner, 2026-11-16). Nine brands since 2026-11-27 (Kiara Jewels and Joiya
+   Jewellery joined), set symmetrically: one row of nine on a wide screen, three by three below it. */
+.sora-bc__row { list-style: none; margin: 0; padding: 0 0 8px; display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 12px; }
 .sora-bc__card { display: flex; flex-direction: column; height: 100%; background: #fff; border: 1px solid var(--sora-line); color: var(--sora-ink); text-decoration: none; transition: box-shadow .25s ease, transform .25s ease; }
 .sora-bc__card:hover { box-shadow: 0 14px 30px -18px rgba(15, 17, 17, .45); transform: translateY(-2px); }
 .sora-bc__img { display: block; aspect-ratio: 4 / 5; overflow: hidden; background: #F3F1EA; }
 .sora-bc__img img { width: 100%; height: 100%; object-fit: cover; object-position: center 25%; }
 .sora-bc__img.is-whole img { object-fit: contain; padding: 18px; box-sizing: border-box; background: #fff; }
-.sora-bc__body { display: flex; flex-direction: column; gap: 5px; padding: 12px 14px 14px; flex: 1; }
-.sora-bc__body em { font-style: normal; font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--sora-muted); }
-.sora-bc__body b { font: 500 21px/1.2 var(--slv2-disp, Georgia, serif); }
-.sora-bc__body > span { font-size: 13.5px; line-height: 1.45; color: #333; flex: 1; }
+.sora-bc__body { display: flex; flex-direction: column; gap: 5px; padding: 10px 10px 12px; flex: 1; }
+.sora-bc__body em { font-style: normal; font-size: 10.5px; letter-spacing: .05em; text-transform: uppercase; color: var(--sora-muted); }
+.sora-bc__body b { font: 500 17px/1.2 var(--slv2-disp, Georgia, serif); flex: 1; }
+.sora-bc__body > span { display: none; }
 .sora-bc__body i { font-style: normal; font-weight: 700; font-size: 14px; color: var(--sora-forest-2); display: inline-flex; align-items: center; gap: 4px; }
-@media (max-width: 1100px) and (min-width: 601px) { .sora-bc__row { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (max-width: 1100px) and (min-width: 601px) { .sora-bc__row { grid-template-columns: repeat(3, minmax(0, 1fr)); } .sora-bc__img { aspect-ratio: 16 / 10; } .sora-bc__body b { font-size: 19px; } }
 @media (max-width: 600px) {
   .sora-bc { padding: 24px 0 8px; }
-  .sora-bc__row { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px 8px; }
-  .sora-bc__row > li { flex: 0 0 calc((100% - 24px) / 4); min-width: 0; }
+  .sora-bc__row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px 10px; }
+  .sora-bc__row > li { min-width: 0; }
   .sora-bc__card { border: 0; background: none; text-align: center; }
   .sora-bc__card:hover { box-shadow: none; transform: none; }
   .sora-bc__img { aspect-ratio: 1; border: 1px solid var(--sora-line); background: #F3F1EA; }
   .sora-bc__img.is-whole img { padding: 8px; }
   .sora-bc__body { padding: 6px 0 0; gap: 1px; align-items: center; }
-  .sora-bc__body b { font: 600 12.5px/1.25 var(--font-sans, system-ui, sans-serif); color: var(--sora-ink); }
+  .sora-bc__body b { flex: none; font: 600 13px/1.25 var(--font-sans, system-ui, sans-serif); color: var(--sora-ink); }
   .sora-bc__body em { order: 2; font-size: 10.5px; letter-spacing: 0; text-transform: none; }
   .sora-bc__body > span, .sora-bc__body i { display: none; }
 }
@@ -1132,12 +1133,14 @@ html.is-scrolled .v2-hdr, html.is-scrolled .fs-hdr, html.is-scrolled .hl-hdr { b
 .cartcoupon__appliedcode { animation: coupon-glow 1.4s ease .35s 1; }
 @keyframes coupon-glow { 0%, 100% { text-shadow: none; } 40% { text-shadow: 0 0 10px rgba(242, 193, 78, .9); } }
 
-/* 16 · the homepage hero's words arrive one after another on each slide. */
-.hx-hero__slide[aria-hidden="false"] .hx-eyebrow, .hx-hero__slide[aria-hidden="false"] .hx-hero__title > span, .hx-hero__slide[aria-hidden="false"] .hx-btn { animation: hero-in .75s cubic-bezier(.2, .8, .2, 1) backwards; }
-.hx-hero__slide[aria-hidden="false"] .hx-hero__title > span { display: inline-block; animation-delay: .1s; }
-.hx-hero__slide[aria-hidden="false"] .hx-hero__title > span + span { animation-delay: .22s; }
-.hx-hero__slide[aria-hidden="false"] .hx-btn { animation-delay: .34s; }
-@keyframes hero-in { from { opacity: .25; transform: translate3d(0, 14px, 0); } to { opacity: 1; transform: none; } }
+/* 16 · the homepage hero (the collage, 2026-11-27): the slide in view settles from a slight zoom and its
+   words rise in, panel after panel. */
+.hx-hero__slide.is-on .hx-hero__ph { animation: hx-settle 7s cubic-bezier(.2, .7, .2, 1) backwards; }
+.hx-hero__slide.is-on .hx-hero__txt > * { animation: hx-rise .7s cubic-bezier(.2, .8, .2, 1) backwards; animation-delay: calc(.15s + var(--i, 0) * .12s); }
+.hx-hero__slide.is-on .hx-hero__txt > b { animation-delay: calc(.22s + var(--i, 0) * .12s); }
+.hx-hero__slide.is-on .hx-hero__txt > .hx-hero__shop { animation-delay: calc(.3s + var(--i, 0) * .12s); }
+@keyframes hx-settle { from { transform: scale(1.08); } to { transform: none; } }
+@keyframes hx-rise { from { opacity: 0; transform: translate3d(0, 14px, 0); } to { opacity: 1; transform: none; } }
 
 /* 17 · the offer clock's numbers flip as they change. */
 .hx-offer__clock { perspective: 400px; }
@@ -1164,7 +1167,7 @@ html.is-scrolled .v2-hdr, html.is-scrolled .fs-hdr, html.is-scrolled .hl-hdr { b
 @media (prefers-reduced-motion: reduce) {
   .rv { opacity: 1 !important; transform: none !important; }
   .fs-chip.is-on, .sora-stickycats a.is-on, .v2-fd [aria-pressed="true"], .hl-filters [aria-pressed="true"], .fs-sheet__panel, .cartcoupon__applied, .cartcoupon__appliedcode,
-  .hx-hero__slide .hx-eyebrow, .hx-hero__slide .hx-hero__title > span, .hx-hero__slide .hx-btn, .hx-offer__clock b, .v2-hdr__suggest-item, [role="listbox"] > [role="option"], .search-overlay > * { animation: none !important; }
+  .hx-hero__ph, .hx-hero__txt > *, .hx-offer__clock b, .v2-hdr__suggest-item, [role="listbox"] > [role="option"], .search-overlay > * { animation: none !important; }
   html.is-scrolled header .logo img, html.is-scrolled header .logo__img, html.is-scrolled header [class*="__brand"] img { transform: none; }
   .sora-ripple, .sora-flurry, .sora-heartbit { display: none !important; }
 }

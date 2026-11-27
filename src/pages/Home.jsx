@@ -1,5 +1,5 @@
 import { useEffect, useSyncExternalStore } from 'react';
-import { HomeHero, HomeTrustStrip, HomeTiles, ExploreStores, FestivePromo, JewelleryBanner } from '../components/HomeStorefront.jsx';
+import { HomeHero, HomeTrustStrip, ExploreStores, FestivePromo, JewelleryBanner } from '../components/HomeStorefront.jsx';
 import EditorialCard from '../components/EditorialCard.jsx';
 import StoryBlock from '../components/StoryBlock.jsx';
 import Newsletter from '../components/Newsletter.jsx';
@@ -88,7 +88,7 @@ export default function Home() {
       <BagReminder phone={false} />
       {/* Order again (round 35, 2026-11-21): a signed-in shopper's past wellness buys still on sale (OrderAgain.jsx). */}
       <OrderAgain />
-      <HomeTiles />
+      {/* The three store tiles gave way (2026-11-27): the collage hero opens the stores now. */}
       {/* The round quick-nav row stays straight under the hero, above the offers (test-home-discovery D18). */}
       <ExploreStores />
 
@@ -105,6 +105,7 @@ export default function Home() {
       <section className="hx sora-homeedits" aria-label="Edits"><div className="hx-wrap"><EditStrips /></div></section>
       {/* Owner, 2026-11-13: "festive gifting ke niche shop by brand" — the brands row, then
           Taj Leather's and Ansari Fashion's posters as they were ("ache lagte hain"). */}
+      <HomeGroup eyebrow="Our brands" title="Straight from the makers" />
       <BrandCarousel />
       <TajLeatherPosters />
       <AnsariPosters />

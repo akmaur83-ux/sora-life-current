@@ -13,19 +13,6 @@
    every page is exactly as it was. Every selector is scoped to its section's own class.
    ============================================================ */
 
-/* ---- Wellness homepage: the hero ---------------------------------------- */
-.hx .hx-hero__slide[data-tone] { background: var(--sf-tone); }
-@media (min-width: 701px) {
-  .hx-hero__slide[data-pos="right"] .hx-hero__image { right: auto; left: 0; -webkit-mask-image: linear-gradient(270deg, transparent 0, #000 14%); mask-image: linear-gradient(270deg, transparent 0, #000 14%); }
-  .hx-hero__slide[data-pos] .hx-hero__copy { display: grid; }
-  .hx-hero__slide[data-pos="right"] .hx-hero__copy { justify-content: end; }
-  .hx-hero__slide[data-pos="center"] .hx-hero__copy { justify-content: center; text-align: center; }
-  .hx-hero__slide[data-pos] .hx-hero__copy > *, .hx-hero__slide[data-pos] .hx-hero__copy > .hx-hero__title { max-width: min(520px, 44vw); justify-self: start; }
-  .hx-hero__slide[data-pos="center"] .hx-hero__copy > *, .hx-hero__slide[data-pos="center"] .hx-hero__copy > .hx-hero__title { max-width: min(640px, 70vw); justify-self: center; }
-  .hx-hero__slide[data-pos="center"] .hx-hero__image { left: 0; right: 0; width: 100%; object-fit: cover; -webkit-mask-image: none; mask-image: none; }
-  .hx-hero__slide[data-pos="center"]::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at center, color-mix(in srgb, var(--sf-tone, #FDFBF8) 72%, transparent) 0%, transparent 72%); }
-}
-
 /* ---- Wellness homepage: the trust strip ---------------------------------------- */
 /* Fewer than four items: even columns for those left (data-count is set only then). */
 .hx-trust__list[data-count] { grid-template-columns: repeat(var(--hx-trust-n), minmax(0, 1fr)); }

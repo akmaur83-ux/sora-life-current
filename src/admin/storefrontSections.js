@@ -1,4 +1,4 @@
-import { HERO_SECTION, TRUST_SECTION, TILES_SECTION, STORES_SECTION, FESTIVE_SECTION, JEWELLERY_BANNER_SECTION } from '../components/HomeStorefront.jsx';
+import { HERO_SECTION, TRUST_SECTION, STORES_SECTION, FESTIVE_SECTION, JEWELLERY_BANNER_SECTION } from '../components/HomeStorefront.jsx';
 import { LIFESTYLE_SECTION, STORE_CAROUSEL_SECTION } from '../components/FashionBanner.jsx';
 import { NEW_ARRIVALS_SECTION } from '../components/NewArrivals.jsx';
 import { LUXURY_BEDS_SECTION, BEDSHEETS_SECTION } from '../components/HomeCategoryRails.jsx';
@@ -25,7 +25,6 @@ export const SECTION_PAGES = Object.freeze({
     { title: 'Wellness homepage', href: '/', sections: [
       { path: 'hero', defaults: HERO_SECTION },
       { path: 'trust', defaults: TRUST_SECTION },
-      { path: 'tiles', defaults: TILES_SECTION },
       { path: 'stores', defaults: STORES_SECTION },
       { path: 'promo', defaults: FESTIVE_SECTION },
       { path: 'newArrivals', defaults: NEW_ARRIVALS_SECTION },
