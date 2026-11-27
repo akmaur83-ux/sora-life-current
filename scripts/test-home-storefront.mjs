@@ -98,10 +98,10 @@ await test('the hero: three slides of three photographs; the first slide\'s head
   assert.match(hero, /<h2 class="hx-hero__title"><span>Layer up\.<\/span> <span class="hx-hl">Settle in\.<\/span><\/h2>/);
   assert.equal((hero.match(/<h1/g) || []).length, 1, 'one h1');
   const panels = [...hero.matchAll(/<a class="hx-hero__card"(?: tabindex="-1")? href="([^"]+)"><span class="hx-hero__ph"><picture><source media="\(max-width: 700px\)"(?: srcSet="[^"]+")?\/><img alt="([^"]{30,})" width="900" height="1200" class="hx-hero__img"(?: src="[^"]+")? loading="(eager|lazy)" decoding="async"(?: fetchPriority="high")?\/><\/picture><\/span><span class="hx-hero__txt"><em>[^<]+<\/em><b>([^<]+)<\/b><span class="hx-hero__shop">Shop now <svg/g)];
-  const names = mod.HERO_SLIDES.flatMap((sl) => sl.panels.map((pn) => pn.picture.desktop.match(/home-hero\/([a-z-]+)\.webp$/)[1]));
+  const names = mod.HERO_SLIDES.flatMap((sl) => sl.panels.map((pn) => pn.picture.desktop.match(/home-hero\/u-([a-z-]+)\.webp$/)[1]));
   assert.deepEqual(panels.map((m, i) => [m[4].replace('&amp;', '&'), m[1], names[i]]), [
     ['Leather', '/fashion/leather', 'leather'], ['Jewellery', '/fashion/jewellery', 'jewellery'], ['Wellness', '/category/wellness', 'wellness'],
-    ['Sarees', '/fashion/women/sarees', 'sarees'], ['Suits', '/fashion/c/suits-dress-materials', 'suits'], ['Mangalsutra', '/fashion/c/mangalsutra', 'mangalsutra'],
+    ['Sarees', '/fashion/women/sarees', 'sarees'], ['Suits', '/fashion/c/suits-dress-materials', 'suits'], ['Bangles', '/fashion/c/bangles', 'bangles'],
     ['Women’s jackets', '/fashion/c/womens-leather-jackets', 'womens-jackets'], ['The winter edit', '/fashion/winter', 'winter'], ['Home & Living', '/homeliving', 'home'],
   ]);
   for (const sl of mod.HERO_SLIDES) for (const pn of sl.panels) assert.equal(pn.picture.phone, pn.picture.desktop.replace('.webp', '-600.webp'), `${pn.title}: the phone file beside it`);
@@ -112,19 +112,17 @@ await test('the hero: three slides of three photographs; the first slide\'s head
   assert.match(hero, /<div class="hx-hero__dots" role="group" aria-label="Choose a slide"><button type="button" aria-label="Show slide 1 of 3" aria-pressed="true" class="hx-hero__dot is-on"><\/button>/);
 });
 
-await test('the hero\'s photographs: portrait 3:4, 900×1200 and 600×800, each under 150 KB; no words baked into the Taj Leather poster any more', async () => {
-  for (const name of ['leather', 'jewellery', 'wellness', 'sarees', 'suits', 'mangalsutra', 'womens-jackets', 'winter', 'home']) {
+await test('the hero\'s photographs: real photographs from Unsplash (owner, 2026-11-27: "aise images fake lagti hain"), each under the Unsplash License with its id recorded; portrait 3:4, 900×1200 and 600×800, each under 150 KB', () => {
+  for (const sl of mod.HERO_SLIDES) for (const pn of sl.panels) {
+    assert.match(pn.photo, /^\d{10,13}-[0-9a-f]{12}$/, `${pn.title}: its Unsplash photo id`);
+    const name = pn.picture.desktop.match(/home-hero\/(u-[a-z-]+)\.webp$/)[1];
     for (const [rel, size] of [[`img/home-hero/${name}.webp`, [900, 1200]], [`img/home-hero/${name}-600.webp`, [600, 800]]]) {
       assert.ok(has(rel), `${rel} is missing`);
       assert.ok(statSync(resolve(ROOT, rel)).size <= 150 * 1024, `${rel} under 150 KB`);
       assert.deepEqual(webpSize(readFileSync(resolve(ROOT, rel))), size, `${rel} dimensions`);
     }
   }
-  // The poster's lettering sat on the dark wall at the left: that band is wall now, no near-white strokes.
-  const { data, info } = await sharp(resolve(ROOT, 'img/home-hero/leather.webp')).greyscale().raw().toBuffer({ resolveWithObject: true });
-  let bright = 0;
-  for (let y = Math.round(info.height * 0.42); y < info.height * 0.62; y++) for (let x = Math.round(info.width * 0.06); x < info.width * 0.34; x++) if (data[y * info.width + x] > 150) bright++;
-  assert.equal(bright, 0, 'no lettering left on the wall');
+  assert.match(read('src/components/HomeStorefront.jsx'), /from Unsplash, under\n\/\/ the Unsplash License/);
 });
 
 await test('the hero carousel: autoplays only with more than one slide, pauses on hover and on focus, never moves under prefers-reduced-motion; a 40px sideways swipe changes the slide and swallows the click; the hidden slide\'s button is untabbable', async () => {

@@ -16,7 +16,7 @@ test('the admin edits the hero as three slides of three photographs: name, small
   assert.equal(panel.type, 'list'); assert.equal(panel.length, 3);
   assert.deepEqual(Object.keys(panel.fields), ['hidden', 'title', 'note', 'cta', 'link', 'picture', 'alt', 'focus']);
   assert.deepEqual(panel.fields.focus.options, ['left', 'center', 'right']);
-  const ok = validateStorefrontContent('wellness', { hero: { slides: [{ title: ['New', 'season'], panels: [{ title: 'Bangles', link: '/fashion/c/bangles', focus: 'right', picture: { phone: '/img/home-hero/leather-600.webp', desktop: '/img/home-hero/leather.webp' } }] }] } });
+  const ok = validateStorefrontContent('wellness', { hero: { slides: [{ title: ['New', 'season'], panels: [{ title: 'Bangles', link: '/fashion/c/bangles', focus: 'right', picture: { phone: '/img/home-hero/u-leather-600.webp', desktop: '/img/home-hero/u-leather.webp' } }] }] } });
   assert.deepEqual(ok.errors, {});
   const bad = validateStorefrontContent('wellness', { hero: { slides: [{ panels: [{ link: 'https://elsewhere.example', focus: 'top', picture: { phone: '/img/a.webp' } }] }] } });
   assert.deepEqual(Object.keys(bad.errors).sort(), ['hero.slides.0.panels.0.focus', 'hero.slides.0.panels.0.link', 'hero.slides.0.panels.0.picture']);

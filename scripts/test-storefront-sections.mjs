@@ -153,7 +153,9 @@ await test('the editor: photographs in pairs, a matched colour with its photogra
   assert.deepEqual(v('grocery', { hero: { position: 'center' } }), {});
   assert.match(v('grocery', { trust: { hidden: 'yes' } })['trust.hidden'], /on or off/);
   assert.match(v('wellness', { hero: { slides: [{ title: ['a', 'b', 'c'] }] } })['hero.slides.0.title'], /At most 2 lines/);
-  assert.match(v('wellness', { hero: { slides: [{}, {}, {}] } })['hero.slides'], /At most 2/);
+  // The collage hero (2026-11-27): three slides of three photographs.
+  assert.match(v('wellness', { hero: { slides: [{}, {}, {}, {}] } })['hero.slides'], /At most 3/);
+  assert.match(v('wellness', { hero: { slides: [{ panels: [{}, {}, {}, {}] }] } })['hero.slides.0.panels'], /At most 3/);
   assert.match(v('fashion', { men: { hero: { picture: { phone: U('p'), desktop: U('d'), colour: '#000000' } } } })['men.hero.picture.colour'], /Not a field/, 'a plain photograph pair has no colour');
   assert.match(v('fashion', { men: { hero: { picture: { phone: 'javascript:alert(1)', desktop: U('d') } } } })['men.hero.picture.phone'], /uploaded here/);
   assert.match(v('fashion', { men: { hero: { picture: { phone: '/img/x.webp");background:red', desktop: '/img/y.webp' } } } })['men.hero.picture.phone'], /uploaded here/, 'a shipped photograph is an /img/ image file');
@@ -211,7 +213,7 @@ await test(`with nothing published, every page renders exactly as it did before 
 
 const PUBLISHED = { stores: {
   wellness: {
-    hero: { slides: [{ title: ['Published', 'hero'], ctaLabel: 'Go there', ctaLink: '/shop?edit=1', picture: { colour: '#F4EFE6', phone: U('hp'), desktop: U('hd') }, position: 'right' }, { hidden: true }] },
+    hero: { slides: [{ title: ['Published', 'hero'], panels: [{ title: 'Go there', link: '/shop?edit=1', picture: { phone: U('hp'), desktop: U('hd') }, focus: 'right' }, { hidden: true }] }, { hidden: true }, { hidden: true }] },
     trust: { items: [{ title: ['Published', 'trust'] }, { link: '/about' }, {}, { hidden: true }] },
     tiles: { fashion: { title: ['Dressed', 'for', 'today.'], cta: 'See fashion', picture: { colour: '#1D2A44', phone: U('fp'), desktop: U('fd') } }, living: { hidden: true } },
     stores: { title: 'Published stores', items: [{ name: 'Wellbeing', picture: { colour: '#EEE8DD', phone: U('cp'), desktop: U('cd') } }, { hidden: true }] },
@@ -240,13 +242,14 @@ const pub = dump({ STOREFRONT_PUBLISHED: join(dir, 'published.json') });
 rmSync(dir, { recursive: true, force: true });
 const amp = (u) => u.replace(/&/g, '&amp;');
 
-await test('the wellness homepage: the hero\'s copy, button, photographs, matched colour and position; a hidden slide and a hidden banner gone; the jewellery banner and the carousel changed', () => {
+await test('the wellness homepage: the hero\'s headline, a photograph\'s name, link, photographs and crop; a hidden photograph, hidden slides and a hidden banner gone; the jewellery banner and the carousel changed', () => {
   const hero = pub['/#hero'];
   assert.match(hero, /<span>Published<\/span> <span class="hx-hl">hero<\/span>/);
-  assert.match(hero, /data-pos="right" data-tone="" style="--sf-tone:#F4EFE6"/);
+  assert.match(hero, /--focus:70%/, 'the phone crop to the right');
   assert.ok(hero.includes(`srcSet="${U('hp')}"`), 'the phone photograph');
-  assert.match(hero, new RegExp(`href="${amp('/shop?edit=1').replace(/[?.]/g, '\\$&')}"[^>]*>Go there`));
-  assert.equal((hero.match(/hx-hero__slide /g) || []).length, 1, 'the hidden slide is gone');
+  assert.match(hero, new RegExp(`href="${amp('/shop?edit=1').replace(/[?.]/g, '\\$&')}"[\\s\\S]*?<b>Go there</b>`));
+  assert.equal((hero.match(/class="hx-hero__panel"/g) || []).length, 2, 'the hidden photograph is gone');
+  assert.equal((hero.match(/hx-hero__slide /g) || []).length, 1, 'the hidden slides are gone');
   assert.doesNotMatch(hero, /hx-hero__dots/, 'and with one slide there are no dots');
   assert.doesNotMatch(pub['/#lifestyleBanner'], /fsb-lead"/, 'the hidden banner is gone');
   assert.match(pub['/#lifestyleBanner'], /fsb-strip/, 'the category strip under it stays');
