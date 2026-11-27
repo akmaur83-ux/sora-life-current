@@ -97,7 +97,7 @@ await test('the hero: three slides of three photographs; the first slide\'s head
   assert.match(hero, /<h2 class="hx-hero__title"><span>Dressed for<\/span> <span class="hx-hl">every function\.<\/span><\/h2>/);
   assert.match(hero, /<h2 class="hx-hero__title"><span>Layer up\.<\/span> <span class="hx-hl">Settle in\.<\/span><\/h2>/);
   assert.equal((hero.match(/<h1/g) || []).length, 1, 'one h1');
-  const panels = [...hero.matchAll(/<a class="hx-hero__card"(?: tabindex="-1")? href="([^"]+)"><span class="hx-hero__ph"><picture><source media="\(max-width: 700px\)"(?: srcSet="[^"]+")?\/><img alt="([^"]{30,})" width="900" height="1200" class="hx-hero__img"(?: src="[^"]+")? loading="(eager|lazy)" decoding="async"(?: fetchPriority="high")?\/><\/picture><\/span><span class="hx-hero__txt"><em>[^<]+<\/em><b>([^<]+)<\/b><span class="hx-hero__shop">Shop now <svg/g)];
+  const panels = [...hero.matchAll(/<a class="hx-hero__card"(?: tabindex="-1")? href="([^"]+)"><span class="hx-hero__ph"><picture><source media="\(max-width: 700px\)"(?: srcSet="[^"]+")?\/><img alt="([^"]{30,})" width="900" height="1200" class="hx-hero__img"(?: src="[^"]+")? loading="(eager|lazy)" decoding="async"(?: fetchPriority="high")?\/><\/picture><\/span><span class="hx-hero__glare" aria-hidden="true"><\/span><span class="hx-hero__txt"><em>[^<]+<\/em><b>([^<]+)<\/b><span class="hx-hero__shop">Shop now <svg/g)];
   const names = mod.HERO_SLIDES.flatMap((sl) => sl.panels.map((pn) => pn.picture.desktop.match(/home-hero\/u-([a-z-]+)\.webp$/)[1]));
   assert.deepEqual(panels.map((m, i) => [m[4].replace('&amp;', '&'), m[1], names[i]]), [
     ['Leather', '/fashion/leather', 'leather'], ['Jewellery', '/fashion/jewellery', 'jewellery'], ['Wellness', '/category/wellness', 'wellness'],
@@ -109,7 +109,8 @@ await test('the hero: three slides of three photographs; the first slide\'s head
   assert.equal((hero.match(/fetchPriority="high"/g) || []).length, 3, 'slide 1 is the largest paint');
   assert.equal((hero.match(/<a class="hx-hero__card" tabindex="-1"/g) || []).length, 6, 'the hidden slides\' links leave the tab order');
   assert.match(hero, /<div class="hx-hero__track" style="transform:translateX\(-0%\)">/, 'the track moves on transform');
-  assert.match(hero, /<div class="hx-hero__dots" role="group" aria-label="Choose a slide"><button type="button" aria-label="Show slide 1 of 3" aria-pressed="true" class="hx-hero__dot is-on"><\/button>/);
+  assert.match(hero, /<div class="hx-hero__dots" role="group" aria-label="Choose a slide"><button type="button" aria-label="Show slide 1 of 3" aria-pressed="true" class="hx-hero__dot is-on"><i class="hx-hero__fill" aria-hidden="true"><\/i><\/button><button type="button" aria-label="Show slide 2 of 3" aria-pressed="false" class="hx-hero__dot"><\/button>/, 'the slide in view fills its bar');
+  assert.match(hero, /<section class="hx hx-hero is-seen" style="--hero-ms:6000ms"/, 'the bar fills over the autoplay\'s time');
 });
 
 await test('the hero\'s photographs: real photographs from Unsplash (owner, 2026-11-27: "aise images fake lagti hain"), each under the Unsplash License with its id recorded; portrait 3:4, 900×1200 and 600×800, each under 150 KB', () => {
@@ -146,7 +147,7 @@ await test('the hero carousel: autoplays only with more than one slide, pauses o
   await tree.act(() => { for (const t of live()) t.fn(); }); assert.equal(at(), 'translateX(-0%)', 'and round again');
   const button = findAll(tree.tree, (n) => n.type === 'a' && n.props.className === 'hx-hero__card')[0];
   assert.equal(button.props.tabIndex, undefined, 'the current slide\'s links are in the tab order');
-  const section = node('hx hx-hero');
+  const section = node('hx hx-hero is-seen');
   await tree.act(() => section.props.onMouseEnter()); assert.equal(live().length, 0, 'hover pauses');
   await tree.act(() => section.props.onMouseLeave()); assert.equal(live().length, 1);
   await tree.act(() => section.props.onFocus()); assert.equal(live().length, 0, 'focus pauses');

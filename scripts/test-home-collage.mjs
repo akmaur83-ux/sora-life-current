@@ -47,7 +47,19 @@ test('motion: only transform and opacity, entrances fill backwards, nothing unde
   assert.match(css, /@keyframes hx-settle \{ from \{ transform: scale\(1\.08\); \} to \{ transform: none; \} \}/);
   assert.match(css, /@keyframes hx-rise \{ from \{ opacity: 0; transform: translate3d\(0, 14px, 0\); \} to \{ opacity: 1; transform: none; \} \}/);
   assert.match(css, /\.hx-hero__slide\.is-on \.hx-hero__ph \{ animation: hx-settle [^}]* backwards; \}/);
-  assert.match(css, /prefers-reduced-motion: reduce\) \{[\s\S]*?\.hx-hero__ph, \.hx-hero__txt > \*,[^{]*\{ animation: none !important; \}/);
+  assert.match(css, /prefers-reduced-motion: reduce\) \{[\s\S]*?\.hx-hero__ph, \.hx-hero__ph picture, \.hx-hero__card, \.hx-hero__head > \*, \.hx-hero__title > span, \.hx-hero__txt > \*, \.hx-hero__shop::after, \.hx-hero::before, \.hx-hero::after, \.hx-hero__fill,[^{]*\{ animation: none !important; \}/);
+  // The loops run only while the hero is on screen (.is-seen); the slide's bar stops while it is paused.
+  for (const loop of ['hx-drift', 'hx-shine', 'hx-glow']) for (const [, sel] of css.matchAll(new RegExp(`\\n([^\\n{]+)\\{ animation: ${loop} [^}]*infinite`, 'g'))) assert.match(sel, /^\.hx-hero\.is-seen/, `${loop} only on screen: ${sel}`);
+  assert.match(css, /\.hx-hero\.is-seen:not\(\.is-paused\) \.hx-hero__fill \{ animation: hx-fill var\(--hero-ms, 6s\) linear backwards; \}/);
+  for (const [, body] of css.matchAll(/@keyframes hx-[a-z-]+ \{([^\n]*)\}\n/g)) assert.doesNotMatch(body.replace(/transform:[^;]*;|opacity:[^;]*;/g, ''), /[a-z-]+\s*:/, `only transform and opacity: ${body}`);
+});
+
+test('the tilt: a wide screen with a mouse only, never under reduced motion; CSS variables on the card, no re-render', () => {
+  const c = read('src/components/HomeStorefront.jsx');
+  assert.match(c, /matchMedia\('\(hover: hover\) and \(pointer: fine\)'\)\.matches && !window\.matchMedia\('\(prefers-reduced-motion: reduce\)'\)\.matches/);
+  assert.match(c, /onPointerMove=\{tiltTo\} onPointerLeave=\{tiltOff\}/);
+  assert.match(c, /el\.style\.setProperty\('--ry'/);
+  assert.match(read('src/styles/v2-home.css'), /\.hx-hero__card \{[^}]*transform: perspective\(1100px\) rotateX\(var\(--rx, 0deg\)\) rotateY\(var\(--ry, 0deg\)\);/);
   assert.match(read('src/styles/v2-home.css'), /prefers-reduced-motion: reduce\) \{\n  \.hx-hero__track, \.hx-hero__img, \.hx-hero__shop, \.hx-hero__shop svg,/);
 });
 

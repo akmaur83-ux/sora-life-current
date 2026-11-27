@@ -1,0 +1,219 @@
+diff --git a/src/components/HomeStorefront.jsx b/src/components/HomeStorefront.jsx
+index 935ed70..a1ee3a7 100644
+--- a/src/components/HomeStorefront.jsx
++++ b/src/components/HomeStorefront.jsx
+@@ -119,16 +119,40 @@ export function heroSlidesOf(section) {
+ // Where a phone's narrow crop of the photograph centres, across its width (per cent).
+ const FOCUS = { left: 30, center: 50, right: 70 };
+ 
++/** One panel: the photograph, its name, and its own Shop button — the whole panel one link. */
++// A wide screen with a mouse tilts the photograph under it a few degrees towards the pointer, a soft light
++// following it (2026-11-27: "visually strong … with cool animations"). Styles only: CSS variables on the
++// card, no re-render; never for touch or for a shopper whose device asks for less motion.
++const canTilt = () => typeof window !== 'undefined' && typeof window.matchMedia === 'function'
++  && window.matchMedia('(hover: hover) and (pointer: fine)').matches && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
++function tiltTo(e) {
++  const el = e.currentTarget;
++  if (!canTilt()) return;
++  const r = el.getBoundingClientRect();
++  const x = (e.clientX - r.left) / r.width - 0.5, y = (e.clientY - r.top) / r.height - 0.5;
++  el.style.setProperty('--ry', `${(x * 7).toFixed(2)}deg`);
++  el.style.setProperty('--rx', `${(-y * 6).toFixed(2)}deg`);
++  el.style.setProperty('--gx', `${(x * 60).toFixed(1)}%`);
++  el.style.setProperty('--gy', `${(y * 60).toFixed(1)}%`);
++  el.classList.add('is-tilt');
++}
++function tiltOff(e) {
++  const el = e.currentTarget;
++  for (const v of ['--rx', '--ry', '--gx', '--gy']) el.style.removeProperty(v);
++  el.classList.remove('is-tilt');
++}
++
+ /** One panel: the photograph, its name, and its own Shop button — the whole panel one link. */
+ function HeroPanel({ p, current, eager, high, i }) {
+   const Entry = entryFor(p.link);
+   return (
+     <li className="hx-hero__panel" style={{ '--i': i, '--focus': `${FOCUS[p.focus] || FOCUS.center}%` }}>
+-      <Entry to={p.link} className="hx-hero__card" tabIndex={current ? undefined : -1}>
++      <Entry to={p.link} className="hx-hero__card" tabIndex={current ? undefined : -1} onPointerMove={tiltTo} onPointerLeave={tiltOff}>
+         <span className="hx-hero__ph">
+           <DeferredImage src={p.picture.desktop} {...phoneSources(p.picture.phone, p.picture.desktop)} alt={p.alt} width={900} height={1200}
+             className="hx-hero__img" loading={eager ? 'eager' : 'lazy'} fetchPriority={high ? 'high' : undefined} />
+         </span>
++        <span className="hx-hero__glare" aria-hidden="true" />
+         <span className="hx-hero__txt">
+           {p.note && <em>{p.note}</em>}
+           <b>{p.title}</b>
+@@ -147,9 +171,19 @@ export function HomeHero({ slides: given, autoplayMs = HERO_AUTOPLAY_MS }) {
+   const [paused, setPaused] = useState(false);
+   // The later slides' photographs load once the page has (or after 2.5 s), so a slide never arrives blank.
+   const [warm, setWarm] = useState(false);
++  // On screen: the slow loops (drift, shine, the glow behind) and the autoplay run only while it is.
++  const [seen, setSeen] = useState(true);
++  const root = useRef(null);
+   const reduced = useRef(false);
+   const swipe = useRef({ x: null, y: null, moved: false });
+   const n = slides.length;
++  useEffect(() => {
++    const el = root.current;
++    if (!el || typeof IntersectionObserver === 'undefined') return undefined;
++    const io = new IntersectionObserver(([entry]) => setSeen(entry.isIntersecting));
++    io.observe(el);
++    return () => io.disconnect();
++  }, [n > 0]);
+   useEffect(() => {
+     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return undefined;
+     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+@@ -164,10 +198,10 @@ export function HomeHero({ slides: given, autoplayMs = HERO_AUTOPLAY_MS }) {
+     return () => clearTimeout(t);
+   }, [n]);
+   useEffect(() => {
+-    if (n < 2 || paused) return undefined;
++    if (n < 2 || paused || !seen) return undefined;
+     const t = setInterval(() => { if (!reduced.current) setIndex((i) => (i + 1) % n); }, autoplayMs);
+     return () => clearInterval(t);
+-  }, [n, paused, autoplayMs]);
++  }, [n, paused, seen, autoplayMs]);
+   if (n === 0) return null;
+   const at = index % n;
+   const go = (d) => { setWarm(true); setIndex((i) => (i + d + n) % n); };
+@@ -181,7 +215,7 @@ export function HomeHero({ slides: given, autoplayMs = HERO_AUTOPLAY_MS }) {
+   };
+   const onClickCapture = (e) => { if (swipe.current.moved) { e.preventDefault(); e.stopPropagation(); swipe.current.moved = false; } };
+   return (
+-    <section className="hx hx-hero" aria-roledescription="carousel" aria-label="SORA LIFESTYLE"
++    <section ref={root} className={`hx hx-hero${seen ? ' is-seen' : ''}${paused ? ' is-paused' : ''}`} style={{ '--hero-ms': `${autoplayMs}ms` }} aria-roledescription="carousel" aria-label="SORA LIFESTYLE"
+       onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)} onFocus={() => setPaused(true)} onBlur={() => setPaused(false)}>
+       <div className="hx-hero__viewport" onPointerDown={onPointerDown} onPointerUp={onPointerUp} onPointerCancel={() => { swipe.current = { x: null, y: null, moved: false }; }} onClickCapture={onClickCapture}>
+         <div className="hx-hero__track" style={{ transform: `translateX(-${at * 100}%)` }}>
+@@ -195,7 +229,7 @@ export function HomeHero({ slides: given, autoplayMs = HERO_AUTOPLAY_MS }) {
+                     {s.eyebrow && <p className="hx-eyebrow">{s.eyebrow}</p>}
+                     <Title className="hx-hero__title">{s.title.map((line, j) => <Fragment key={j}>{j > 0 && ' '}<span className={j > 0 ? 'hx-hl' : undefined}>{line}</span></Fragment>)}</Title>
+                   </div>
+-                  <ul className="hx-hero__panels" style={{ '--n': s.panels.length }}>
++                  <ul className="hx-hero__panels" data-n={s.panels.length} style={{ '--n': s.panels.length }}>
+                     {s.panels.map((p, k) => <HeroPanel key={k} p={p} i={k} current={current} eager={i === 0 || warm} high={i === 0} />)}
+                   </ul>
+                 </div>
+@@ -207,7 +241,10 @@ export function HomeHero({ slides: given, autoplayMs = HERO_AUTOPLAY_MS }) {
+       {n > 1 && (
+         <div className="hx-hero__dots" role="group" aria-label="Choose a slide">
+           {slides.map((s, i) => (
+-            <button key={s.key || i} type="button" aria-label={`Show slide ${i + 1} of ${n}`} aria-pressed={i === at} className={`hx-hero__dot${i === at ? ' is-on' : ''}`} onClick={() => { setWarm(true); setIndex(i); }} />
++            <button key={s.key || i} type="button" aria-label={`Show slide ${i + 1} of ${n}`} aria-pressed={i === at} className={`hx-hero__dot${i === at ? ' is-on' : ''}`} onClick={() => { setWarm(true); setIndex(i); }}>
++              {/* The time left on this slide, filling; restarts when the autoplay does (a new key). */}
++              {i === at && <i key={`${at}:${paused || !seen ? 'p' : 'r'}`} className="hx-hero__fill" aria-hidden="true" />}
++            </button>
+           ))}
+         </div>
+       )}
+diff --git a/src/styles/sora-ds.css b/src/styles/sora-ds.css
+index 3bf7855..917aa23 100644
+--- a/src/styles/sora-ds.css
++++ b/src/styles/sora-ds.css
+@@ -1136,11 +1136,32 @@ html.is-scrolled .v2-hdr, html.is-scrolled .fs-hdr, html.is-scrolled .hl-hdr { b
+ /* 16 · the homepage hero (the collage, 2026-11-27): the slide in view settles from a slight zoom and its
+    words rise in, panel after panel. */
+ .hx-hero__slide.is-on .hx-hero__ph { animation: hx-settle 7s cubic-bezier(.2, .7, .2, 1) backwards; }
+-.hx-hero__slide.is-on .hx-hero__txt > * { animation: hx-rise .7s cubic-bezier(.2, .8, .2, 1) backwards; animation-delay: calc(.15s + var(--i, 0) * .12s); }
+-.hx-hero__slide.is-on .hx-hero__txt > b { animation-delay: calc(.22s + var(--i, 0) * .12s); }
+-.hx-hero__slide.is-on .hx-hero__txt > .hx-hero__shop { animation-delay: calc(.3s + var(--i, 0) * .12s); }
++.hx-hero__slide.is-on .hx-hero__card { animation: hx-card-in .95s cubic-bezier(.16, .84, .24, 1) backwards; animation-delay: calc(var(--i, 0) * .11s); }
++.hx-hero__slide.is-on .hx-hero__head > * { animation: hx-rise .8s cubic-bezier(.2, .8, .2, 1) backwards; }
++.hx-hero__slide.is-on .hx-hero__head > * + * { animation-delay: .1s; }
++.hx-hero__slide.is-on .hx-hero__title > span { display: inline-block; animation: hx-rise .8s cubic-bezier(.2, .8, .2, 1) backwards; animation-delay: .14s; }
++.hx-hero__slide.is-on .hx-hero__title > span + span { animation-delay: .26s; }
++.hx-hero__slide.is-on .hx-hero__txt > * { animation: hx-rise .7s cubic-bezier(.2, .8, .2, 1) backwards; animation-delay: calc(.3s + var(--i, 0) * .11s); }
++.hx-hero__slide.is-on .hx-hero__txt > b { animation-delay: calc(.38s + var(--i, 0) * .11s); }
++.hx-hero__slide.is-on .hx-hero__txt > .hx-hero__shop { animation-delay: calc(.46s + var(--i, 0) * .11s); }
++/* While the hero is on screen: the photographs drift slowly, light sweeps the Shop buttons one after another,
++   the warm glow behind breathes, and the slide's time fills its bar. */
++.hx-hero.is-seen .hx-hero__slide.is-on .hx-hero__ph picture { animation: hx-drift 16s ease-in-out infinite alternate; animation-delay: calc(var(--i, 0) * -5s); }
++.hx-hero.is-seen .hx-hero__slide.is-on .hx-hero__shop::after { animation: hx-shine 4.8s ease-in-out infinite; animation-delay: calc(1.4s + var(--i, 0) * .35s); }
++.hx-hero.is-seen::before { animation: hx-glow 18s ease-in-out infinite alternate; }
++.hx-hero.is-seen::after { animation: hx-glow 22s ease-in-out infinite alternate-reverse; }
++/* On a phone the light sweeps only the middle button and the glow stays still: the motion stays light. */
++@media (max-width: 700px) {
++  .hx-hero.is-seen::before, .hx-hero.is-seen::after, .hx-hero.is-seen .hx-hero__slide.is-on .hx-hero__panel:not(:nth-child(2)) .hx-hero__shop::after { animation: none; }
++}
++.hx-hero.is-seen:not(.is-paused) .hx-hero__fill { animation: hx-fill var(--hero-ms, 6s) linear backwards; }
+ @keyframes hx-settle { from { transform: scale(1.08); } to { transform: none; } }
+ @keyframes hx-rise { from { opacity: 0; transform: translate3d(0, 14px, 0); } to { opacity: 1; transform: none; } }
++@keyframes hx-card-in { from { opacity: .2; transform: perspective(1100px) translate3d(0, 34px, 0) rotateX(6deg) scale(.95); } to { opacity: 1; transform: perspective(1100px); } }
++@keyframes hx-drift { from { transform: scale(1.02) translate3d(0, 0, 0); } to { transform: scale(1.09) translate3d(-1.6%, -1.2%, 0); } }
++@keyframes hx-shine { 0%, 62% { transform: translateX(-120%) skewX(-18deg); } 100% { transform: translateX(320%) skewX(-18deg); } }
++@keyframes hx-glow { from { transform: translate3d(0, 0, 0) scale(1); } to { transform: translate3d(8%, 6%, 0) scale(1.15); } }
++@keyframes hx-fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+ 
+ /* 17 · the offer clock's numbers flip as they change. */
+ .hx-offer__clock { perspective: 400px; }
+@@ -1167,7 +1188,7 @@ html.is-scrolled .v2-hdr, html.is-scrolled .fs-hdr, html.is-scrolled .hl-hdr { b
+ @media (prefers-reduced-motion: reduce) {
+   .rv { opacity: 1 !important; transform: none !important; }
+   .fs-chip.is-on, .sora-stickycats a.is-on, .v2-fd [aria-pressed="true"], .hl-filters [aria-pressed="true"], .fs-sheet__panel, .cartcoupon__applied, .cartcoupon__appliedcode,
+-  .hx-hero__ph, .hx-hero__txt > *, .hx-offer__clock b, .v2-hdr__suggest-item, [role="listbox"] > [role="option"], .search-overlay > * { animation: none !important; }
++  .hx-hero__ph, .hx-hero__ph picture, .hx-hero__card, .hx-hero__head > *, .hx-hero__title > span, .hx-hero__txt > *, .hx-hero__shop::after, .hx-hero::before, .hx-hero::after, .hx-hero__fill, .hx-offer__clock b, .v2-hdr__suggest-item, [role="listbox"] > [role="option"], .search-overlay > * { animation: none !important; }
+   html.is-scrolled header .logo img, html.is-scrolled header .logo__img, html.is-scrolled header [class*="__brand"] img { transform: none; }
+   .sora-ripple, .sora-flurry, .sora-heartbit { display: none !important; }
+ }
+diff --git a/src/styles/v2-home.css b/src/styles/v2-home.css
+index 8a09c4e..fc7fef6 100644
+--- a/src/styles/v2-home.css
++++ b/src/styles/v2-home.css
+@@ -188,7 +188,16 @@
+ .hx-hero__title .hx-hl { font-style: italic; }
+ .hx-hero__panels { display: grid; grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr)); gap: 12px; margin: 0; padding: 0; list-style: none; height: clamp(420px, 40vw, 580px); }
+ .hx-hero__panel { min-width: 0; }
+-.hx-hero__card { position: relative; display: block; height: 100%; overflow: hidden; background: #E9E1D6; isolation: isolate; }
++.hx-hero::before, .hx-hero::after { content: ''; position: absolute; z-index: 0; width: 62vw; max-width: 900px; aspect-ratio: 1; border-radius: 50%; pointer-events: none; }
++.hx-hero::before { top: -38%; left: -18%; background: radial-gradient(circle, rgba(244, 123, 32, .16) 0%, rgba(244, 123, 32, 0) 62%); }
++.hx-hero::after { right: -20%; bottom: -46%; background: radial-gradient(circle, rgba(194, 80, 10, .12) 0%, rgba(194, 80, 10, 0) 62%); }
++.hx-hero__viewport, .hx-hero__dots { position: relative; z-index: 1; }
++.hx-hero__card { position: relative; display: block; height: 100%; overflow: hidden; background: #E9E1D6; isolation: isolate; box-shadow: 0 22px 44px -30px rgba(40, 20, 6, .55); transform: perspective(1100px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); transition: transform .6s cubic-bezier(.2, .8, .2, 1), box-shadow .6s ease; }
++.hx-hero__card.is-tilt { transition-duration: .18s, .6s; box-shadow: 0 30px 60px -28px rgba(40, 20, 6, .6); }
++/* The middle photograph stands a little taller than the two beside it: one centre, both sides alike. */
++.hx-hero__panels[data-n="3"] > .hx-hero__panel:not(:nth-child(2)) { padding-block: 22px; }
++.hx-hero__glare { position: absolute; inset: -30%; z-index: 2; pointer-events: none; opacity: 0; background: radial-gradient(circle at 50% 50%, rgba(255, 248, 238, .32) 0%, rgba(255, 248, 238, 0) 38%); transform: translate3d(var(--gx, 0), var(--gy, 0), 0); transition: opacity .4s ease; }
++.hx-hero__card.is-tilt .hx-hero__glare { opacity: 1; }
+ .hx-hero__ph { position: absolute; inset: 0; display: block; }
+ .hx-hero__ph picture, .hx-hero__img { display: block; width: 100%; height: 100%; }
+ .hx-hero__img { object-fit: cover; object-position: var(--focus, 50%) 30%; transition: transform .9s cubic-bezier(.2, .8, .2, 1); }
+@@ -197,12 +206,14 @@
+ .hx-hero__txt { position: absolute; left: 0; right: 0; bottom: 0; z-index: 3; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 0 18px 30px; text-align: center; color: #FFF8EE; }
+ .hx-hero__txt em { font: 600 10.5px/1.4 var(--slv2-sans); letter-spacing: .2em; text-transform: uppercase; font-style: normal; color: #FFD9A8; }
+ .hx-hero__txt b { font: 500 clamp(24px, 2.3vw, 34px)/1.1 var(--slv2-disp); letter-spacing: -.01em; text-shadow: 0 1px 18px rgba(0, 0, 0, .35); }
+-.hx-hero__shop { display: inline-flex; align-items: center; gap: 8px; min-height: 42px; margin-top: 8px; padding: 10px 22px; border-radius: 999px; background: #FFF8EE; color: var(--hx-ink); font: 600 13.5px/1.2 var(--slv2-sans); white-space: nowrap; transition: background-color .25s ease, color .25s ease; }
++.hx-hero__shop { position: relative; overflow: hidden; display: inline-flex; align-items: center; gap: 8px; min-height: 42px; margin-top: 8px; padding: 10px 22px; border-radius: 999px; background: #FFF8EE; color: var(--hx-ink); font: 600 13.5px/1.2 var(--slv2-sans); white-space: nowrap; transition: background-color .25s ease, color .25s ease; }
++.hx-hero__shop::after { content: ''; position: absolute; top: 0; bottom: 0; left: 0; width: 46%; pointer-events: none; background: linear-gradient(100deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, .75) 50%, rgba(255, 255, 255, 0) 100%); transform: translateX(-120%) skewX(-18deg); }
+ .hx-hero__shop svg { flex: none; transition: transform .3s ease; }
+ .hx-hero__dots { position: absolute; left: 0; right: 0; bottom: 2px; display: flex; justify-content: center; gap: 2px; }
+-.hx-hero__dot { position: relative; width: 30px; height: 30px; padding: 0; border: 0; background: none; cursor: pointer; }
+-.hx-hero__dot::after { content: ''; position: absolute; top: 13px; left: 7px; width: 16px; height: 4px; border-radius: 2px; background: #D8CFC3; transition: background-color .3s ease; }
+-.hx-hero__dot.is-on::after { background: var(--hx-orange-deep); }
++.hx-hero__dot { position: relative; width: 30px; height: 30px; padding: 0; border: 0; background: none; cursor: pointer; transition: width .4s cubic-bezier(.2, .8, .2, 1); }
++.hx-hero__dot::after, .hx-hero__fill { content: ''; position: absolute; top: 13px; left: 7px; right: 7px; height: 4px; border-radius: 2px; background: #D8CFC3; }
++.hx-hero__dot.is-on { width: 54px; }
++.hx-hero__fill { z-index: 1; background: var(--hx-orange-deep); transform-origin: 0 50%; }
+ @media (hover: hover) and (min-width: 701px) {
+   .hx-hero__card:hover .hx-hero__img { transform: scale(1.05); }
+   .hx-hero__card:hover .hx-hero__shop { background: var(--hx-orange-deep); color: #fff; }
+@@ -300,6 +311,10 @@
+   .hx-hero__title { font-size: clamp(24px, 7vw, 30px); }
+   .hx-hero__panels { gap: 6px; height: clamp(300px, 92vw, 440px); }
+   .hx-hero__card::before { inset: 6px; }
++  .hx-hero__panels[data-n="3"] > .hx-hero__panel:not(:nth-child(2)) { padding-block: 14px; }
++  .hx-hero::before, .hx-hero::after { width: 120vw; }
++  /* A phone keeps the motion light: no tilt (no mouse), so the cards stay flat layers. */
++  .hx-hero__card { transform: none; box-shadow: 0 16px 30px -24px rgba(40, 20, 6, .55); }
+   .hx-hero__card::after { background: linear-gradient(180deg, rgba(20, 12, 6, 0) 50%, rgba(20, 12, 6, .45) 72%, rgba(20, 12, 6, .82) 100%); }
+   .hx-hero__txt { gap: 4px; padding: 0 6px 16px; }
+   .hx-hero__txt em { display: none; }
+@@ -370,7 +385,7 @@
+   .hx-jewel__cta { min-height: 44px; padding: 10px 20px; }
+ }
+ @media (prefers-reduced-motion: reduce) {
+-  .hx-hero__track, .hx-hero__img, .hx-hero__shop, .hx-hero__shop svg, .hx-tile__image, .hx-store__image, .hx-btn svg, .hx-tile__go, .hx-jewel__image, .hx-jewel__cta svg { transition: none; }
++  .hx-hero__track, .hx-hero__img, .hx-hero__shop, .hx-hero__shop svg, .hx-hero__card, .hx-hero__dot, .hx-tile__image, .hx-store__image, .hx-btn svg, .hx-tile__go, .hx-jewel__image, .hx-jewel__cta svg { transition: none; }
+   .hx .hx-btn:hover svg, .hx-tile:hover .hx-tile__go, .hx-tile:hover .hx-tile__image, .hx-store:hover .hx-store__image, .hx-jewel__link:hover .hx-jewel__image, .hx-jewel__link:hover .hx-jewel__cta svg { transform: none; }
+ }
+ 

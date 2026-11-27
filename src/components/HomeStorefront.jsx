@@ -120,15 +120,39 @@ export function heroSlidesOf(section) {
 const FOCUS = { left: 30, center: 50, right: 70 };
 
 /** One panel: the photograph, its name, and its own Shop button — the whole panel one link. */
+// A wide screen with a mouse tilts the photograph under it a few degrees towards the pointer, a soft light
+// following it (2026-11-27: "visually strong … with cool animations"). Styles only: CSS variables on the
+// card, no re-render; never for touch or for a shopper whose device asks for less motion.
+const canTilt = () => typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+  && window.matchMedia('(hover: hover) and (pointer: fine)').matches && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+function tiltTo(e) {
+  const el = e.currentTarget;
+  if (!canTilt()) return;
+  const r = el.getBoundingClientRect();
+  const x = (e.clientX - r.left) / r.width - 0.5, y = (e.clientY - r.top) / r.height - 0.5;
+  el.style.setProperty('--ry', `${(x * 7).toFixed(2)}deg`);
+  el.style.setProperty('--rx', `${(-y * 6).toFixed(2)}deg`);
+  el.style.setProperty('--gx', `${(x * 60).toFixed(1)}%`);
+  el.style.setProperty('--gy', `${(y * 60).toFixed(1)}%`);
+  el.classList.add('is-tilt');
+}
+function tiltOff(e) {
+  const el = e.currentTarget;
+  for (const v of ['--rx', '--ry', '--gx', '--gy']) el.style.removeProperty(v);
+  el.classList.remove('is-tilt');
+}
+
+/** One panel: the photograph, its name, and its own Shop button — the whole panel one link. */
 function HeroPanel({ p, current, eager, high, i }) {
   const Entry = entryFor(p.link);
   return (
     <li className="hx-hero__panel" style={{ '--i': i, '--focus': `${FOCUS[p.focus] || FOCUS.center}%` }}>
-      <Entry to={p.link} className="hx-hero__card" tabIndex={current ? undefined : -1}>
+      <Entry to={p.link} className="hx-hero__card" tabIndex={current ? undefined : -1} onPointerMove={tiltTo} onPointerLeave={tiltOff}>
         <span className="hx-hero__ph">
           <DeferredImage src={p.picture.desktop} {...phoneSources(p.picture.phone, p.picture.desktop)} alt={p.alt} width={900} height={1200}
             className="hx-hero__img" loading={eager ? 'eager' : 'lazy'} fetchPriority={high ? 'high' : undefined} />
         </span>
+        <span className="hx-hero__glare" aria-hidden="true" />
         <span className="hx-hero__txt">
           {p.note && <em>{p.note}</em>}
           <b>{p.title}</b>
@@ -147,9 +171,19 @@ export function HomeHero({ slides: given, autoplayMs = HERO_AUTOPLAY_MS }) {
   const [paused, setPaused] = useState(false);
   // The later slides' photographs load once the page has (or after 2.5 s), so a slide never arrives blank.
   const [warm, setWarm] = useState(false);
+  // On screen: the slow loops (drift, shine, the glow behind) and the autoplay run only while it is.
+  const [seen, setSeen] = useState(true);
+  const root = useRef(null);
   const reduced = useRef(false);
   const swipe = useRef({ x: null, y: null, moved: false });
   const n = slides.length;
+  useEffect(() => {
+    const el = root.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return undefined;
+    const io = new IntersectionObserver(([entry]) => setSeen(entry.isIntersecting));
+    io.observe(el);
+    return () => io.disconnect();
+  }, [n > 0]);
   useEffect(() => {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return undefined;
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -164,10 +198,10 @@ export function HomeHero({ slides: given, autoplayMs = HERO_AUTOPLAY_MS }) {
     return () => clearTimeout(t);
   }, [n]);
   useEffect(() => {
-    if (n < 2 || paused) return undefined;
+    if (n < 2 || paused || !seen) return undefined;
     const t = setInterval(() => { if (!reduced.current) setIndex((i) => (i + 1) % n); }, autoplayMs);
     return () => clearInterval(t);
-  }, [n, paused, autoplayMs]);
+  }, [n, paused, seen, autoplayMs]);
   if (n === 0) return null;
   const at = index % n;
   const go = (d) => { setWarm(true); setIndex((i) => (i + d + n) % n); };
@@ -181,7 +215,7 @@ export function HomeHero({ slides: given, autoplayMs = HERO_AUTOPLAY_MS }) {
   };
   const onClickCapture = (e) => { if (swipe.current.moved) { e.preventDefault(); e.stopPropagation(); swipe.current.moved = false; } };
   return (
-    <section className="hx hx-hero" aria-roledescription="carousel" aria-label="SORA LIFESTYLE"
+    <section ref={root} className={`hx hx-hero${seen ? ' is-seen' : ''}${paused ? ' is-paused' : ''}`} style={{ '--hero-ms': `${autoplayMs}ms` }} aria-roledescription="carousel" aria-label="SORA LIFESTYLE"
       onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)} onFocus={() => setPaused(true)} onBlur={() => setPaused(false)}>
       <div className="hx-hero__viewport" onPointerDown={onPointerDown} onPointerUp={onPointerUp} onPointerCancel={() => { swipe.current = { x: null, y: null, moved: false }; }} onClickCapture={onClickCapture}>
         <div className="hx-hero__track" style={{ transform: `translateX(-${at * 100}%)` }}>
@@ -195,7 +229,7 @@ export function HomeHero({ slides: given, autoplayMs = HERO_AUTOPLAY_MS }) {
                     {s.eyebrow && <p className="hx-eyebrow">{s.eyebrow}</p>}
                     <Title className="hx-hero__title">{s.title.map((line, j) => <Fragment key={j}>{j > 0 && ' '}<span className={j > 0 ? 'hx-hl' : undefined}>{line}</span></Fragment>)}</Title>
                   </div>
-                  <ul className="hx-hero__panels" style={{ '--n': s.panels.length }}>
+                  <ul className="hx-hero__panels" data-n={s.panels.length} style={{ '--n': s.panels.length }}>
                     {s.panels.map((p, k) => <HeroPanel key={k} p={p} i={k} current={current} eager={i === 0 || warm} high={i === 0} />)}
                   </ul>
                 </div>
@@ -207,7 +241,10 @@ export function HomeHero({ slides: given, autoplayMs = HERO_AUTOPLAY_MS }) {
       {n > 1 && (
         <div className="hx-hero__dots" role="group" aria-label="Choose a slide">
           {slides.map((s, i) => (
-            <button key={s.key || i} type="button" aria-label={`Show slide ${i + 1} of ${n}`} aria-pressed={i === at} className={`hx-hero__dot${i === at ? ' is-on' : ''}`} onClick={() => { setWarm(true); setIndex(i); }} />
+            <button key={s.key || i} type="button" aria-label={`Show slide ${i + 1} of ${n}`} aria-pressed={i === at} className={`hx-hero__dot${i === at ? ' is-on' : ''}`} onClick={() => { setWarm(true); setIndex(i); }}>
+              {/* The time left on this slide, filling; restarts when the autoplay does (a new key). */}
+              {i === at && <i key={`${at}:${paused || !seen ? 'p' : 'r'}`} className="hx-hero__fill" aria-hidden="true" />}
+            </button>
           ))}
         </div>
       )}

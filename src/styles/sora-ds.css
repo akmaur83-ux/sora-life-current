@@ -1136,11 +1136,32 @@ html.is-scrolled .v2-hdr, html.is-scrolled .fs-hdr, html.is-scrolled .hl-hdr { b
 /* 16 · the homepage hero (the collage, 2026-11-27): the slide in view settles from a slight zoom and its
    words rise in, panel after panel. */
 .hx-hero__slide.is-on .hx-hero__ph { animation: hx-settle 7s cubic-bezier(.2, .7, .2, 1) backwards; }
-.hx-hero__slide.is-on .hx-hero__txt > * { animation: hx-rise .7s cubic-bezier(.2, .8, .2, 1) backwards; animation-delay: calc(.15s + var(--i, 0) * .12s); }
-.hx-hero__slide.is-on .hx-hero__txt > b { animation-delay: calc(.22s + var(--i, 0) * .12s); }
-.hx-hero__slide.is-on .hx-hero__txt > .hx-hero__shop { animation-delay: calc(.3s + var(--i, 0) * .12s); }
+.hx-hero__slide.is-on .hx-hero__card { animation: hx-card-in .95s cubic-bezier(.16, .84, .24, 1) backwards; animation-delay: calc(var(--i, 0) * .11s); }
+.hx-hero__slide.is-on .hx-hero__head > * { animation: hx-rise .8s cubic-bezier(.2, .8, .2, 1) backwards; }
+.hx-hero__slide.is-on .hx-hero__head > * + * { animation-delay: .1s; }
+.hx-hero__slide.is-on .hx-hero__title > span { display: inline-block; animation: hx-rise .8s cubic-bezier(.2, .8, .2, 1) backwards; animation-delay: .14s; }
+.hx-hero__slide.is-on .hx-hero__title > span + span { animation-delay: .26s; }
+.hx-hero__slide.is-on .hx-hero__txt > * { animation: hx-rise .7s cubic-bezier(.2, .8, .2, 1) backwards; animation-delay: calc(.3s + var(--i, 0) * .11s); }
+.hx-hero__slide.is-on .hx-hero__txt > b { animation-delay: calc(.38s + var(--i, 0) * .11s); }
+.hx-hero__slide.is-on .hx-hero__txt > .hx-hero__shop { animation-delay: calc(.46s + var(--i, 0) * .11s); }
+/* While the hero is on screen: the photographs drift slowly, light sweeps the Shop buttons one after another,
+   the warm glow behind breathes, and the slide's time fills its bar. */
+.hx-hero.is-seen .hx-hero__slide.is-on .hx-hero__ph picture { animation: hx-drift 16s ease-in-out infinite alternate; animation-delay: calc(var(--i, 0) * -5s); }
+.hx-hero.is-seen .hx-hero__slide.is-on .hx-hero__shop::after { animation: hx-shine 4.8s ease-in-out infinite; animation-delay: calc(1.4s + var(--i, 0) * .35s); }
+.hx-hero.is-seen::before { animation: hx-glow 18s ease-in-out infinite alternate; }
+.hx-hero.is-seen::after { animation: hx-glow 22s ease-in-out infinite alternate-reverse; }
+/* On a phone the light sweeps only the middle button and the glow stays still: the motion stays light. */
+@media (max-width: 700px) {
+  .hx-hero.is-seen::before, .hx-hero.is-seen::after, .hx-hero.is-seen .hx-hero__slide.is-on .hx-hero__panel:not(:nth-child(2)) .hx-hero__shop::after { animation: none; }
+}
+.hx-hero.is-seen:not(.is-paused) .hx-hero__fill { animation: hx-fill var(--hero-ms, 6s) linear backwards; }
 @keyframes hx-settle { from { transform: scale(1.08); } to { transform: none; } }
 @keyframes hx-rise { from { opacity: 0; transform: translate3d(0, 14px, 0); } to { opacity: 1; transform: none; } }
+@keyframes hx-card-in { from { opacity: .2; transform: perspective(1100px) translate3d(0, 34px, 0) rotateX(6deg) scale(.95); } to { opacity: 1; transform: perspective(1100px); } }
+@keyframes hx-drift { from { transform: scale(1.02) translate3d(0, 0, 0); } to { transform: scale(1.09) translate3d(-1.6%, -1.2%, 0); } }
+@keyframes hx-shine { 0%, 62% { transform: translateX(-120%) skewX(-18deg); } 100% { transform: translateX(320%) skewX(-18deg); } }
+@keyframes hx-glow { from { transform: translate3d(0, 0, 0) scale(1); } to { transform: translate3d(8%, 6%, 0) scale(1.15); } }
+@keyframes hx-fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 
 /* 17 · the offer clock's numbers flip as they change. */
 .hx-offer__clock { perspective: 400px; }
@@ -1167,7 +1188,7 @@ html.is-scrolled .v2-hdr, html.is-scrolled .fs-hdr, html.is-scrolled .hl-hdr { b
 @media (prefers-reduced-motion: reduce) {
   .rv { opacity: 1 !important; transform: none !important; }
   .fs-chip.is-on, .sora-stickycats a.is-on, .v2-fd [aria-pressed="true"], .hl-filters [aria-pressed="true"], .fs-sheet__panel, .cartcoupon__applied, .cartcoupon__appliedcode,
-  .hx-hero__ph, .hx-hero__txt > *, .hx-offer__clock b, .v2-hdr__suggest-item, [role="listbox"] > [role="option"], .search-overlay > * { animation: none !important; }
+  .hx-hero__ph, .hx-hero__ph picture, .hx-hero__card, .hx-hero__head > *, .hx-hero__title > span, .hx-hero__txt > *, .hx-hero__shop::after, .hx-hero::before, .hx-hero::after, .hx-hero__fill, .hx-offer__clock b, .v2-hdr__suggest-item, [role="listbox"] > [role="option"], .search-overlay > * { animation: none !important; }
   html.is-scrolled header .logo img, html.is-scrolled header .logo__img, html.is-scrolled header [class*="__brand"] img { transform: none; }
   .sora-ripple, .sora-flurry, .sora-heartbit { display: none !important; }
 }
